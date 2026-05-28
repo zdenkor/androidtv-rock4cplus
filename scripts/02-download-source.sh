@@ -1,0 +1,250 @@
+#!/bin/bash
+# =============================================================================
+# 02-download-source.sh
+# Downloads AOSP Android source + Rockchip BSP for ROCK 4C+
+# Sources:
+#   - Radxa Android 9 (official, stable)
+#   - Advantech Android 12 BSP for RK3399 (kernel 4.19.232)
+# =============================================================================
+
+set -e
+
+# Load build config
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+CONFIG_FILE="$SCRIPT_DIR/../.build-config"
+
+if [ -f "$CONFIG_FILE" ]; then
+    source "$CONFIG_FILE"
+else
+    echo "ERROR: No .build-config found. Run 00-setup-usb.sh first!"
+    exit 1
+fi
+
+echo "============================================"
+echo " Downloading Android Source Code"
+echo " Target: Radxa ROCK 4C+ (RK3399-T)"
+echo "============================================"
+echo ""
+
+# ---------------------------------------------------------------------------
+# Choose build option
+# ---------------------------------------------------------------------------
+echo "Available Android BSP sources for RK3399:"
+echo ""
+echo "  1) Android 9 Pie (Radxa, OFFICIALLY SUPPORTED)"
+echo "     - Manifest: radxa/manifests, branch: rockpi-box-9.0"
+echo "     - Most stable, all hardware works"
+echo "     - Can add Android TV features on top"
+echo ""
+echo "  2) Android 12 (Vicharak BSP, kernel 5.10) ★ RECOMMENDED"
+echo "     - Manifest: vicharak-in/rockchip-android-manifest (GitHub)"
+echo "     - Full Rockchip BSP included, no separate downloads needed"
+echo "     - Has rk3399 device config (Vaaman board)"
+echo "     - Last updated: Dec 2025"
+echo ""
+echo "  3) Android 12 (Advantech BSP, kernel 4.19.232)"
+echo "     - Manifest: ADVANTECH-Rockchip Azure DevOps"
+echo "     - Requires separate prebuilts/external downloads"
+echo ""
+echo "  4) Android 12 AOSP (pure Google, EXPERIMENTAL)"
+echo "     - No Rockchip BSP — manual integration required"
+echo ""
+read -rp "Enter choice [1-4]: " BUILD_CHOICE
+
+# ---------------------------------------------------------------------------
+# Create working directory
+# ---------------------------------------------------------------------------
+echo ""
+echo "[1/4] Creating working directory: $WORK_DIR"
+mkdir -p "$WORK_DIR"
+cd "$WORK_DIR"
+
+case $BUILD_CHOICE in
+    1)
+        # ====================================================================
+        # OPTION 1: Android 9 Pie (Officially supported by Radxa)
+        # ====================================================================
+        echo "[2/4] Initializing repo with Radxa Android 9 Pie manifest..."
+        echo ""
+        echo "Manifest: https://github.com/radxa/manifests.git"
+        echo "Branch:   rockpi-box-9.0"
+        echo "XML:      rockpi-release.xml"
+        echo ""
+
+        repo init --depth=1 \
+            -u https://github.com/radxa/manifests.git \
+            -b rockpi-box-9.0 \
+            -m rockpi-release.xml
+
+        echo "[3/4] Syncing repositories (this will take a while)..."
+        echo "Estimated download: ~80GB"
+        echo ""
+        repo sync -c -j$(nproc) --no-tags --no-clone-bundle
+
+        echo "[4/4] Downloading additional tools..."
+        mkdir -p "$WORK_DIR/tools"
+        git clone --depth=1 https://github.com/rockchip-linux/tools.git "$WORK_DIR/tools/rkbin" || true
+        ;;
+
+    2)
+        # ====================================================================
+        # OPTION 2: Android 12 (Vicharak BSP, kernel 5.10) ★ BEST
+        # ====================================================================
+        echo "[2/4] Initializing repo with Vicharak Android 12 manifest..."
+        echo ""
+        echo "Manifest: https://github.com/vicharak-in/rockchip-android-manifest"
+        echo "Branch:   master"
+        echo "XML:      rockchip-s-vicharak.xml"
+        echo ""
+
+        repo init --no-tags --no-clone-bundle \
+            -u https://github.com/vicharak-in/rockchip-android-manifest \
+            -b master \
+            -m rockchip-s-vicharak.xml
+
+        echo "[3/4] Syncing repositories (this will take a while)..."
+        echo "Estimated download: ~80GB"
+        echo ""
+
+        # First attempt: sync with reduced parallelism to avoid rate limits
+        repo sync -j4 --no-clone-bundle || {
+            echo ""
+            echo "=== Sync had errors, fixing known issues ==="
+            echo ""
+
+            # Fix 1: prebuilts/sdk often fails on AOSP mirrors — clone directly from Google
+            if [ ! -d "prebuilts/sdk/.git" ]; then
+                echo "Cloning prebuilts/sdk from Google's official source..."
+                rm -rf prebuilts/sdk
+                mkdir -p prebuilts
+                git clone --depth=1 https://android.googlesource.com/platform/prebuilts/sdk prebuilts/sdk || {
+                    echo "Google source failed, trying Tsinghua mirror..."
+                    rm -rf prebuilts/sdk
+                    git clone --depth=1 https://mirrors.tuna.tsinghua.edu.cn/git/AOSP/platform/prebuilts/sdk prebuilts/sdk
+                }
+            fi
+
+            # Fix 2: Retry remaining repos with single thread
+            echo "Retrying remaining repos..."
+            repo sync -j1 --no-clone-bundle --fail-fast || {
+                echo "Some repos still failed. Retrying one more time..."
+                repo sync -j1 -c --no-clone-bundle
+            }
+        }
+
+        echo "[4/4] Copying Android kernel configs..."
+        if [ -d "mkcombinedroot/configs" ]; then
+            cp -vr mkcombinedroot/configs/android-1* kernel-5.10/arch/arm64/configs/ 2>/dev/null || true
+            echo "Kernel configs copied."
+        fi
+        echo ""
+        echo "Vicharak BSP ready. Device config at: device/rockchip/rk3399"
+        ;;
+
+    3)
+        # ====================================================================
+        # OPTION 3: Android 12 (Advantech BSP for RK3399)
+        # ====================================================================
+        echo "[2/4] Initializing repo with Advantech Android 12 manifest..."
+        echo ""
+        echo "Manifest: https://kag-sw.visualstudio.com/RK3399-Android/_git/android-s12-manifest"
+        echo "Branch:   rk3399-androidS12"
+        echo "XML:      default.xml"
+        echo ""
+
+        # Advantech uses a custom repo tool
+        echo "Cloning Advantech repo tool..."
+        git clone https://github.com/ADVANTECH-Rockchip/repo.git "$WORK_DIR/../adv-repo" || true
+
+        if [ -d "$WORK_DIR/../adv-repo" ]; then
+            REPO_CMD="$WORK_DIR/../adv-repo/repo"
+        else
+            REPO_CMD="repo"
+        fi
+
+        $REPO_CMD init -u \
+            https://kag-sw.visualstudio.com/RK3399-Android/_git/android-s12-manifest \
+            -b rk3399-androidS12 \
+            -m default.xml
+
+        echo "[3/4] Syncing repositories (this will take a while)..."
+        echo "Estimated download: ~80GB"
+        echo ""
+        $REPO_CMD sync -c -f --no-clone-bundle -j$(nproc)
+
+        echo ""
+        echo "============================================"
+        echo " IMPORTANT: Download prebuilts & external!"
+        echo "============================================"
+        echo ""
+        echo "The Advantech BSP requires additional tarballs:"
+        echo ""
+        echo "  Dropbox:"
+        echo "    prebuilts: https://www.dropbox.com/scl/fi/plwys31je681795kt4fvy/prebuilts-rk3399-AndroidS12-20230518.tar.gz"
+        echo "    external:  https://www.dropbox.com/scl/fi/lszmpsjr9mqhm8xxpxhmp/external-rk3399-AndroidS12-20230522.tar.gz"
+        echo ""
+        echo "  Baidu (Key: 1234):"
+        echo "    https://pan.baidu.com/s/1jDOMJTM6jTNGqpNdgNKC7w?pwd=1234"
+        echo ""
+        echo "After downloading, extract them into the source tree:"
+        echo "  tar zxvf prebuilts-rk3399-AndroidS12-20230518.tar.gz -C $WORK_DIR/"
+        echo "  tar zxvf external-rk3399-AndroidS12-20230522.tar.gz -C $WORK_DIR/"
+        echo ""
+        ;;
+
+    4)
+        # ====================================================================
+        # OPTION 4: Android 12 AOSP (Experimental, no official BSP)
+        # ====================================================================
+        echo "[2/4] Initializing repo with AOSP Android 12 manifest..."
+        echo ""
+        echo "Manifest: https://android.googlesource.com/platform/manifest"
+        echo "Branch:   android-12.1.0_r11"
+        echo ""
+        echo "WARNING: This is pure AOSP without Rockchip BSP."
+        echo "You will need to manually add:"
+        echo "  - Rockchip kernel (4.19/5.10)"
+        echo "  - Mali GPU drivers"
+        echo "  - Rockchip HALs (gralloc, hwcomposer, etc.)"
+        echo "  - Device tree for ROCK 4C+"
+        echo ""
+
+        repo init --depth=1 \
+            -u https://android.googlesource.com/platform/manifest \
+            -b android-12.1.0_r11
+
+        echo "[3/4] Syncing repositories (this will take a while)..."
+        echo "Estimated download: ~60GB"
+        echo ""
+        repo sync -c -j$(nproc) --no-tags --no-clone-bundle
+
+        echo "[4/4] Downloading Rockchip BSP components..."
+        mkdir -p "$WORK_DIR/vendor/rockchip"
+        git clone --depth=1 https://github.com/rockchip-linux/kernel.git "$WORK_DIR/kernel" || true
+        git clone --depth=1 https://github.com/rockchip-linux/tools.git "$WORK_DIR/tools/rkbin" || true
+        git clone --depth=1 https://github.com/rockchip-linux/mpp.git "$WORK_DIR/vendor/rockchip/mpp" || true
+        ;;
+    *)
+        echo "Invalid choice. Exiting."
+        exit 1
+        ;;
+esac
+
+# ---------------------------------------------------------------------------
+# Done
+# ---------------------------------------------------------------------------
+echo ""
+echo "============================================"
+echo " Source download complete!"
+echo "============================================"
+echo ""
+echo "Source location: $WORK_DIR"
+echo ""
+
+# Print disk usage
+echo "Disk usage:"
+du -sh "$WORK_DIR" 2>/dev/null || true
+echo ""
+
+echo "Next step: Run 03-configure-build.sh"
+echo ""

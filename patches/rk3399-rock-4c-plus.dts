@@ -1,0 +1,340 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Device Tree for Radxa ROCK 4C+
+ * Based on RK3399-T (lower-clocked RK3399 variant)
+ *
+ * Adapted from ROCK Pi 4 / Vaaman device tree.
+ * Key differences for ROCK 4C+:
+ *   - RK3399-T OPP table (lower CPU/GPU frequencies)
+ *   - AP6256 Wi-Fi/BT (same as ROCK Pi 4)
+ *   - HDMI up to 4K@60
+ *   - 2GB/4GB LPDDR4
+ *   - 40-pin GPIO header
+ *   - M.2 M-Key (PCIe 2.0 x4)
+ */
+
+/dts-v1/;
+
+#include "rk3399.dtsi"
+#include "rk3399-opp.dtsi"
+
+/ {
+	model = "Radxa ROCK 4C+";
+	compatible = "radxa,rock-4c-plus", "rockchip,rk3399";
+
+	chosen {
+		stdout-path = "serial2:1500000n8";
+		bootargs = "earlycon=uart8250,mmio32,0xff1a0000 swiotlb=1 coherent_pool=1m";
+	};
+
+	/* RK3399-T OPP table override */
+	cluster0_opp: opp-table0 {
+		compatible = "operating-points-v2";
+		opp-shared;
+
+		opp-600000000 {
+			opp-hz = /bits/ 64 <600000000>;
+			opp-microvolt = <825000>;
+			clock-latency-ns = <40000>;
+		};
+		opp-816000000 {
+			opp-hz = /bits/ 64 <816000000>;
+			opp-microvolt = <850000>;
+			clock-latency-ns = <40000>;
+		};
+		opp-1008000000 {
+			opp-hz = /bits/ 64 <1008000000>;
+			opp-microvolt = <925000>;
+			clock-latency-ns = <40000>;
+		};
+	};
+
+	cluster1_opp: opp-table1 {
+		compatible = "operating-points-v2";
+		opp-shared;
+
+		opp-600000000 {
+			opp-hz = /bits/ 64 <600000000>;
+			opp-microvolt = <825000>;
+			clock-latency-ns = <40000>;
+		};
+		opp-816000000 {
+			opp-hz = /bits/ 64 <816000000>;
+			opp-microvolt = <850000>;
+			clock-latency-ns = <40000>;
+		};
+		opp-1008000000 {
+			opp-hz = /bits/ 64 <1008000000>;
+			opp-microvolt = <875000>;
+			clock-latency-ns = <40000>;
+		};
+		opp-1200000000 {
+			opp-hz = /bits/ 64 <1200000000>;
+			opp-microvolt = <950000>;
+			clock-latency-ns = <40000>;
+		};
+		opp-1416000000 {
+			opp-hz = /bits/ 64 <1416000000>;
+			opp-microvolt = <1025000>;
+			clock-latency-ns = <40000>;
+		};
+		opp-1512000000 {
+			opp-hz = /bits/ 64 <1512000000>;
+			opp-microvolt = <1075000>;
+			clock-latency-ns = <40000>;
+		};
+	};
+
+	/* GPIO keys */
+	gpio-keys {
+		compatible = "gpio-keys";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pwrbtn>;
+
+		power {
+			debounce-interval = <100>;
+			gpios = <&gpio0 RK_PA5 GPIO_ACTIVE_LOW>;
+			label = "Power";
+			linux,code = <KEY_POWER>;
+			wakeup-source;
+		};
+	};
+
+	/* LEDs */
+	leds {
+		compatible = "gpio-leds";
+		pinctrl-names = "default";
+		pinctrl-0 = <&user_led1>, <&user_led2>;
+
+		user-led1 {
+			label = "green:user1";
+			gpios = <&gpio3 RK_PD4 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "heartbeat";
+		};
+
+		user-led2 {
+			label = "green:user2";
+			gpios = <&gpio3 RK_PD5 GPIO_ACTIVE_HIGH>;
+			default-state = "off";
+		};
+	};
+
+	/* HDMI sound */
+	hdmi-sound {
+		compatible = "simple-audio-card";
+		simple-audio-card,format = "i2s";
+		simple-audio-card,mclk-fs = <256>;
+		simple-audio-card,name = "rockchip,hdmi";
+
+		simple-audio-card,cpu {
+			sound-dai = <&i2s2>;
+		};
+		simple-audio-card,codec {
+			sound-dai = <&hdmi>;
+		};
+	};
+
+	/* SD card power */
+	vcc3v3_sd: vcc3v3-sd {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc3v3_sd";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		enable-active-high;
+		gpio = <&gpio0 RK_PA1 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&sdmmc0_pwr_h>;
+	};
+
+	/* Wi-Fi / BT power */
+	vcc3v3_wifi: vcc3v3-wifi {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc3v3_wifi";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		enable-active-high;
+		gpio = <&gpio0 RK_PA2 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&wifi_enable_h>;
+	};
+};
+
+/* CPU OPP assignment */
+&cpu_l0 { operating-points-v2 = <&cluster0_opp>; };
+&cpu_l1 { operating-points-v2 = <&cluster0_opp>; };
+&cpu_l2 { operating-points-v2 = <&cluster0_opp>; };
+&cpu_l3 { operating-points-v2 = <&cluster0_opp>; };
+&cpu_b0 { operating-points-v2 = <&cluster1_opp>; };
+&cpu_b1 { operating-points-v2 = <&cluster1_opp>; };
+
+/* HDMI */
+&hdmi {
+	status = "okay";
+	ddc-i2c-bus = <&i2c3>;
+};
+
+&hdmi_in_vopl {
+	status = "okay";
+};
+
+&hdmi_in_vopb {
+	status = "disabled";
+};
+
+&route_hdmi {
+	status = "okay";
+	connect = <&vopl_out_hdmi>;
+};
+
+/* Display */
+&vopl {
+	status = "okay";
+};
+
+&vopl_mmu {
+	status = "okay";
+};
+
+&vopb {
+	status = "disabled";
+};
+
+&vopb_mmu {
+	status = "disabled";
+};
+
+/* eMMC */
+&sdhci {
+	bus-width = <8>;
+	mmc-hs400-1_8v;
+	mmc-hs400-enhanced-strobe;
+	non-removable;
+	status = "okay";
+};
+
+/* microSD */
+&sdmmc {
+	bus-width = <4>;
+	cap-mmc-highspeed;
+	cap-sd-highspeed;
+	cd-gpios = <&gpio0 RK_PA7 GPIO_ACTIVE_LOW>;
+	disable-wp;
+	max-frequency = <150000000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&sdmmc_clk &sdmmc_cmd &sdmmc_cd &sdmmc_bus4>;
+	vmmc-supply = <&vcc3v3_sd>;
+	vqmmc-supply = <&vcc_sdio>;
+	status = "okay";
+};
+
+/* Wi-Fi (SDIO) */
+&sdio0 {
+	bus-width = <4>;
+	cap-sd-highspeed;
+	cap-sdio-irq;
+	keep-power-in-suspend;
+	max-frequency = <100000000>;
+	mmc-pwrseq = <&sdio_pwrseq>;
+	non-removable;
+	pinctrl-names = "default";
+	pinctrl-0 = <&sdio0_bus4 &sdio0_cmd &sdio0_clk>;
+	sd-uhs-sdr104;
+	status = "okay";
+};
+
+/* UART for console */
+&uart2 {
+	status = "okay";
+};
+
+/* I2C */
+&i2c3 {
+	i2c-scl-rising-time-ns = <450>;
+	i2c-scl-falling-time-ns = <15>;
+	status = "okay";
+};
+
+&i2c4 {
+	status = "okay";
+};
+
+/* USB */
+&usbdrd3_0 {
+	status = "okay";
+};
+
+&usbdrd_dwc3_0 {
+	dr_mode = "host";
+	status = "okay";
+};
+
+&usbdrd3_1 {
+	status = "okay";
+};
+
+&usbdrd_dwc3_1 {
+	dr_mode = "host";
+	status = "okay";
+};
+
+/* Gigabit Ethernet */
+&gmac {
+	assigned-clocks = <&cru SCLK_RMII_SRC>;
+	assigned-clock-parents = <&clkin_gmac>;
+	clock_in_out = "input";
+	phy-mode = "rgmii";
+	pinctrl-names = "default";
+	pinctrl-0 = <&rgmii_pins>;
+	snps,reset-gpio = <&gpio3 RK_PB7 GPIO_ACTIVE_LOW>;
+	snps,reset-active-low;
+	snps,reset-delays-us = <0 10000 50000>;
+	tx_delay = <0x28>;
+	rx_delay = <0x11>;
+	status = "okay";
+};
+
+/* PCIe (M.2 slot) */
+&pcie0 {
+	ep-gpios = <&gpio4 RK_PD3 GPIO_ACTIVE_HIGH>;
+	max-link-speed = <2>;
+	num-lanes = <4>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pcie_clkreqn_cpm>;
+	status = "okay";
+};
+
+/* GPU */
+&gpu {
+	mali-supply = <&vdd_gpu>;
+	status = "okay";
+};
+
+/* Pin control */
+&pinctrl {
+	pwrbtn {
+		pwrbtn: pwrbtn {
+			rockchip,pins = <0 RK_PA5 RK_FUNC_GPIO &pcfg_pull_up>;
+		};
+	};
+
+	leds {
+		user_led1: user-led1 {
+			rockchip,pins = <3 RK_PD4 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+		user_led2: user-led2 {
+			rockchip,pins = <3 RK_PD5 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+
+	sdmmc {
+		sdmmc0_pwr_h: sdmmc0-pwr-h {
+			rockchip,pins = <0 RK_PA1 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+
+	wifi {
+		wifi_enable_h: wifi-enable-h {
+			rockchip,pins = <0 RK_PA2 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+};
