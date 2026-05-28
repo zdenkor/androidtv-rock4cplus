@@ -41,6 +41,25 @@ if [ -d "mkcombinedroot/configs" ]; then
     echo "Kernel configs copied to kernel-5.10/"
 fi
 
+# Fix: Vaaman BoardConfig defaults to kernel 4.19, but BSP has 5.10
+VAAMAN_BC="device/rockchip/rk3399/vaaman/BoardConfig.mk"
+if [ -f "$VAAMAN_BC" ]; then
+    if grep -q "PRODUCT_KERNEL_VERSION := 4.19" "$VAAMAN_BC"; then
+        sed -i 's/PRODUCT_KERNEL_VERSION := 4.19/PRODUCT_KERNEL_VERSION := 5.10/' "$VAAMAN_BC"
+        echo "Fixed kernel version: 4.19 -> 5.10 in Vaaman BoardConfig"
+    fi
+fi
+
+# Fix: U-Boot make.sh uses relative path for prebuilt GCC, which fails on Debian 13
+UBOOT_MAKE_SH="u-boot/make.sh"
+if [ -f "$UBOOT_MAKE_SH" ]; then
+    if grep -q "CROSS_COMPILE_ARM64=../prebuilts" "$UBOOT_MAKE_SH"; then
+        ABS_PATH="$WORK_DIR/prebuilts/gcc/linux-x86/aarch64/gcc-linaro-6.3.1-2017.05-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-"
+        sed -i "s|CROSS_COMPILE_ARM64=../prebuilts/gcc/linux-x86/aarch64/gcc-linaro-6.3.1-2017.05-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-|CROSS_COMPILE_ARM64=$ABS_PATH|" "$UBOOT_MAKE_SH"
+        echo "Fixed U-Boot toolchain path to absolute in make.sh"
+    fi
+fi
+
 # ---------------------------------------------------------------------------
 # 3. Select lunch target
 # ---------------------------------------------------------------------------
@@ -163,10 +182,71 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 7. GApps Integration
+# 7. Fix prebuilts/sdk compatibility (Debian/WSL2 workarounds)
 # ---------------------------------------------------------------------------
 echo ""
-echo "[7/7] GApps Integration..."
+echo "[7/7] Fixing prebuilts/sdk compatibility..."
+echo ""
+
+SCRIPT_DIR_FIX="$(cd "$(dirname "$0")" && pwd)"
+
+# Run Python sanitizer on prebuilts/sdk Android.bp files
+if [ -f "$SCRIPT_DIR_FIX/fix_prebuilts.py" ]; then
+    echo "Running prebuilts sanitizer..."
+    python3 "$SCRIPT_DIR_FIX/fix_prebuilts.py"
+fi
+
+# Create missing AndroidManifest.xml files in prebuilts/sdk directories
+MANIFEST_DIRS=(
+    "prebuilts/sdk/current"
+    "prebuilts/sdk/current/extras/app-toolkit"
+    "prebuilts/sdk/current/extras/constraint-layout"
+    "prebuilts/sdk/current/extras/material-design"
+    "prebuilts/sdk/current/extras/material-design-x"
+    "prebuilts/sdk/current/support"
+)
+MANIFEST_CONTENT='<?xml version="1.0" encoding="utf-8"?><manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.android.stub" />'
+for dir in "${MANIFEST_DIRS[@]}"; do
+    if [ -d "$dir" ] && [ ! -f "$dir/AndroidManifest.xml" ]; then
+        echo "$MANIFEST_CONTENT" > "$dir/AndroidManifest.xml"
+        echo "Created $dir/AndroidManifest.xml"
+    fi
+done
+
+# Fix broken symlinks for clang-3289846 libraries
+CLANG_LIB_DIR="prebuilts/clang/host/linux-x86/clang-3289846/lib64"
+GCC_SYSROOT="prebuilts/gcc/linux-x86/host/x86_64-linux-glibc2.17-4.8/sysroot/usr/lib"
+if [ -d "$CLANG_LIB_DIR" ] && [ -d "$GCC_SYSROOT" ]; then
+    for lib in libncurses.so.5 libtinfo.so.5; do
+        if [ ! -e "$CLANG_LIB_DIR/$lib" ] && [ -e "$GCC_SYSROOT/$lib" ]; then
+            ln -sf "../../../../../gcc/linux-x86/host/x86_64-linux-glibc2.17-4.8/sysroot/usr/lib/$lib" "$CLANG_LIB_DIR/$lib"
+            echo "Fixed symlink: $CLANG_LIB_DIR/$lib"
+        fi
+    done
+fi
+
+# Fix build.sh kernel copy and IS_VEHICLE syntax
+BUILD_SH="build.sh"
+if [ -f "$BUILD_SH" ]; then
+    # Fix 1: Add mkdir before kernel copy
+    if grep -q 'cp -rf \$KERNEL_DEBUG \$OUT/kernel' "$BUILD_SH"; then
+        sed -i 's|cp -rf \$KERNEL_DEBUG \$OUT/kernel|mkdir -p $(dirname \$OUT/kernel) \&\& cp -rf \$KERNEL_DEBUG \$OUT/kernel|' "$BUILD_SH"
+        echo "Fixed build.sh: kernel copy mkdir"
+    fi
+    # Fix 2: Quote IS_VEHICLE variable
+    if grep -q 'if \[ \$IS_VEHICLE = "true" \]; then' "$BUILD_SH"; then
+        sed -i 's|if \[ \$IS_VEHICLE = "true" \]; then|if [ "\$IS_VEHICLE" = "true" ]; then|' "$BUILD_SH"
+        echo "Fixed build.sh: IS_VEHICLE quoting"
+    fi
+fi
+
+echo "Prebuilts fixes applied."
+
+# ---------------------------------------------------------------------------
+# 8. GApps Integration
+# ---------------------------------------------------------------------------
+echo ""
+echo "[8/8] GApps Integration..."
 echo ""
 echo "Include Google Play & services for Android TV?"
 echo "  1) MindTheGapps (Android TV 12.1) - Recommended"

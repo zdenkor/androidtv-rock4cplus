@@ -85,7 +85,26 @@ sudo mount "$PART_PATH" "$MOUNT_POINT"
 sudo chown -R "$USER:$USER" "$MOUNT_POINT"
 
 # ---------------------------------------------------------------------------
-# 6. Add to fstab for auto-mount on boot
+# 6. Copy repository to USB drive (so scripts are available in WSL)
+# ---------------------------------------------------------------------------
+echo ""
+echo "[6/6] Copying build repository to USB drive..."
+REPO_SRC="$(cd "$(dirname "$0")/.." && pwd)"
+REPO_DST="$MOUNT_POINT/androidtv-rock4cplus-repo"
+
+if [ -d "$REPO_SRC" ]; then
+    mkdir -p "$REPO_DST"
+    cp -r "$REPO_SRC"/* "$REPO_DST/" 2>/dev/null || true
+    cp -r "$REPO_SRC"/.* "$REPO_DST/" 2>/dev/null || true
+    echo "Repository copied to: $REPO_DST"
+    echo "You can now run scripts from WSL using:"
+    echo "  cd $REPO_DST && ./scripts/01-setup-environment.sh"
+else
+    echo "WARNING: Could not find repository source at $REPO_SRC"
+fi
+
+# ---------------------------------------------------------------------------
+# 7. Add to fstab for auto-mount on boot
 # ---------------------------------------------------------------------------
 echo ""
 echo "Adding to /etc/fstab for auto-mount on boot..."
@@ -96,7 +115,7 @@ if ! grep -q "$UUID" /etc/fstab; then
 fi
 
 # ---------------------------------------------------------------------------
-# 7. Save config
+# 8. Save config
 # ---------------------------------------------------------------------------
 CONFIG_FILE="$(dirname "$0")/../.build-config"
 mkdir -p "$(dirname "$CONFIG_FILE")"
@@ -107,6 +126,9 @@ cat > "$CONFIG_FILE" << EOF
 
 # Work directory (on USB drive)
 WORK_DIR=$MOUNT_POINT/androidtv-rock4cplus
+
+# Repository directory (copy on USB drive)
+REPO_DIR=$REPO_DST
 
 # USB mount point
 USB_MOUNT=$MOUNT_POINT
@@ -123,7 +145,12 @@ echo "Drive: $USB_PATH"
 echo "Mount: $MOUNT_POINT"
 echo "UUID:  $UUID"
 echo ""
+echo "AOSP work dir:  $MOUNT_POINT/androidtv-rock4cplus"
+echo "Repo copy:      $REPO_DST"
+echo ""
 echo "Config saved to: $CONFIG_FILE"
 echo ""
 echo "Next step: Run 01-setup-environment.sh"
+echo "  From Windows: ./scripts/01-setup-environment.sh"
+echo "  From WSL:     cd $REPO_DST && ./scripts/01-setup-environment.sh"
 echo ""

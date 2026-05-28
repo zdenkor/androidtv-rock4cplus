@@ -15,6 +15,14 @@ CONFIG_FILE="$SCRIPT_DIR/../.build-config"
 if [ -f "$CONFIG_FILE" ]; then
     source "$CONFIG_FILE"
     echo "Loaded config: WORK_DIR=$WORK_DIR"
+    if [ -n "$REPO_DIR" ] && [ "$SCRIPT_DIR" != "$REPO_DIR/scripts" ]; then
+        echo ""
+        echo "NOTE: Repository copy exists on USB drive at:"
+        echo "  $REPO_DIR"
+        echo "Consider running scripts from there instead:"
+        echo "  cd $REPO_DIR && ./scripts/01-setup-environment.sh"
+        echo ""
+    fi
 else
     echo "NOTE: No .build-config found. Run 00-setup-usb.sh first, or using default paths."
     WORK_DIR="$HOME/androidtv-rock4cplus"

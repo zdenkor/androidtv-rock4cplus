@@ -27,6 +27,45 @@ echo ""
 cd "$WORK_DIR"
 
 # ---------------------------------------------------------------------------
+# 0. Re-apply prebuilts fixes (in case source was re-synced)
+# ---------------------------------------------------------------------------
+echo "[0/4] Re-applying prebuilts fixes..."
+SCRIPT_DIR_FIX="$(cd "$(dirname "$0")" && pwd)"
+if [ -f "$SCRIPT_DIR_FIX/fix_prebuilts.py" ]; then
+    python3 "$SCRIPT_DIR_FIX/fix_prebuilts.py" 2>/dev/null || true
+fi
+
+# Re-create missing AndroidManifest.xml files if needed
+MANIFEST_DIRS=(
+    "prebuilts/sdk/current"
+    "prebuilts/sdk/current/extras/app-toolkit"
+    "prebuilts/sdk/current/extras/constraint-layout"
+    "prebuilts/sdk/current/extras/material-design"
+    "prebuilts/sdk/current/extras/material-design-x"
+    "prebuilts/sdk/current/support"
+)
+MANIFEST_CONTENT='<?xml version="1.0" encoding="utf-8"?><manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.android.stub" />'
+for dir in "${MANIFEST_DIRS[@]}"; do
+    if [ -d "$dir" ] && [ ! -f "$dir/AndroidManifest.xml" ]; then
+        echo "$MANIFEST_CONTENT" > "$dir/AndroidManifest.xml"
+    fi
+done
+
+# Re-fix clang symlinks if needed
+CLANG_LIB_DIR="prebuilts/clang/host/linux-x86/clang-3289846/lib64"
+GCC_SYSROOT="prebuilts/gcc/linux-x86/host/x86_64-linux-glibc2.17-4.8/sysroot/usr/lib"
+if [ -d "$CLANG_LIB_DIR" ] && [ -d "$GCC_SYSROOT" ]; then
+    for lib in libncurses.so.5 libtinfo.so.5; do
+        if [ ! -e "$CLANG_LIB_DIR/$lib" ] && [ -e "$GCC_SYSROOT/$lib" ]; then
+            ln -sf "../../../../../gcc/linux-x86/host/x86_64-linux-glibc2.17-4.8/sysroot/usr/lib/$lib" "$CLANG_LIB_DIR/$lib"
+        fi
+    done
+fi
+
+echo "Prebuilts fixes verified."
+echo ""
+
+# ---------------------------------------------------------------------------
 # 1. Set up environment
 # ---------------------------------------------------------------------------
 echo "[1/4] Setting up build environment..."
@@ -64,28 +103,67 @@ echo "[3/4] Starting build..."
 echo "This will take 4-8 hours on first build."
 echo ""
 
+# Fix: Debian 13's GCC 12+ is too new for U-Boot.
+# Pre-build U-Boot manually with prebuilt GCC 6.3.1, then skip it in build.sh.
+GCC_PREBUILT="$WORK_DIR/prebuilts/gcc/linux-x86/aarch64/gcc-linaro-6.3.1-2017.05-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-"
+
+if [ -f "${GCC_PREBUILT}gcc" ]; then
+    echo "Pre-building U-Boot with GCC 6.3.1..."
+    cd "$WORK_DIR/u-boot"
+    make clean 2>/dev/null; make mrproper 2>/dev/null; make distclean 2>/dev/null
+    export CROSS_COMPILE="$GCC_PREBUILT"
+    make rk3399-vaaman-android_defconfig 2>&1 | tail -1
+    make -j$(nproc) 2>&1 | tail -3
+    unset CROSS_COMPILE
+    cd "$WORK_DIR"
+    
+    if [ -f "$WORK_DIR/u-boot/idbloader.img" ]; then
+        echo "U-Boot built successfully (idbloader.img)"
+        # Copy U-Boot outputs to where build.sh expects them
+        mkdir -p "$WORK_DIR/rockdev"
+        cp "$WORK_DIR/u-boot/idbloader.img" "$WORK_DIR/rockdev/" 2>/dev/null || true
+        cp "$WORK_DIR/u-boot/u-boot.itb" "$WORK_DIR/rockdev/" 2>/dev/null || true
+        cp "$WORK_DIR/u-boot/trust.img" "$WORK_DIR/rockdev/" 2>/dev/null || true
+        SKIP_UBOOT=true
+    else
+        echo "WARNING: U-Boot build may have failed. Continuing anyway..."
+        SKIP_UBOOT=false
+    fi
+else
+    SKIP_UBOOT=false
+fi
+
 START_TIME=$(date +%s)
 
 case $BUILD_CHOICE in
     1)
         # Full build: U-Boot + Android + Kernel + update image
-        echo "Running: ./build.sh -UACKup"
-        ./build.sh -UACKup 2>&1 | tee build.log
+        if [ "$SKIP_UBOOT" = true ]; then
+            echo "Running: ./build.sh -ACKup (U-Boot pre-built)"
+            ./build.sh -ACKup 2>&1 | tee build.log
+        else
+            echo "Running: ./build.sh -UACKup"
+            ./build.sh -UACKup 2>&1 | tee build.log
+        fi
+        BUILD_EXIT=${PIPESTATUS[0]}
         ;;
     2)
         # Android only
         echo "Running: ./build.sh -A"
         ./build.sh -A 2>&1 | tee build.log
+        BUILD_EXIT=${PIPESTATUS[0]}
         ;;
     3)
         # Kernel only
         echo "Running: ./build.sh -CK"
         ./build.sh -CK 2>&1 | tee build.log
+        BUILD_EXIT=${PIPESTATUS[0]}
         ;;
     4)
         # U-Boot only
         echo "Running: ./build.sh -U"
         ./build.sh -U 2>&1 | tee build.log
+        BUILD_EXIT=${PIPESTATUS[0]}
         ;;
     *)
         echo "Invalid choice. Running full build."
