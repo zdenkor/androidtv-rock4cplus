@@ -4,7 +4,8 @@
 # Downloads and integrates preinstalled apps into the Android TV build
 # =============================================================================
 
-set -e
+# NOTE: Not using 'set -e' — we handle errors explicitly so the script
+# doesn't silently exit on download failures.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -139,6 +140,29 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# Helper: resolve GitHub /latest/download/ URLs via API
+# ---------------------------------------------------------------------------
+resolve_github_url() {
+    local url="$1"
+    # Extract owner/repo from github.com URLs
+    if [[ "$url" =~ github\.com/([^/]+/[^/]+)/releases/latest/download/(.+) ]]; then
+        local repo="${BASH_REMATCH[1]}"
+        local filename="${BASH_REMATCH[2]}"
+        # Query GitHub API for the latest release
+        local api_url="https://api.github.com/repos/$repo/releases/latest"
+        local download_url
+        download_url=$(curl -sS "$api_url" 2>/dev/null | grep -o "\"browser_download_url\": *\"[^\"]*$filename\"" | head -1 | grep -o 'https://[^"]*')
+        if [ -n "$download_url" ]; then
+            echo "$download_url"
+            return 0
+        fi
+    fi
+    # Not a GitHub /latest/ URL or API failed — return original
+    echo "$url"
+    return 1
+}
+
+# ---------------------------------------------------------------------------
 # Download selected apps
 # ---------------------------------------------------------------------------
 echo ""
@@ -154,20 +178,26 @@ for app in "${SELECTED[@]}"; do
     
     echo "  [$app] $url"
     
+    # Resolve GitHub /latest/ URLs via API
+    resolved_url=$(resolve_github_url "$url")
+    if [ "$resolved_url" != "$url" ]; then
+        echo "    -> Resolved: $resolved_url"
+    fi
+    
     if command -v wget &>/dev/null; then
-        if wget -q --show-progress -O "$APPS_DIR/$file" "$url" 2>/dev/null; then
+        if wget --show-progress -O "$APPS_DIR/$file" "$resolved_url" 2>&1 | tail -5; then
             echo "    -> Downloaded: $file"
             ((DOWNLOADED++)) || true
         else
-            echo "    -> FAILED (will need manual download)"
+            echo "    -> FAILED (HTTP error or network issue)"
             ((FAILED++)) || true
         fi
     elif command -v curl &>/dev/null; then
-        if curl -sSL -o "$APPS_DIR/$file" "$url" 2>/dev/null; then
+        if curl -SL --progress-bar -o "$APPS_DIR/$file" "$resolved_url"; then
             echo "    -> Downloaded: $file"
             ((DOWNLOADED++)) || true
         else
-            echo "    -> FAILED (will need manual download)"
+            echo "    -> FAILED (HTTP error or network issue)"
             ((FAILED++)) || true
         fi
     else
