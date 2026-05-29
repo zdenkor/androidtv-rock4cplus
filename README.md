@@ -37,7 +37,7 @@ This repository provides a complete, automated build system for compiling Androi
 
 ### Preinstalled Apps (Optional)
 
-Run `06-preinstall-apps.sh` to bake apps directly into the system image.
+Run `03a-preinstall-apps.sh` to bake apps directly into the system image.
 
 **Essential (recommended):**
 
@@ -152,7 +152,7 @@ chmod +x scripts/*.sh
 ./scripts/01-setup-environment.sh # Install dependencies
 ./scripts/02-download-source.sh   # Download AOSP + Rockchip BSP (~80GB)
 ./scripts/03-configure-build.sh   # Configure device, TV, apply prebuilts fixes
-./scripts/06-preinstall-apps.sh   # Optional: preinstall apps
+./scripts/03a-preinstall-apps.sh   # Optional: preinstall apps
 ./scripts/04-build-android.sh     # Build Android TV (4-8 hours)
 ./scripts/05-flash-device.sh    # Flash to ROCK 4C+
 ```
@@ -170,7 +170,7 @@ cd /mnt/aosp-build/androidtv-rock4cplus-repo
 | 1 | `./scripts/01-setup-environment.sh` | Install build dependencies & JDK 11 |
 | 2 | `./scripts/02-download-source.sh` | Download AOSP + Rockchip BSP (~80GB) |
 | 3 | `./scripts/03-configure-build.sh` | Configure for ROCK 4C+, Android TV, and **auto-apply prebuilts fixes** |
-| 3b | `./scripts/06-preinstall-apps.sh` | (Optional) Preinstall apps into build |
+| 3b | `./scripts/03a-preinstall-apps.sh` | (Optional) Preinstall apps into build |
 | 4 | `./scripts/04-build-android.sh` | Build Android TV (4-8 hours) |
 | 5 | `./scripts/05-flash-device.sh` | Flash to ROCK 4C+ |
 
@@ -190,7 +190,7 @@ AndroidTV for Radxa4C+/
 │   ├── 03-configure-build.sh        # Configure device, kernel, TV, GApps
 │   ├── 04-build-android.sh          # Build the image
 │   ├── 05-flash-device.sh           # Flash to device
-│   └── 06-preinstall-apps.sh        # Download & integrate apps
+│   └── 03a-preinstall-apps.sh        # Download & integrate apps
 ├── patches/
 │   └── rk3399-rock-4c-plus.dts      # ROCK 4C+ device tree (RK3399-T)
 ├── configs/

@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================================
-# 06-preinstall-apps.sh
+# 03a-preinstall-apps.sh
 # Downloads and integrates preinstalled apps into the Android TV build
 # =============================================================================
 
