@@ -69,29 +69,29 @@ APPS[AuroraStore,url]="https://gitlab.com/AuroraOSS/AuroraStore/-/releases/perma
 APPS[AuroraStore,file]="AuroraStore.apk"
 APPS[AuroraStore,desc]="Anonymous Google Play Store client"
 
-APPS[VLC,url]="https://get.videolan.org/vlc-android/3.5.7/VLC-Android-3.5.7-arm64.apk"
+APPS[VLC,url]="https://get.videolan.org/vlc-android/3.7.0/VLC-Android-3.7.0-arm64.apk"
 APPS[VLC,file]="VLC.apk"
 APPS[VLC,desc]="Universal media player"
 
 APPS[TiviMate,url]="https://tivimate.com/download/TiviMate.apk"
 APPS[TiviMate,file]="TiviMate.apk"
-APPS[TiviMate,desc]="IPTV player with EPG guide"
+APPS[TiviMate,desc]="IPTV player with EPG guide (NOTE: URL may be broken — download manually from tivimate.com)"
 
-APPS[Xplore,url]="https://www.lonelycatgames.com/download/xplore/X-plore.apk"
+APPS[Xplore,url]="https://www.lonelycatgames.com/apps/xplore/release/X-plore.apk"
 APPS[Xplore,file]="Xplore.apk"
-APPS[Xplore,desc]="File manager with network shares (SMB, FTP)"
+APPS[Xplore,desc]="File manager with network shares (SMB, FTP) (NOTE: URL may be broken — download manually)"
 
-APPS[SideloadLauncher,url]="https://github.com/Chainfire/SideloadLauncher/releases/latest/download/SideloadLauncher.apk"
+APPS[SideloadLauncher,url]="https://f-droid.org/repo/org.cyanogenmod.sideloadlauncher_1.apk"
 APPS[SideloadLauncher,file]="SideloadLauncher.apk"
-APPS[SideloadLauncher,desc]="Show sideloaded apps in Android TV launcher"
+APPS[SideloadLauncher,desc]="Show sideloaded apps in Android TV launcher (NOTE: URL may be broken — download manually)"
 
 APPS[BackgroundApps,url]="https://f-droid.org/repo/com.ebaschiera.backgroundappsandprocesslist.apk"
 APPS[BackgroundApps,file]="BackgroundApps.apk"
-APPS[BackgroundApps,desc]="Task manager / force-stop apps (NOTE: may be unavailable — download manually if 404)"
+APPS[BackgroundApps,desc]="Task manager / force-stop apps (NOTE: removed from F-Droid — download manually)"
 
 APPS[AptoideTV,url]="https://en.aptoide.com/download?package=cm.aptoide.tv"
 APPS[AptoideTV,file]="AptoideTV.apk"
-APPS[AptoideTV,desc]="App store designed for Android TV (NOTE: downloads from web page — may need manual download)"
+APPS[AptoideTV,desc]="App store designed for Android TV (NOTE: web download — may need manual APK)"
 
 # ---------------------------------------------------------------------------
 # Download apps
@@ -153,7 +153,7 @@ resolve_release_url() {
         
         # Get ALL .apk assets, pick best architecture match
         local all_urls
-        all_urls=$(curl -sS "$api_url" 2>/dev/null | grep -o '"browser_download_url": *"[^"]*\.apk"' | grep -o 'https://[^"]*')
+        all_urls=$(curl -sSL "$api_url" 2>/dev/null | grep -o '"browser_download_url": *"[^"]*\.apk"' | grep -o 'https://[^"]*')
         
         if [ -n "$all_urls" ]; then
             # Prefer arm64-v8a, then arm64, then universal, then any
@@ -179,7 +179,7 @@ resolve_release_url() {
         
         # Get ALL .apk asset direct URLs, pick best architecture match
         local all_urls
-        all_urls=$(curl -sS "$api_url" 2>/dev/null | grep -o '"direct_asset_url":"[^"]*\.apk"' | grep -o 'https://[^"]*' | sed 's/\\//g')
+        all_urls=$(curl -sSL "$api_url" 2>/dev/null | grep -o '"direct_asset_url":"[^"]*\.apk"' | grep -o 'https://[^"]*' | sed 's/\\//g')
         
         if [ -n "$all_urls" ]; then
             download_url=$(echo "$all_urls" | grep -i "arm64-v8a" | head -1)
