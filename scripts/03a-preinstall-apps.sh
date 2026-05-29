@@ -6,6 +6,24 @@
 
 # NOTE: Not using 'set -e' — we handle errors explicitly so the script
 # doesn't silently exit on download failures.
+#
+# ============================================================================
+# GOOGLE PLAY SETUP (Optional — for official APKs directly from Play Store)
+# ============================================================================
+# To use Google Play as the PRIMARY download source, set these env vars:
+#
+#   export APKEEP_GP_EMAIL="your@gmail.com"
+#   export APKEEP_GP_PASS="xxxx xxxx xxxx xxxx"
+#
+# How to get the password:
+#   1. Enable 2-Step Verification on your Google account
+#   2. Go to: https://myaccount.google.com/apppasswords
+#   3. Generate a 16-character App Password for "Other" → name it "apkeep"
+#   4. Copy the 16-char password (spaces are OK) into APKEEP_GP_PASS
+#
+# If these vars are NOT set, the script uses APKMirror → F-Droid → APKPure
+# via apkeep, or wget/curl as final fallback.
+# ============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -134,6 +152,9 @@ echo ""
 echo "  [A] ALL apps (1-15)"
 echo "  [E] Essential only (1-8)"
 echo "  [W] Working apps only (auto-downloadable, excludes manual)"
+echo ""
+echo "  NOTE: Set APKEEP_GP_EMAIL + APKEEP_GP_PASS env vars to use"
+echo "        Google Play as primary source (see script header for setup)"
 echo ""
 read -rp "Enter choices (e.g., 1,2,3,7 or A): " APP_CHOICES
 
