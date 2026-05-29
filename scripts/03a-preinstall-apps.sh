@@ -50,6 +50,28 @@ echo " Preinstalled Apps for Android TV"
 echo "============================================"
 echo ""
 
+# ---------------------------------------------------------------------------
+# Optional: Google Play credentials setup
+# ---------------------------------------------------------------------------
+if [ -z "${APKEEP_GP_EMAIL}" ] || [ -z "${APKEEP_GP_PASS}" ]; then
+    echo "Google Play credentials not detected."
+    echo "  - Official APKs from Play Store (most reliable)"
+    echo "  - Or press Enter to skip and use APKMirror/F-Droid/APKPure"
+    echo ""
+    read -rp "Use Google Play? [y/N]: " USE_GP
+    if [ "$USE_GP" = "y" ] || [ "$USE_GP" = "Y" ]; then
+        read -rp "  Google email: " APKEEP_GP_EMAIL
+        read -rsp "  App password (hidden): " APKEEP_GP_PASS
+        echo ""
+        export APKEEP_GP_EMAIL APKEEP_GP_PASS
+        echo "  Credentials set for this session."
+        echo "  To save permanently, add to ~/.bashrc:"
+        echo "    export APKEEP_GP_EMAIL=\"$APKEEP_GP_EMAIL\""
+        echo "    export APKEEP_GP_PASS=\"$APKEEP_GP_PASS\""
+    fi
+    echo ""
+fi
+
 APPS_DIR="$WORK_DIR/vendor/rockchip/apps"
 mkdir -p "$APPS_DIR"
 
