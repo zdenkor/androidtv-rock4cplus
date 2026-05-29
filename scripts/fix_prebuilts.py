@@ -299,26 +299,24 @@ for path in modules_to_disable:
 # ---------------------------------------------------------------------------
 # 7. Create missing AndroidManifest.xml files
 # ---------------------------------------------------------------------------
-manifest_dirs = [
-    os.path.join(WORK_DIR, 'prebuilts', 'sdk', 'current'),
-    os.path.join(WORK_DIR, 'prebuilts', 'sdk', 'current', 'androidx'),
-    os.path.join(WORK_DIR, 'prebuilts', 'sdk', 'current', 'androidx-legacy'),
-    os.path.join(WORK_DIR, 'prebuilts', 'sdk', 'current', 'extras', 'app-toolkit'),
-    os.path.join(WORK_DIR, 'prebuilts', 'sdk', 'current', 'extras', 'constraint-layout'),
-    os.path.join(WORK_DIR, 'prebuilts', 'sdk', 'current', 'extras', 'constraint-layout-x'),
-    os.path.join(WORK_DIR, 'prebuilts', 'sdk', 'current', 'extras', 'material-design'),
-    os.path.join(WORK_DIR, 'prebuilts', 'sdk', 'current', 'extras', 'material-design-x'),
-    os.path.join(WORK_DIR, 'prebuilts', 'sdk', 'current', 'support'),
-]
+# Automatically find ALL directories under prebuilts/sdk/current that have
+# an Android.bp file but no AndroidManifest.xml, and create stubs.
 manifest_content = '<?xml version="1.0" encoding="utf-8"?><manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.android.stub" />'
+sdk_current = os.path.join(WORK_DIR, 'prebuilts', 'sdk', 'current')
 
-for d in manifest_dirs:
-    manifest_path = os.path.join(d, 'AndroidManifest.xml')
-    if os.path.isdir(d) and not os.path.exists(manifest_path):
-        with open(manifest_path, 'w') as f:
-            f.write(manifest_content)
-        print('Created', manifest_path)
-        changed += 1
+if os.path.isdir(sdk_current):
+    for dirpath, dirnames, filenames in os.walk(sdk_current):
+        # Skip directories that already have AndroidManifest.xml
+        if 'AndroidManifest.xml' in filenames:
+            continue
+        # Check if this directory has any .bp file (Android.bp or *.bp)
+        bp_files = [f for f in filenames if f.endswith('.bp')]
+        if bp_files:
+            manifest_path = os.path.join(dirpath, 'AndroidManifest.xml')
+            with open(manifest_path, 'w') as f:
+                f.write(manifest_content)
+            print('Created', manifest_path)
+            changed += 1
 
 # ---------------------------------------------------------------------------
 # 8. Fix broken clang-3289846 symlinks

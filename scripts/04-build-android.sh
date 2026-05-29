@@ -38,25 +38,6 @@ if [ -f "$SCRIPT_DIR_FIX/fix_prebuilts.py" ]; then
     python3 "$SCRIPT_DIR_FIX/fix_prebuilts.py" 2>/dev/null || true
 fi
 
-# Re-create missing AndroidManifest.xml files if needed
-MANIFEST_DIRS=(
-    "prebuilts/sdk/current"
-    "prebuilts/sdk/current/androidx"
-    "prebuilts/sdk/current/androidx-legacy"
-    "prebuilts/sdk/current/extras/app-toolkit"
-    "prebuilts/sdk/current/extras/constraint-layout"
-    "prebuilts/sdk/current/extras/constraint-layout-x"
-    "prebuilts/sdk/current/extras/material-design"
-    "prebuilts/sdk/current/extras/material-design-x"
-    "prebuilts/sdk/current/support"
-)
-MANIFEST_CONTENT='<?xml version="1.0" encoding="utf-8"?><manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.android.stub" />'
-for dir in "${MANIFEST_DIRS[@]}"; do
-    if [ -d "$dir" ] && [ ! -f "$dir/AndroidManifest.xml" ]; then
-        echo "$MANIFEST_CONTENT" > "$dir/AndroidManifest.xml"
-    fi
-done
-
 # Re-fix clang symlinks if needed
 CLANG_LIB_DIR="prebuilts/clang/host/linux-x86/clang-3289846/lib64"
 GCC_SYSROOT="prebuilts/gcc/linux-x86/host/x86_64-linux-glibc2.17-4.8/sysroot/usr/lib"

@@ -193,30 +193,11 @@ echo "[7/7] Fixing prebuilts/sdk compatibility..."
 echo ""
 
 # Run Python sanitizer on prebuilts/sdk Android.bp files
+# This also auto-creates missing AndroidManifest.xml stubs
 if [ -f "$SCRIPT_DIR_FIX/fix_prebuilts.py" ]; then
     echo "Running prebuilts sanitizer..."
     python3 "$SCRIPT_DIR_FIX/fix_prebuilts.py"
 fi
-
-# Create missing AndroidManifest.xml files in prebuilts/sdk directories
-MANIFEST_DIRS=(
-    "prebuilts/sdk/current"
-    "prebuilts/sdk/current/androidx"
-    "prebuilts/sdk/current/androidx-legacy"
-    "prebuilts/sdk/current/extras/app-toolkit"
-    "prebuilts/sdk/current/extras/constraint-layout"
-    "prebuilts/sdk/current/extras/constraint-layout-x"
-    "prebuilts/sdk/current/extras/material-design"
-    "prebuilts/sdk/current/extras/material-design-x"
-    "prebuilts/sdk/current/support"
-)
-MANIFEST_CONTENT='<?xml version="1.0" encoding="utf-8"?><manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.android.stub" />'
-for dir in "${MANIFEST_DIRS[@]}"; do
-    if [ -d "$dir" ] && [ ! -f "$dir/AndroidManifest.xml" ]; then
-        echo "$MANIFEST_CONTENT" > "$dir/AndroidManifest.xml"
-        echo "Created $dir/AndroidManifest.xml"
-    fi
-done
 
 # Fix broken symlinks for clang-3289846 libraries
 CLANG_LIB_DIR="prebuilts/clang/host/linux-x86/clang-3289846/lib64"
