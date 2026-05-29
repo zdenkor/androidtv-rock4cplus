@@ -148,21 +148,20 @@ resolve_release_url() {
     # --- GitHub: github.com/OWNER/REPO/releases/latest/download/FILENAME ---
     if [[ "$url" =~ github\.com/([^/]+/[^/]+)/releases/latest/download/(.+) ]]; then
         local repo="${BASH_REMATCH[1]}"
-        local filename="${BASH_REMATCH[2]}"
-        local pattern="${filename%.apk}"
         local api_url="https://api.github.com/repos/$repo/releases/latest"
         local download_url
         
-        # Try exact match first, then fuzzy match
-        download_url=$(curl -sS "$api_url" 2>/dev/null | grep -o "\"browser_download_url\": *\"[^\"]*$filename\"" | head -1 | grep -o 'https://[^"]*')
+        # Get ALL .apk assets, pick best architecture match
+        local all_urls
+        all_urls=$(curl -sS "$api_url" 2>/dev/null | grep -o '"browser_download_url": *"[^"]*\.apk"' | grep -o 'https://[^"]*')
         
-        if [ -z "$download_url" ]; then
-            local all_urls
-            all_urls=$(curl -sS "$api_url" 2>/dev/null | grep -o '"browser_download_url": *"[^"]*"' | grep -o 'https://[^"]*')
-            download_url=$(echo "$all_urls" | grep -i "$pattern" | grep -i "arm64-v8a" | head -1)
-            [ -z "$download_url" ] && download_url=$(echo "$all_urls" | grep -i "$pattern" | grep -i "arm64" | head -1)
-            [ -z "$download_url" ] && download_url=$(echo "$all_urls" | grep -i "$pattern" | grep -i "universal" | head -1)
-            [ -z "$download_url" ] && download_url=$(echo "$all_urls" | grep -i "$pattern" | head -1)
+        if [ -n "$all_urls" ]; then
+            # Prefer arm64-v8a, then arm64, then universal, then any
+            download_url=$(echo "$all_urls" | grep -i "arm64-v8a" | head -1)
+            [ -z "$download_url" ] && download_url=$(echo "$all_urls" | grep -i "arm64" | head -1)
+            [ -z "$download_url" ] && download_url=$(echo "$all_urls" | grep -i "universal" | head -1)
+            [ -z "$download_url" ] && download_url=$(echo "$all_urls" | grep -i "aarch64" | head -1)
+            [ -z "$download_url" ] && download_url=$(echo "$all_urls" | head -1)
         fi
         
         if [ -n "$download_url" ]; then
@@ -174,25 +173,20 @@ resolve_release_url() {
     # --- GitLab: gitlab.com/OWNER/REPO/-/releases/permalink/latest/downloads/FILENAME ---
     if [[ "$url" =~ gitlab\.com/([^/]+/[^/]+)/-/releases/permalink/latest/downloads/(.+) ]]; then
         local repo="${BASH_REMATCH[1]}"
-        local filename="${BASH_REMATCH[2]}"
-        local pattern="${filename%.apk}"
-        # GitLab API: URL-encode the project path
         local encoded_repo="${repo//\//%2F}"
         local api_url="https://gitlab.com/api/v4/projects/${encoded_repo}/releases/permalink/latest"
         local download_url
         
-        # Get all asset direct URLs from GitLab API
+        # Get ALL .apk asset direct URLs, pick best architecture match
         local all_urls
-        all_urls=$(curl -sS "$api_url" 2>/dev/null | grep -o '"direct_asset_url":"[^"]*"' | grep -o 'https://[^"]*' | sed 's/\\//g')
+        all_urls=$(curl -sS "$api_url" 2>/dev/null | grep -o '"direct_asset_url":"[^"]*\.apk"' | grep -o 'https://[^"]*' | sed 's/\\//g')
         
         if [ -n "$all_urls" ]; then
-            # Try exact match first
-            download_url=$(echo "$all_urls" | grep -i "/$filename$" | head -1)
-            # Then fuzzy match, prefer arm64-v8a
-            [ -z "$download_url" ] && download_url=$(echo "$all_urls" | grep -i "$pattern" | grep -i "arm64-v8a" | head -1)
-            [ -z "$download_url" ] && download_url=$(echo "$all_urls" | grep -i "$pattern" | grep -i "arm64" | head -1)
-            [ -z "$download_url" ] && download_url=$(echo "$all_urls" | grep -i "$pattern" | grep -i "universal" | head -1)
-            [ -z "$download_url" ] && download_url=$(echo "$all_urls" | grep -i "$pattern" | head -1)
+            download_url=$(echo "$all_urls" | grep -i "arm64-v8a" | head -1)
+            [ -z "$download_url" ] && download_url=$(echo "$all_urls" | grep -i "arm64" | head -1)
+            [ -z "$download_url" ] && download_url=$(echo "$all_urls" | grep -i "universal" | head -1)
+            [ -z "$download_url" ] && download_url=$(echo "$all_urls" | grep -i "aarch64" | head -1)
+            [ -z "$download_url" ] && download_url=$(echo "$all_urls" | head -1)
         fi
         
         if [ -n "$download_url" ]; then
@@ -221,6 +215,18 @@ for app in "${SELECTED[@]}"; do
     file="${APPS[$app,file]}"
     
     echo "  [$app] $url"
+    
+    # Skip if already downloaded
+    if [ -f "$APPS_DIR/$file" ]; then
+        local_size=$(stat -c%s "$APPS_DIR/$file" 2>/dev/null || stat -f%z "$APPS_DIR/$file" 2>/dev/null || echo 0)
+        if [ "$local_size" -gt 10000 ]; then
+            echo "    -> Already downloaded ($(numfmt --to=iec $local_size 2>/dev/null || echo ${local_size} bytes)), skipping"
+            ((DOWNLOADED++)) || true
+            continue
+        else
+            echo "    -> Existing file too small (${local_size} bytes), re-downloading..."
+        fi
+    fi
     
     # Resolve GitHub/GitLab /latest/ URLs via API
     resolved_url=$(resolve_release_url "$url")
