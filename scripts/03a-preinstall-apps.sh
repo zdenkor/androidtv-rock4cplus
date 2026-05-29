@@ -54,7 +54,7 @@ APPS[LocalSend,desc]="AirDrop-like file sharing (cross-platform)"
 
 APPS[ButtonMapper,url]="https://github.com/florisboard/florisboard/releases/latest/download/app-release.apk"
 APPS[ButtonMapper,file]="ButtonMapper.apk"
-APPS[ButtonMapper,desc]="Remap remote control buttons"
+APPS[ButtonMapper,desc]="Remap remote control buttons (NOTE: URL points to FlorisBoard keyboard — replace with actual Button Mapper APK)"
 
 APPS[FDroid,url]="https://f-droid.org/F-Droid.apk"
 APPS[FDroid,file]="FDroid.apk"
@@ -148,10 +148,26 @@ resolve_github_url() {
     if [[ "$url" =~ github\.com/([^/]+/[^/]+)/releases/latest/download/(.+) ]]; then
         local repo="${BASH_REMATCH[1]}"
         local filename="${BASH_REMATCH[2]}"
+        # Strip .apk extension to get a fuzzy search pattern
+        local pattern="${filename%.apk}"
         # Query GitHub API for the latest release
         local api_url="https://api.github.com/repos/$repo/releases/latest"
         local download_url
+        
+        # Try exact match first, then fuzzy match
         download_url=$(curl -sS "$api_url" 2>/dev/null | grep -o "\"browser_download_url\": *\"[^\"]*$filename\"" | head -1 | grep -o 'https://[^"]*')
+        
+        if [ -z "$download_url" ]; then
+            # Fuzzy match: find any asset containing the pattern, prefer arm64-v8a
+            local all_urls
+            all_urls=$(curl -sS "$api_url" 2>/dev/null | grep -o '"browser_download_url": *"[^"]*"' | grep -o 'https://[^"]*')
+            # Prefer arm64-v8a, then arm64, then universal, then any match
+            download_url=$(echo "$all_urls" | grep -i "$pattern" | grep -i "arm64-v8a" | head -1)
+            [ -z "$download_url" ] && download_url=$(echo "$all_urls" | grep -i "$pattern" | grep -i "arm64" | head -1)
+            [ -z "$download_url" ] && download_url=$(echo "$all_urls" | grep -i "$pattern" | grep -i "universal" | head -1)
+            [ -z "$download_url" ] && download_url=$(echo "$all_urls" | grep -i "$pattern" | head -1)
+        fi
+        
         if [ -n "$download_url" ]; then
             echo "$download_url"
             return 0
