@@ -25,13 +25,15 @@ echo " Target: Radxa ROCK 4C+ (RK3399-T)"
 echo "============================================"
 echo ""
 
+# Resolve script directory BEFORE changing to WORK_DIR
+SCRIPT_DIR_FIX="$SCRIPT_DIR"
+
 cd "$WORK_DIR"
 
 # ---------------------------------------------------------------------------
 # 0. Re-apply prebuilts fixes (in case source was re-synced)
 # ---------------------------------------------------------------------------
 echo "[0/4] Re-applying prebuilts fixes..."
-SCRIPT_DIR_FIX="$(cd "$(dirname "$0")" && pwd)"
 if [ -f "$SCRIPT_DIR_FIX/fix_prebuilts.py" ]; then
     python3 "$SCRIPT_DIR_FIX/fix_prebuilts.py" 2>/dev/null || true
 fi

@@ -25,6 +25,9 @@ echo " Target: Radxa ROCK 4C+ (RK3399-T)"
 echo "============================================"
 echo ""
 
+# Resolve script directory BEFORE changing to WORK_DIR
+SCRIPT_DIR_FIX="$(cd "$(dirname "$0")" && pwd)"
+
 cd "$WORK_DIR"
 
 # ---------------------------------------------------------------------------
@@ -188,8 +191,6 @@ fi
 echo ""
 echo "[7/7] Fixing prebuilts/sdk compatibility..."
 echo ""
-
-SCRIPT_DIR_FIX="$(cd "$(dirname "$0")" && pwd)"
 
 # Run Python sanitizer on prebuilts/sdk Android.bp files
 if [ -f "$SCRIPT_DIR_FIX/fix_prebuilts.py" ]; then
