@@ -357,10 +357,14 @@ if os.path.exists(build_sh):
                     os.chmod(build_sh, 0o644)
                 except OSError:
                     pass
-            with open(build_sh, 'w') as f:
-                f.write(content)
-            print('Fixed build.sh syntax')
-            changed += 1
+            # Check again — if still not writable, skip gracefully
+            if not os.access(build_sh, os.W_OK):
+                print('WARNING: Cannot write build.sh (wrong owner) — skipping. Run: sudo chown -R "$USER" /mnt/aosp-build/androidtv-rock4cplus')
+            else:
+                with open(build_sh, 'w') as f:
+                    f.write(content)
+                print('Fixed build.sh syntax')
+                changed += 1
     except PermissionError:
         print('WARNING: Permission denied for build.sh — skipping (run with sudo if needed)')
 
