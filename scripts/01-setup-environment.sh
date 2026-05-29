@@ -8,24 +8,27 @@
 
 set -e
 
-# Load build config (WORK_DIR, USB mount, etc.)
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-CONFIG_FILE="$SCRIPT_DIR/../.build-config"
 
+# Default work directory (USB drive mount point)
+WORK_DIR="${WORK_DIR:-/mnt/aosp-build/androidtv-rock4cplus}"
+
+# Optionally load .build-config if it exists (for custom paths)
+CONFIG_FILE="$SCRIPT_DIR/../.build-config"
 if [ -f "$CONFIG_FILE" ]; then
     source "$CONFIG_FILE"
     echo "Loaded config: WORK_DIR=$WORK_DIR"
-    if [ -n "$REPO_DIR" ] && [ "$SCRIPT_DIR" != "$REPO_DIR/scripts" ]; then
-        echo ""
-        echo "NOTE: Repository copy exists on USB drive at:"
-        echo "  $REPO_DIR"
-        echo "Consider running scripts from there instead:"
-        echo "  cd $REPO_DIR && ./scripts/01-setup-environment.sh"
-        echo ""
-    fi
-else
-    echo "NOTE: No .build-config found. Run 00-setup-usb.sh first, or using default paths."
-    WORK_DIR="$HOME/androidtv-rock4cplus"
+fi
+
+# Check if a repo copy exists on the USB drive
+USB_REPO="/mnt/aosp-build/androidtv-rock4cplus-repo"
+if [ -d "$USB_REPO" ] && [ "$SCRIPT_DIR" != "$USB_REPO/scripts" ]; then
+    echo ""
+    echo "NOTE: Repository copy exists on USB drive at:"
+    echo "  $USB_REPO"
+    echo "Consider running scripts from there instead:"
+    echo "  cd $USB_REPO && ./scripts/01-setup-environment.sh"
+    echo ""
 fi
 
 # Detect distribution
