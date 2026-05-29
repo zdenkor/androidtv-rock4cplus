@@ -340,6 +340,12 @@ for app in "${SELECTED[@]}"; do
         ((DOWNLOADED++)) || true
     else
         echo "    -> FAILED (all download methods exhausted)"
+        ((FAILED++)) || true
+    fi
+done
+
+# ---------------------------------------------------------------------------
+# Create Android.mk for prebuilt apps
 # ---------------------------------------------------------------------------
 echo ""
 echo "Creating Android.mk for prebuilt apps..."
