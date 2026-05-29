@@ -140,23 +140,28 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Helper: resolve GitHub /latest/download/ and GitLab /permalink/latest/ URLs via API
+# Helper: resolve GitHub /latest/download/ and GitLab /permalink/latest/ URLs
+# via their respective APIs. These are FUTURE-PROOF — they always fetch the
+# latest release regardless of version number changes.
+#
+# Direct URLs (Kodi, VLC, F-Droid, AdAway, etc.) are NOT resolved here —
+# they pass through unchanged and must be updated manually when versions change.
 # ---------------------------------------------------------------------------
 resolve_release_url() {
     local url="$1"
     
     # --- GitHub: github.com/OWNER/REPO/releases/latest/download/FILENAME ---
+    # Uses GitHub Releases API. Works for ANY repo with releases.
+    # Picks arm64-v8a > arm64 > universal > aarch64 > first available.
     if [[ "$url" =~ github\.com/([^/]+/[^/]+)/releases/latest/download/(.+) ]]; then
         local repo="${BASH_REMATCH[1]}"
         local api_url="https://api.github.com/repos/$repo/releases/latest"
         local download_url
         
-        # Get ALL .apk assets, pick best architecture match
         local all_urls
         all_urls=$(curl -sSL "$api_url" 2>/dev/null | grep -o '"browser_download_url": *"[^"]*\.apk"' | grep -o 'https://[^"]*')
         
         if [ -n "$all_urls" ]; then
-            # Prefer arm64-v8a, then arm64, then universal, then any
             download_url=$(echo "$all_urls" | grep -i "arm64-v8a" | head -1)
             [ -z "$download_url" ] && download_url=$(echo "$all_urls" | grep -i "arm64" | head -1)
             [ -z "$download_url" ] && download_url=$(echo "$all_urls" | grep -i "universal" | head -1)
@@ -171,13 +176,13 @@ resolve_release_url() {
     fi
     
     # --- GitLab: gitlab.com/OWNER/REPO/-/releases/permalink/latest/downloads/FILENAME ---
+    # Uses GitLab Releases API. Works for ANY project with releases.
     if [[ "$url" =~ gitlab\.com/([^/]+/[^/]+)/-/releases/permalink/latest/downloads/(.+) ]]; then
         local repo="${BASH_REMATCH[1]}"
         local encoded_repo="${repo//\//%2F}"
         local api_url="https://gitlab.com/api/v4/projects/${encoded_repo}/releases/permalink/latest"
         local download_url
         
-        # Get ALL .apk asset direct URLs, pick best architecture match
         local all_urls
         all_urls=$(curl -sSL "$api_url" 2>/dev/null | grep -o '"direct_asset_url":"[^"]*\.apk"' | grep -o 'https://[^"]*' | sed 's/\\//g')
         
@@ -195,7 +200,7 @@ resolve_release_url() {
         fi
     fi
     
-    # Not a recognized release URL or API failed — return original
+    # Not a recognized API-backed URL — return original (direct URL)
     echo "$url"
     return 1
 }
