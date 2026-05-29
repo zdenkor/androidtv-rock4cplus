@@ -15,8 +15,22 @@
 # --- METHOD 1: Google Play (Recommended — official APKs) ---
 #   export APKEEP_GP_EMAIL="your@gmail.com"
 #   export APKEEP_GP_PASS="xxxx xxxx xxxx xxxx"
-#   How to get password: https://myaccount.google.com/apppasswords
-#   Requires: 2-Step Verification enabled on Google account
+#
+#   HOW TO GENERATE APP PASSWORD (16 chars):
+#   1. Enable 2-Step Verification on your Google account first:
+#      https://myaccount.google.com/signinoptions/two-step-verification
+#   2. Go to App Passwords page:
+#      https://myaccount.google.com/apppasswords
+#   3. Sign in with your Google password if asked
+#   4. At the bottom, click "Select app" → choose "Other (Custom name)"
+#   5. Type "apkeep" as the name, click "GENERATE"
+#   6. Google shows a 16-character password (e.g., "abcd efgh ijkl mnop")
+#   7. COPY IT IMMEDIATELY — you cannot view it again later
+#   8. Paste it into APKEEP_GP_PASS (spaces are OK, keep them)
+#
+#   EXAMPLE:
+#     export APKEEP_GP_EMAIL="tvoj@gmail.com"
+#     export APKEEP_GP_PASS="abcd efgh ijkl mnop"
 #
 # --- METHOD 2: APKMirror + F-Droid + APKPure (Default, no setup) ---
 #   Nothing to configure. apkeep automatically tries:
