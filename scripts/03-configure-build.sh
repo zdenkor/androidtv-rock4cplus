@@ -201,6 +201,7 @@ fi
 # Create missing AndroidManifest.xml files in prebuilts/sdk directories
 MANIFEST_DIRS=(
     "prebuilts/sdk/current"
+    "prebuilts/sdk/current/androidx"
     "prebuilts/sdk/current/extras/app-toolkit"
     "prebuilts/sdk/current/extras/constraint-layout"
     "prebuilts/sdk/current/extras/material-design"

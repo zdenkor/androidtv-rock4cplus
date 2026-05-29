@@ -41,6 +41,7 @@ fi
 # Re-create missing AndroidManifest.xml files if needed
 MANIFEST_DIRS=(
     "prebuilts/sdk/current"
+    "prebuilts/sdk/current/androidx"
     "prebuilts/sdk/current/extras/app-toolkit"
     "prebuilts/sdk/current/extras/constraint-layout"
     "prebuilts/sdk/current/extras/material-design"
