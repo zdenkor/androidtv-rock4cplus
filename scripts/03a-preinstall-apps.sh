@@ -74,6 +74,19 @@ if [ -z "${APKEEP_GP_EMAIL}" ] || [ -z "${APKEEP_GP_PASS}" ]; then
     echo ""
     read -rp "Use Google Play? [y/N]: " USE_GP
     if [ "$USE_GP" = "y" ] || [ "$USE_GP" = "Y" ]; then
+        echo ""
+        echo "  HOW TO GENERATE APP PASSWORD (16 chars):"
+        echo "  1. Enable 2-Step Verification first:"
+        echo "     https://myaccount.google.com/signinoptions/two-step-verification"
+        echo "  2. Go to App Passwords page:"
+        echo "     https://myaccount.google.com/apppasswords"
+        echo "  3. Sign in with your Google password if asked"
+        echo "  4. Click 'Select app' → choose 'Other (Custom name)'"
+        echo "  5. Type 'apkeep' as the name, click 'GENERATE'"
+        echo "  6. Google shows a 16-character password"
+        echo "  7. COPY IT IMMEDIATELY — you cannot view it again later"
+        echo "  8. Paste it below (spaces are OK, keep them)"
+        echo ""
         read -rp "  Google email: " APKEEP_GP_EMAIL
         read -rsp "  App password (hidden): " APKEEP_GP_PASS
         echo ""
