@@ -35,10 +35,12 @@ declare -A APPS
 APPS[SmartTube,url]="https://github.com/yuliskov/SmartTube/releases/latest/download/SmartTube_stable.apk"
 APPS[SmartTube,file]="SmartTube.apk"
 APPS[SmartTube,desc]="Ad-free YouTube client with 4K HDR, SponsorBlock"
+APPS[SmartTube,pkg]="com.liskovsoft.smarttubetv"
 
 APPS[Kodi,url]="https://mirrors.kodi.tv/releases/android/arm64-v8a/kodi-21.2-Omega-arm64-v8a.apk"
 APPS[Kodi,file]="Kodi.apk"
 APPS[Kodi,desc]="Media center (local files, Plex, Jellyfin, IPTV)"
+APPS[Kodi,pkg]="org.xbmc.kodi"
 
 APPS[ProjectivyLauncher,url]="https://github.com/spocky/miproja1/releases/latest/download/ProjectivyLauncher.apk"
 APPS[ProjectivyLauncher,file]="ProjectivyLauncher.apk"
@@ -47,51 +49,63 @@ APPS[ProjectivyLauncher,desc]="Customizable Android TV launcher (no ads)"
 APPS[TVBro,url]="https://github.com/truefedex/tv-bro/releases/latest/download/tv-bro.apk"
 APPS[TVBro,file]="TVBro.apk"
 APPS[TVBro,desc]="Web browser optimized for TV remote control"
+APPS[TVBro,pkg]="com.phlox.tvwebbrowser"
 
 APPS[LocalSend,url]="https://github.com/localsend/localsend/releases/latest/download/LocalSend-android-arm64.apk"
 APPS[LocalSend,file]="LocalSend.apk"
 APPS[LocalSend,desc]="AirDrop-like file sharing (cross-platform)"
+APPS[LocalSend,pkg]="org.localsend.localsend_app"
 
-APPS[ButtonMapper,url]="https://github.com/florisboard/florisboard/releases/latest/download/app-release.apk"
-APPS[ButtonMapper,file]="ButtonMapper.apk"
-APPS[ButtonMapper,desc]="Remap remote control buttons (NOTE: URL points to FlorisBoard keyboard — replace with actual Button Mapper APK)"
+APPS[KeyMapper,url]="https://f-droid.org/repo/io.github.sds100.keymapper.apk"
+APPS[KeyMapper,file]="KeyMapper.apk"
+APPS[KeyMapper,desc]="Remap keys and buttons (TV remote, gamepad, keyboard)"
+APPS[KeyMapper,pkg]="io.github.sds100.keymapper"
 
 APPS[FDroid,url]="https://f-droid.org/F-Droid.apk"
 APPS[FDroid,file]="FDroid.apk"
 APPS[FDroid,desc]="Open-source app store"
+APPS[FDroid,pkg]="org.fdroid.fdroid"
 
 APPS[AdAway,url]="https://app.adaway.org/adaway.apk"
 APPS[AdAway,file]="AdAway.apk"
 APPS[AdAway,desc]="System-wide ad blocker (hosts-based, needs root)"
+APPS[AdAway,pkg]="org.adaway"
 
 # --- Additional Recommended Apps ---
 APPS[AuroraStore,url]="https://gitlab.com/AuroraOSS/AuroraStore/-/releases/permalink/latest/downloads/AuroraStore.apk"
 APPS[AuroraStore,file]="AuroraStore.apk"
 APPS[AuroraStore,desc]="Anonymous Google Play Store client"
+APPS[AuroraStore,pkg]="com.aurora.store"
 
-APPS[VLC,url]="https://get.videolan.org/vlc-android/3.7.0/VLC-Android-3.7.0-arm64.apk"
+APPS[VLC,url]="https://f-droid.org/repo/org.videolan.vlc.apk"
 APPS[VLC,file]="VLC.apk"
-APPS[VLC,desc]="Universal media player"
+APPS[VLC,desc]="Universal media player (via F-Droid — stable URL)"
+APPS[VLC,pkg]="org.videolan.vlc"
 
 APPS[TiviMate,url]="https://tivimate.com/download/TiviMate.apk"
 APPS[TiviMate,file]="TiviMate.apk"
 APPS[TiviMate,desc]="IPTV player with EPG guide (MANUAL DOWNLOAD REQUIRED — proprietary app, get from tivimate.com)"
+APPS[TiviMate,pkg]="com.aronszabo.tvplayer"
 
 APPS[Xplore,url]="https://github.com/zhanghai/MaterialFiles/releases/latest/download/app-release-universal.apk"
 APPS[Xplore,file]="Xplore.apk"
 APPS[Xplore,desc]="Material Design file manager (replaces broken X-plore)"
+APPS[Xplore,pkg]="me.zhanghai.android.files"
 
 APPS[SideloadLauncher,url]="https://github.com/Droid-ify/client/releases/latest/download/app-release.apk"
 APPS[SideloadLauncher,file]="SideloadLauncher.apk"
 APPS[SideloadLauncher,desc]="F-Droid client with modern UI (replaces broken SideloadLauncher)"
+APPS[SideloadLauncher,pkg]="com.looker.droidify"
 
 APPS[BackgroundApps,url]="https://github.com/TeamAmaze/AmazeFileManager/releases/latest/download/app-fdroid-release.apk"
 APPS[BackgroundApps,file]="BackgroundApps.apk"
 APPS[BackgroundApps,desc]="Feature-rich file manager (replaces broken Background Apps)"
+APPS[BackgroundApps,pkg]="com.amaze.filemanager"
 
 APPS[AptoideTV,url]="https://aptoide-tv.en.uptodown.com/android/download"
 APPS[AptoideTV,file]="AptoideTV.apk"
 APPS[AptoideTV,desc]="App store for Android TV (MANUAL ONLY — no direct download. Get from aptoide.com or skip)"
+APPS[AptoideTV,pkg]="cm.aptoide.pt"
 
 # ---------------------------------------------------------------------------
 # Download apps
@@ -104,7 +118,7 @@ echo "    [2] Kodi               - ${APPS[Kodi,desc]}"
 echo "    [3] Projectivy Launcher - ${APPS[ProjectivyLauncher,desc]}"
 echo "    [4] TV Bro             - ${APPS[TVBro,desc]}"
 echo "    [5] LocalSend          - ${APPS[LocalSend,desc]}"
-echo "    [6] Button Mapper      - ${APPS[ButtonMapper,desc]}"
+echo "    [6] Key Mapper         - ${APPS[KeyMapper,desc]}"
 echo "    [7] F-Droid            - ${APPS[FDroid,desc]}"
 echo "    [8] AdAway             - ${APPS[AdAway,desc]}"
 echo ""
@@ -119,18 +133,23 @@ echo "   [15] AptoideTV (manual) - ${APPS[AptoideTV,desc]}"
 echo ""
 echo "  [A] ALL apps (1-15)"
 echo "  [E] Essential only (1-8)"
+echo "  [W] Working apps only (auto-downloadable, excludes manual)"
 echo ""
 read -rp "Enter choices (e.g., 1,2,3,7 or A): " APP_CHOICES
 
 # Parse choices
 SELECTED=()
 if [ "$APP_CHOICES" = "A" ] || [ "$APP_CHOICES" = "a" ]; then
-    SELECTED=("SmartTube" "Kodi" "ProjectivyLauncher" "TVBro" "LocalSend" "ButtonMapper" "FDroid" "AdAway" "AuroraStore" "VLC" "TiviMate" "Xplore" "SideloadLauncher" "BackgroundApps" "AptoideTV")
+    SELECTED=("SmartTube" "Kodi" "ProjectivyLauncher" "TVBro" "LocalSend" "KeyMapper" "FDroid" "AdAway" "AuroraStore" "VLC" "TiviMate" "Xplore" "SideloadLauncher" "BackgroundApps" "AptoideTV")
 elif [ "$APP_CHOICES" = "E" ] || [ "$APP_CHOICES" = "e" ]; then
-    SELECTED=("SmartTube" "Kodi" "ProjectivyLauncher" "TVBro" "LocalSend" "ButtonMapper" "FDroid" "AdAway")
+    SELECTED=("SmartTube" "Kodi" "ProjectivyLauncher" "TVBro" "LocalSend" "KeyMapper" "FDroid" "AdAway")
+elif [ "$APP_CHOICES" = "W" ] || [ "$APP_CHOICES" = "w" ]; then
+    SELECTED=("SmartTube" "Kodi" "ProjectivyLauncher" "TVBro" "LocalSend" "KeyMapper" "FDroid" "AdAway" "AuroraStore" "VLC" "Xplore" "SideloadLauncher" "BackgroundApps")
+    echo ""
+    echo "Selected working apps only (excludes TiviMate, AptoideTV — manual download required)"
 else
     IFS=',' read -ra NUMS <<< "$APP_CHOICES"
-    declare -A MAP=([1]="SmartTube" [2]="Kodi" [3]="ProjectivyLauncher" [4]="TVBro" [5]="LocalSend" [6]="ButtonMapper" [7]="FDroid" [8]="AdAway" [9]="AuroraStore" [10]="VLC" [11]="TiviMate" [12]="Xplore" [13]="SideloadLauncher" [14]="BackgroundApps" [15]="AptoideTV")
+    declare -A MAP=([1]="SmartTube" [2]="Kodi" [3]="ProjectivyLauncher" [4]="TVBro" [5]="LocalSend" [6]="KeyMapper" [7]="FDroid" [8]="AdAway" [9]="AuroraStore" [10]="VLC" [11]="TiviMate" [12]="Xplore" [13]="SideloadLauncher" [14]="BackgroundApps" [15]="AptoideTV")
     for n in "${NUMS[@]}"; do
         n=$(echo "$n" | xargs)  # trim whitespace
         if [ -n "${MAP[$n]}" ]; then
@@ -183,8 +202,19 @@ resolve_release_url() {
         local api_url="https://gitlab.com/api/v4/projects/${encoded_repo}/releases/permalink/latest"
         local download_url
         
+        # GitLab API returns JSON with assets.links array containing direct_asset_url
+        # We need to follow redirects (-L) and extract the actual .apk URLs
+        local api_response
+        api_response=$(curl -sSL "$api_url" 2>/dev/null)
+        
+        # Extract all direct_asset_url values for .apk files
         local all_urls
-        all_urls=$(curl -sSL "$api_url" 2>/dev/null | grep -o '"direct_asset_url":"[^"]*\.apk"' | grep -o 'https://[^"]*' | sed 's/\\//g')
+        all_urls=$(echo "$api_response" | grep -o '"direct_asset_url":"[^"]*\.apk"' | sed 's/"direct_asset_url":"//g; s/"$//g; s/\\//g')
+        
+        # Fallback: if no direct_asset_url, try browser_download_url or url field
+        if [ -z "$all_urls" ]; then
+            all_urls=$(echo "$api_response" | grep -o '"url":"[^"]*\.apk"' | sed 's/"url":"//g; s/"$//g; s/\\//g')
+        fi
         
         if [ -n "$all_urls" ]; then
             download_url=$(echo "$all_urls" | grep -i "arm64-v8a" | head -1)
@@ -274,8 +304,39 @@ for app in "${SELECTED[@]}"; do
             echo "    -> FAILED (HTTP error or network issue)"
             ((FAILED++)) || true
         fi
+    elif command -v apkeep &>/dev/null && [ -n "${APPS[$app,pkg]}" ]; then
+        # Fallback: apkeep (APKMirror / F-Droid)
+        echo "    -> Trying apkeep fallback for ${APPS[$app,pkg]}..."
+        if apkeep -a "${APPS[$app,pkg]}" -d apkmirror "$APPS_DIR" 2>/dev/null; then
+            # apkeep names file as <package>.apk — rename to our expected name
+            mv -f "$APPS_DIR/${APPS[$app,pkg]}.apk" "$APPS_DIR/$file" 2>/dev/null
+            if [ -f "$APPS_DIR/$file" ] && head -c2 "$APPS_DIR/$file" | grep -q 'PK'; then
+                echo "    -> Downloaded via apkeep (APKMirror): $file"
+                ((DOWNLOADED++)) || true
+            else
+                echo "    -> FAILED (apkeep APKMirror download invalid)"
+                rm -f "$APPS_DIR/$file" "$APPS_DIR/${APPS[$app,pkg]}.apk" 2>/dev/null
+                ((FAILED++)) || true
+            fi
+        else
+            # Try F-Droid via apkeep as second fallback
+            if apkeep -a "${APPS[$app,pkg]}" -d fdroid "$APPS_DIR" 2>/dev/null; then
+                mv -f "$APPS_DIR/${APPS[$app,pkg]}.apk" "$APPS_DIR/$file" 2>/dev/null
+                if [ -f "$APPS_DIR/$file" ] && head -c2 "$APPS_DIR/$file" | grep -q 'PK'; then
+                    echo "    -> Downloaded via apkeep (F-Droid): $file"
+                    ((DOWNLOADED++)) || true
+                else
+                    echo "    -> FAILED (apkeep F-Droid download invalid)"
+                    rm -f "$APPS_DIR/$file" "$APPS_DIR/${APPS[$app,pkg]}.apk" 2>/dev/null
+                    ((FAILED++)) || true
+                fi
+            else
+                echo "    -> FAILED (apkeep could not download from APKMirror or F-Droid)"
+                ((FAILED++)) || true
+            fi
+        fi
     else
-        echo "    -> No download tool available. Install wget or curl."
+        echo "    -> No download tool available. Install wget, curl, or apkeep."
         ((FAILED++)) || true
     fi
 done

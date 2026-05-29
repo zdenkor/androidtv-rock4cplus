@@ -64,14 +64,14 @@ install_safe() {
 # ---------------------------------------------------------------------------
 # 1. Update system
 # ---------------------------------------------------------------------------
-echo "[1/7] Updating system packages..."
+echo "[1/8] Updating system packages..."
 sudo apt-get update -y
 sudo apt-get upgrade -y
 
 # ---------------------------------------------------------------------------
 # 2. Install essential build packages
 # ---------------------------------------------------------------------------
-echo "[2/7] Installing essential packages..."
+echo "[2/8] Installing essential packages..."
 install_safe \
     git-core gnupg flex bison build-essential zip curl zlib1g-dev \
     gcc-multilib g++-multilib libc6-dev-i386 \
@@ -91,7 +91,7 @@ fi
 # ---------------------------------------------------------------------------
 # 3. Install AOSP-specific build dependencies
 # ---------------------------------------------------------------------------
-echo "[3/7] Installing AOSP build dependencies..."
+echo "[3/8] Installing AOSP build dependencies..."
 install_safe \
     libssl-dev cpio pkg-config lzop \
     libelf-dev bison flex \
@@ -107,7 +107,7 @@ fi
 # ---------------------------------------------------------------------------
 # 4. Install Java (OpenJDK 11 - required for Android 12)
 # ---------------------------------------------------------------------------
-echo "[4/7] Installing OpenJDK 11..."
+echo "[4/8] Installing OpenJDK 11..."
 
 if apt-cache show openjdk-11-jdk &>/dev/null; then
     # Available directly (Ubuntu 20.04/22.04, Debian 11)
@@ -137,9 +137,30 @@ java -version
 echo ""
 
 # ---------------------------------------------------------------------------
-# 5. Install Repo tool (Google's git repository manager)
+# 5. Install apkeep (APK downloader for APKMirror / F-Droid)
 # ---------------------------------------------------------------------------
-echo "[5/7] Installing Repo tool..."
+echo "[5/8] Installing apkeep..."
+if ! command -v apkeep &>/dev/null; then
+    # Download latest prebuilt binary from GitHub releases
+    APKEEP_URL="https://github.com/EFForg/apkeep/releases/latest/download/apkeep-x86_64-unknown-linux-gnu"
+    echo "  Downloading apkeep from GitHub releases..."
+    if curl -sSL "$APKEEP_URL" -o ~/bin/apkeep 2>/dev/null; then
+        chmod +x ~/bin/apkeep
+        echo "  apkeep installed to ~/bin/apkeep"
+    else
+        echo "  WARNING: Could not download apkeep prebuilt binary."
+        echo "  You can install it manually later:"
+        echo "    cargo install apkeep"
+        echo "    or download from https://github.com/EFForg/apkeep/releases"
+    fi
+else
+    echo "  apkeep already installed: $(apkeep --version 2>/dev/null || echo 'version unknown')"
+fi
+
+# ---------------------------------------------------------------------------
+# 6. Install Repo tool (Google's git repository manager)
+# ---------------------------------------------------------------------------
+echo "[6/8] Installing Repo tool..."
 mkdir -p ~/bin
 curl -sSL https://storage.googleapis.com/git-repo-downloads/repo -o ~/bin/repo
 chmod a+x ~/bin/repo
@@ -151,9 +172,9 @@ fi
 export PATH=~/bin:$PATH
 
 # ---------------------------------------------------------------------------
-# 6. Configure Git
+# 7. Configure Git
 # ---------------------------------------------------------------------------
-echo "[6/7] Configuring Git..."
+echo "[7/8] Configuring Git..."
 if [ -z "$(git config --global user.name 2>/dev/null)" ]; then
     echo "Enter your name for Git commits:"
     read -r GIT_NAME
@@ -167,10 +188,10 @@ if [ -z "$(git config --global user.email 2>/dev/null)" ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# 7. Configure swap (recommended for 16GB RAM systems)
+# 8. Configure swap (recommended for 16GB RAM systems)
 # ---------------------------------------------------------------------------
 echo ""
-echo "Checking swap..."
+echo "[8/8] Checking swap..."
 CURRENT_SWAP=$(free -g | awk '/^Swap:/ {print $2}')
 if [ "$CURRENT_SWAP" -lt 16 ]; then
     echo "Current swap: ${CURRENT_SWAP}GB. Recommended: 16GB+"
@@ -200,6 +221,11 @@ echo ""
 echo "============================================"
 echo " Environment setup complete!"
 echo "============================================"
+echo ""
+echo "Installed tools summary:"
+echo "  - wget, curl, git, repo"
+echo "  - apkeep (APKMirror / F-Droid downloader)"
+echo "  - OpenJDK 11, Python 3, ccache"
 echo ""
 echo "Next step: Run 02-download-source.sh"
 echo ""
