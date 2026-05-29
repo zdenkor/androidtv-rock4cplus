@@ -91,7 +91,7 @@ APPS[BackgroundApps,desc]="Feature-rich file manager (replaces broken Background
 
 APPS[AptoideTV,url]="https://aptoide-tv.en.uptodown.com/android/download"
 APPS[AptoideTV,file]="AptoideTV.apk"
-APPS[AptoideTV,desc]="App store for Android TV (MANUAL DOWNLOAD REQUIRED — get from aptoide.com or uptodown.com)"
+APPS[AptoideTV,desc]="App store for Android TV (MANUAL ONLY — no direct download. Get from aptoide.com or skip)"
 
 # ---------------------------------------------------------------------------
 # Download apps
