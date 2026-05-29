@@ -338,21 +338,24 @@ if os.path.isdir(clang_lib_dir) and os.path.isdir(gcc_sysroot):
 # ---------------------------------------------------------------------------
 build_sh = os.path.join(WORK_DIR, 'build.sh')
 if os.path.exists(build_sh):
-    with open(build_sh, 'r') as f:
-        content = f.read()
-    orig = content
-    content = content.replace(
-        'cp -rf $KERNEL_DEBUG $OUT/kernel',
-        'mkdir -p $(dirname $OUT/kernel) && cp -rf $KERNEL_DEBUG $OUT/kernel'
-    )
-    content = content.replace(
-        'if [ $IS_VEHICLE = "true" ]; then',
-        'if [ "$IS_VEHICLE" = "true" ]; then'
-    )
-    if content != orig:
-        with open(build_sh, 'w') as f:
-            f.write(content)
-        print('Fixed build.sh syntax')
-        changed += 1
+    try:
+        with open(build_sh, 'r') as f:
+            content = f.read()
+        orig = content
+        content = content.replace(
+            'cp -rf $KERNEL_DEBUG $OUT/kernel',
+            'mkdir -p $(dirname $OUT/kernel) && cp -rf $KERNEL_DEBUG $OUT/kernel'
+        )
+        content = content.replace(
+            'if [ $IS_VEHICLE = "true" ]; then',
+            'if [ "$IS_VEHICLE" = "true" ]; then'
+        )
+        if content != orig:
+            with open(build_sh, 'w') as f:
+                f.write(content)
+            print('Fixed build.sh syntax')
+            changed += 1
+    except PermissionError:
+        print('WARNING: Permission denied for build.sh — skipping (run with sudo if needed)')
 
 print('Done. Changes made:', changed)
