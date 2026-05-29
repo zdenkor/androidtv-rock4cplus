@@ -351,6 +351,12 @@ if os.path.exists(build_sh):
             'if [ "$IS_VEHICLE" = "true" ]; then'
         )
         if content != orig:
+            # Try to fix permissions if file is not writable
+            if not os.access(build_sh, os.W_OK):
+                try:
+                    os.chmod(build_sh, 0o644)
+                except OSError:
+                    pass
             with open(build_sh, 'w') as f:
                 f.write(content)
             print('Fixed build.sh syntax')
