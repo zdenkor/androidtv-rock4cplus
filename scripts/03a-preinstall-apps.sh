@@ -140,17 +140,16 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Helper: resolve GitHub /latest/download/ URLs via API
+# Helper: resolve GitHub /latest/download/ and GitLab /permalink/latest/ URLs via API
 # ---------------------------------------------------------------------------
-resolve_github_url() {
+resolve_release_url() {
     local url="$1"
-    # Extract owner/repo from github.com URLs
+    
+    # --- GitHub: github.com/OWNER/REPO/releases/latest/download/FILENAME ---
     if [[ "$url" =~ github\.com/([^/]+/[^/]+)/releases/latest/download/(.+) ]]; then
         local repo="${BASH_REMATCH[1]}"
         local filename="${BASH_REMATCH[2]}"
-        # Strip .apk extension to get a fuzzy search pattern
         local pattern="${filename%.apk}"
-        # Query GitHub API for the latest release
         local api_url="https://api.github.com/repos/$repo/releases/latest"
         local download_url
         
@@ -158,10 +157,8 @@ resolve_github_url() {
         download_url=$(curl -sS "$api_url" 2>/dev/null | grep -o "\"browser_download_url\": *\"[^\"]*$filename\"" | head -1 | grep -o 'https://[^"]*')
         
         if [ -z "$download_url" ]; then
-            # Fuzzy match: find any asset containing the pattern, prefer arm64-v8a
             local all_urls
             all_urls=$(curl -sS "$api_url" 2>/dev/null | grep -o '"browser_download_url": *"[^"]*"' | grep -o 'https://[^"]*')
-            # Prefer arm64-v8a, then arm64, then universal, then any match
             download_url=$(echo "$all_urls" | grep -i "$pattern" | grep -i "arm64-v8a" | head -1)
             [ -z "$download_url" ] && download_url=$(echo "$all_urls" | grep -i "$pattern" | grep -i "arm64" | head -1)
             [ -z "$download_url" ] && download_url=$(echo "$all_urls" | grep -i "$pattern" | grep -i "universal" | head -1)
@@ -173,7 +170,38 @@ resolve_github_url() {
             return 0
         fi
     fi
-    # Not a GitHub /latest/ URL or API failed — return original
+    
+    # --- GitLab: gitlab.com/OWNER/REPO/-/releases/permalink/latest/downloads/FILENAME ---
+    if [[ "$url" =~ gitlab\.com/([^/]+/[^/]+)/-/releases/permalink/latest/downloads/(.+) ]]; then
+        local repo="${BASH_REMATCH[1]}"
+        local filename="${BASH_REMATCH[2]}"
+        local pattern="${filename%.apk}"
+        # GitLab API: URL-encode the project path
+        local encoded_repo="${repo//\//%2F}"
+        local api_url="https://gitlab.com/api/v4/projects/${encoded_repo}/releases/permalink/latest"
+        local download_url
+        
+        # Get all asset direct URLs from GitLab API
+        local all_urls
+        all_urls=$(curl -sS "$api_url" 2>/dev/null | grep -o '"direct_asset_url":"[^"]*"' | grep -o 'https://[^"]*' | sed 's/\\//g')
+        
+        if [ -n "$all_urls" ]; then
+            # Try exact match first
+            download_url=$(echo "$all_urls" | grep -i "/$filename$" | head -1)
+            # Then fuzzy match, prefer arm64-v8a
+            [ -z "$download_url" ] && download_url=$(echo "$all_urls" | grep -i "$pattern" | grep -i "arm64-v8a" | head -1)
+            [ -z "$download_url" ] && download_url=$(echo "$all_urls" | grep -i "$pattern" | grep -i "arm64" | head -1)
+            [ -z "$download_url" ] && download_url=$(echo "$all_urls" | grep -i "$pattern" | grep -i "universal" | head -1)
+            [ -z "$download_url" ] && download_url=$(echo "$all_urls" | grep -i "$pattern" | head -1)
+        fi
+        
+        if [ -n "$download_url" ]; then
+            echo "$download_url"
+            return 0
+        fi
+    fi
+    
+    # Not a recognized release URL or API failed — return original
     echo "$url"
     return 1
 }
@@ -194,8 +222,8 @@ for app in "${SELECTED[@]}"; do
     
     echo "  [$app] $url"
     
-    # Resolve GitHub /latest/ URLs via API
-    resolved_url=$(resolve_github_url "$url")
+    # Resolve GitHub/GitLab /latest/ URLs via API
+    resolved_url=$(resolve_release_url "$url")
     if [ "$resolved_url" != "$url" ]; then
         echo "    -> Resolved: $resolved_url"
     fi
