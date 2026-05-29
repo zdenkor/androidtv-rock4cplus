@@ -1,6 +1,3 @@
-# Build config (machine-specific paths)
-.build-config
-
 # Build output (on USB drive, too large for git)
 out/
 
