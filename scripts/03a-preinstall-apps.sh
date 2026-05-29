@@ -7,13 +7,14 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-CONFIG_FILE="$SCRIPT_DIR/../.build-config"
 
+# Default work directory (USB drive mount point)
+WORK_DIR="${WORK_DIR:-/mnt/aosp-build/androidtv-rock4cplus}"
+
+# Optionally load .build-config if it exists (for custom paths)
+CONFIG_FILE="$SCRIPT_DIR/../.build-config"
 if [ -f "$CONFIG_FILE" ]; then
     source "$CONFIG_FILE"
-else
-    echo "ERROR: No .build-config found. Run 00-setup-usb.sh first!"
-    exit 1
 fi
 
 echo "============================================"
