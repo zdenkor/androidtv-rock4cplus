@@ -8,21 +8,30 @@
 # doesn't silently exit on download failures.
 #
 # ============================================================================
-# GOOGLE PLAY SETUP (Optional — for official APKs directly from Play Store)
+# DOWNLOAD SOURCE SETUP GUIDE
 # ============================================================================
-# To use Google Play as the PRIMARY download source, set these env vars:
+# This script can download APKs from multiple sources. Pick ONE method:
 #
+# --- METHOD 1: Google Play (Recommended — official APKs) ---
 #   export APKEEP_GP_EMAIL="your@gmail.com"
 #   export APKEEP_GP_PASS="xxxx xxxx xxxx xxxx"
+#   How to get password: https://myaccount.google.com/apppasswords
+#   Requires: 2-Step Verification enabled on Google account
 #
-# How to get the password:
-#   1. Enable 2-Step Verification on your Google account
-#   2. Go to: https://myaccount.google.com/apppasswords
-#   3. Generate a 16-character App Password for "Other" → name it "apkeep"
-#   4. Copy the 16-char password (spaces are OK) into APKEEP_GP_PASS
+# --- METHOD 2: APKMirror + F-Droid + APKPure (Default, no setup) ---
+#   Nothing to configure. apkeep automatically tries:
+#   1. APKMirror (largest catalog, latest versions)
+#   2. F-Droid (open-source apps, stable URLs)
+#   3. APKPure (backup for missing apps)
 #
-# If these vars are NOT set, the script uses APKMirror → F-Droid → APKPure
-# via apkeep, or wget/curl as final fallback.
+# --- METHOD 3: wget/curl only (Fallback) ---
+#   Used automatically when apkeep is not installed.
+#   Resolves GitHub /latest/ URLs via API. Less reliable.
+#
+# INSTALL APKEEP:
+#   curl -sSL https://github.com/EFForg/apkeep/releases/latest/download/\
+#     apkeep-x86_64-unknown-linux-gnu -o ~/bin/apkeep && chmod +x ~/bin/apkeep
+#   Or run: ./scripts/01-setup-environment.sh (installs apkeep automatically)
 # ============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -153,8 +162,12 @@ echo "  [A] ALL apps (1-15)"
 echo "  [E] Essential only (1-8)"
 echo "  [W] Working apps only (auto-downloadable, excludes manual)"
 echo ""
-echo "  NOTE: Set APKEEP_GP_EMAIL + APKEEP_GP_PASS env vars to use"
-echo "        Google Play as primary source (see script header for setup)"
+echo "  DOWNLOAD SOURCES (see script header for setup):"
+echo "    [1] Google Play  — official APKs (needs APKEEP_GP_EMAIL/PASS)"
+echo "    [2] APKMirror    — largest catalog (default, no setup)"
+echo "    [3] F-Droid      — open-source apps (default, no setup)"
+echo "    [4] APKPure      — backup source (default, no setup)"
+echo "    [5] wget/curl    — GitHub direct URLs (fallback)"
 echo ""
 read -rp "Enter choices (e.g., 1,2,3,7 or A): " APP_CHOICES
 
