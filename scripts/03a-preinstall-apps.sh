@@ -267,15 +267,28 @@ for app in "${SELECTED[@]}"; do
 
     downloaded=false
 
-    # --- Primary: apkeep (multi-source) ---
-    # apkeep is the MOST RELIABLE method. It queries APKMirror, F-Droid,
-    # APKPure and other stores directly via their APIs. We skip fragile
-    # GitHub /latest/ URL resolution entirely when apkeep is available.
-    if command -v apkeep &>/dev/null && [ -n "${APPS[$app,pkg]}" ]; then
-        echo "    -> Using apkeep (primary) for ${APPS[$app,pkg]}..."
+    # --- Primary: Google Play (optional, requires credentials) ---
+    # To use: export APKEEP_GP_EMAIL="your@gmail.com" APKEEP_GP_PASS="app-password"
+    # Get app password at: https://myaccount.google.com/apppasswords
+    if ! $downloaded && command -v apkeep &>/dev/null && [ -n "${APPS[$app,pkg]}" ] && [ -n "${APKEEP_GP_EMAIL}" ] && [ -n "${APKEEP_GP_PASS}" ]; then
+        echo "    -> Trying Google Play (primary) for ${APPS[$app,pkg]}..."
+        if apkeep -a "${APPS[$app,pkg]}" -d google_play -o "${APKEEP_GP_EMAIL}:${APKEEP_GP_PASS}" "$APPS_DIR" 2>/dev/null; then
+            mv -f "$APPS_DIR/${APPS[$app,pkg]}.apk" "$APPS_DIR/$file" 2>/dev/null
+            if [ -f "$APPS_DIR/$file" ] && head -c2 "$APPS_DIR/$file" | grep -q 'PK'; then
+                echo "    -> Downloaded via Google Play: $file"
+                downloaded=true
+            else
+                rm -f "$APPS_DIR/$file" "$APPS_DIR/${APPS[$app,pkg]}.apk" 2>/dev/null
+            fi
+        fi
+    fi
+
+    # --- Secondary: apkeep multi-source (APKMirror -> F-Droid -> APKPure) ---
+    if ! $downloaded && command -v apkeep &>/dev/null && [ -n "${APPS[$app,pkg]}" ]; then
+        echo "    -> Using apkeep for ${APPS[$app,pkg]}..."
 
         # Try APKMirror first (largest catalog, always latest versions)
-        if ! $downloaded && apkeep -a "${APPS[$app,pkg]}" -d apkmirror "$APPS_DIR" 2>/dev/null; then
+        if apkeep -a "${APPS[$app,pkg]}" -d apkmirror "$APPS_DIR" 2>/dev/null; then
             mv -f "$APPS_DIR/${APPS[$app,pkg]}.apk" "$APPS_DIR/$file" 2>/dev/null
             if [ -f "$APPS_DIR/$file" ] && head -c2 "$APPS_DIR/$file" | grep -q 'PK'; then
                 echo "    -> Downloaded via apkeep (APKMirror): $file"
