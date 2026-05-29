@@ -136,6 +136,12 @@ USB_DEVICE=$USB_PATH
 USB_UUID=$UUID
 EOF
 
+# Also copy .build-config to the USB repo copy so scripts work from there too
+if [ -n "$REPO_DST" ] && [ -d "$REPO_DST" ]; then
+    cp "$CONFIG_FILE" "$REPO_DST/.build-config"
+    echo "Copied .build-config to USB repo copy"
+fi
+
 echo ""
 echo "============================================"
 echo " USB Setup Complete!"
