@@ -162,13 +162,6 @@ echo "  [A] ALL apps (1-15)"
 echo "  [E] Essential only (1-8)"
 echo "  [W] Working apps only (auto-downloadable, excludes manual)"
 echo ""
-echo "  DOWNLOAD SOURCES (see script header for setup):"
-echo "    [1] Google Play  — official APKs (needs APKEEP_GP_EMAIL/PASS)"
-echo "    [2] APKMirror    — largest catalog (default, no setup)"
-echo "    [3] F-Droid      — open-source apps (default, no setup)"
-echo "    [4] APKPure      — backup source (default, no setup)"
-echo "    [5] wget/curl    — GitHub direct URLs (fallback)"
-echo ""
 read -rp "Enter choices (e.g., 1,2,3,7 or A): " APP_CHOICES
 
 # Parse choices
