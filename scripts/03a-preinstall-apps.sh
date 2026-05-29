@@ -201,7 +201,7 @@ for app in "${SELECTED[@]}"; do
     fi
     
     if command -v wget &>/dev/null; then
-        if wget --show-progress -O "$APPS_DIR/$file" "$resolved_url" 2>&1 | tail -5; then
+        if wget --show-progress -O "$APPS_DIR/$file" --user-agent="Mozilla/5.0 (Linux; Android 14; TV) AppleWebKit/537.36" "$resolved_url" 2>&1 | tail -5; then
             echo "    -> Downloaded: $file"
             ((DOWNLOADED++)) || true
         else
@@ -209,7 +209,7 @@ for app in "${SELECTED[@]}"; do
             ((FAILED++)) || true
         fi
     elif command -v curl &>/dev/null; then
-        if curl -SL --progress-bar -o "$APPS_DIR/$file" "$resolved_url"; then
+        if curl -SL --progress-bar -o "$APPS_DIR/$file" -H "User-Agent: Mozilla/5.0 (Linux; Android 14; TV) AppleWebKit/537.36" "$resolved_url"; then
             echo "    -> Downloaded: $file"
             ((DOWNLOADED++)) || true
         else
