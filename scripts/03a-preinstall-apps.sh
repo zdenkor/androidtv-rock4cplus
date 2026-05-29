@@ -208,6 +208,7 @@ echo "Downloading selected apps..."
 echo ""
 
 DOWNLOADED=0
+SKIPPED=0
 FAILED=0
 
 for app in "${SELECTED[@]}"; do
@@ -216,12 +217,12 @@ for app in "${SELECTED[@]}"; do
     
     echo "  [$app] $url"
     
-    # Skip if already downloaded
+    # Skip if already downloaded (file exists and is >10KB)
     if [ -f "$APPS_DIR/$file" ]; then
         local_size=$(stat -c%s "$APPS_DIR/$file" 2>/dev/null || stat -f%z "$APPS_DIR/$file" 2>/dev/null || echo 0)
         if [ "$local_size" -gt 10000 ]; then
             echo "    -> Already downloaded ($(numfmt --to=iec $local_size 2>/dev/null || echo ${local_size} bytes)), skipping"
-            ((DOWNLOADED++)) || true
+            ((SKIPPED++)) || true
             continue
         else
             echo "    -> Existing file too small (${local_size} bytes), re-downloading..."
@@ -235,10 +236,13 @@ for app in "${SELECTED[@]}"; do
     fi
     
     if command -v wget &>/dev/null; then
+        set -o pipefail
         if wget --show-progress -O "$APPS_DIR/$file" --user-agent="Mozilla/5.0 (Linux; Android 14; TV) AppleWebKit/537.36" "$resolved_url" 2>&1 | tail -5; then
+            set +o pipefail
             echo "    -> Downloaded: $file"
             ((DOWNLOADED++)) || true
         else
+            set +o pipefail
             echo "    -> FAILED (HTTP error or network issue)"
             ((FAILED++)) || true
         fi
@@ -328,7 +332,7 @@ echo "============================================"
 echo " Preinstalled Apps Summary"
 echo "============================================"
 echo ""
-echo "Downloaded: $DOWNLOADED | Failed: $FAILED"
+echo "Downloaded: $DOWNLOADED | Skipped (already present): $SKIPPED | Failed: $FAILED"
 echo "Location: $APPS_DIR"
 echo ""
 
@@ -337,6 +341,8 @@ if [ "$FAILED" -gt 0 ]; then
     echo "  $APPS_DIR"
     echo ""
     echo "Then re-run this script to regenerate Android.mk."
+elif [ "$DOWNLOADED" -eq 0 ] && [ "$SKIPPED" -gt 0 ]; then
+    echo "All apps already present — nothing to download."
 fi
 
 echo "Apps will be included in the next build."
