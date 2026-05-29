@@ -39,7 +39,7 @@ APPS[SmartTube,pkg]="com.liskovsoft.smarttubetv"
 
 APPS[Kodi,url]="https://mirrors.kodi.tv/releases/android/arm64-v8a/kodi-21.2-Omega-arm64-v8a.apk"
 APPS[Kodi,file]="Kodi.apk"
-APPS[Kodi,desc]="Media center (local files, Plex, Jellyfin, IPTV)"
+APPS[Kodi,desc]="Media center (local files, Plex, Jellyfin, IPTV) — versioned URL, apkeep fallback recommended"
 APPS[Kodi,pkg]="org.xbmc.kodi"
 
 APPS[ProjectivyLauncher,url]="https://github.com/spocky/miproja1/releases/latest/download/ProjectivyLauncher.apk"
@@ -72,9 +72,9 @@ APPS[AdAway,desc]="System-wide ad blocker (hosts-based, needs root)"
 APPS[AdAway,pkg]="org.adaway"
 
 # --- Additional Recommended Apps ---
-APPS[AuroraStore,url]="https://gitlab.com/AuroraOSS/AuroraStore/-/releases/permalink/latest/downloads/AuroraStore.apk"
+APPS[AuroraStore,url]="https://f-droid.org/repo/com.aurora.store.apk"
 APPS[AuroraStore,file]="AuroraStore.apk"
-APPS[AuroraStore,desc]="Anonymous Google Play Store client"
+APPS[AuroraStore,desc]="Anonymous Google Play Store client (via F-Droid — stable URL)"
 APPS[AuroraStore,pkg]="com.aurora.store"
 
 APPS[VLC,url]="https://f-droid.org/repo/org.videolan.vlc.apk"
