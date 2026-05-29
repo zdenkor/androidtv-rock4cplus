@@ -264,73 +264,90 @@ for app in "${SELECTED[@]}"; do
             rm -f "$APPS_DIR/$file"
         fi
     fi
-    
-    # Resolve GitHub/GitLab /latest/ URLs via API
-    resolved_url=$(resolve_release_url "$url")
-    if [ "$resolved_url" != "$url" ]; then
-        echo "    -> Resolved: $resolved_url"
-    fi
-    
+
     downloaded=false
 
-    # --- Method 1: wget ---
-    if ! $downloaded && command -v wget &>/dev/null; then
-        set -o pipefail
-        if wget --show-progress -O "$APPS_DIR/$file" --user-agent="Mozilla/5.0 (Linux; Android 14; TV) AppleWebKit/537.36" "$resolved_url" 2>&1 | tail -5; then
-            set +o pipefail
-            if [ -f "$APPS_DIR/$file" ] && head -c2 "$APPS_DIR/$file" | grep -q 'PK'; then
-                echo "    -> Downloaded: $file"
-                downloaded=true
-            else
-                echo "    -> wget got invalid file (not APK), will try fallback..."
-                rm -f "$APPS_DIR/$file"
-            fi
-        else
-            set +o pipefail
-            echo "    -> wget failed (HTTP error), will try fallback..."
-        fi
-    fi
+    # --- Primary: apkeep (multi-source) ---
+    # apkeep is the MOST RELIABLE method. It queries APKMirror, F-Droid,
+    # APKPure and other stores directly via their APIs. We skip fragile
+    # GitHub /latest/ URL resolution entirely when apkeep is available.
+    if command -v apkeep &>/dev/null && [ -n "${APPS[$app,pkg]}" ]; then
+        echo "    -> Using apkeep (primary) for ${APPS[$app,pkg]}..."
 
-    # --- Method 2: curl ---
-    if ! $downloaded && command -v curl &>/dev/null; then
-        if curl -SL --progress-bar -o "$APPS_DIR/$file" -H "User-Agent: Mozilla/5.0 (Linux; Android 14; TV) AppleWebKit/537.36" "$resolved_url"; then
-            if [ -f "$APPS_DIR/$file" ] && head -c2 "$APPS_DIR/$file" | grep -q 'PK'; then
-                echo "    -> Downloaded: $file"
-                downloaded=true
-            else
-                echo "    -> curl got invalid file (not APK), will try fallback..."
-                rm -f "$APPS_DIR/$file"
-            fi
-        else
-            echo "    -> curl failed (HTTP error), will try fallback..."
-        fi
-    fi
-
-    # --- Method 3: apkeep (APKMirror -> F-Droid) ---
-    if ! $downloaded && command -v apkeep &>/dev/null && [ -n "${APPS[$app,pkg]}" ]; then
-        echo "    -> Trying apkeep fallback for ${APPS[$app,pkg]}..."
-        # Try APKMirror first
-        if apkeep -a "${APPS[$app,pkg]}" -d apkmirror "$APPS_DIR" 2>/dev/null; then
+        # Try APKMirror first (largest catalog, always latest versions)
+        if ! $downloaded && apkeep -a "${APPS[$app,pkg]}" -d apkmirror "$APPS_DIR" 2>/dev/null; then
             mv -f "$APPS_DIR/${APPS[$app,pkg]}.apk" "$APPS_DIR/$file" 2>/dev/null
             if [ -f "$APPS_DIR/$file" ] && head -c2 "$APPS_DIR/$file" | grep -q 'PK'; then
                 echo "    -> Downloaded via apkeep (APKMirror): $file"
                 downloaded=true
             else
-                echo "    -> apkeep APKMirror download invalid, trying F-Droid..."
                 rm -f "$APPS_DIR/$file" "$APPS_DIR/${APPS[$app,pkg]}.apk" 2>/dev/null
             fi
         fi
-        # If still not downloaded, try F-Droid
-        if ! $downloaded; then
-            if apkeep -a "${APPS[$app,pkg]}" -d fdroid "$APPS_DIR" 2>/dev/null; then
-                mv -f "$APPS_DIR/${APPS[$app,pkg]}.apk" "$APPS_DIR/$file" 2>/dev/null
+
+        # Fallback 2: F-Droid (open-source apps, stable URLs)
+        if ! $downloaded && apkeep -a "${APPS[$app,pkg]}" -d fdroid "$APPS_DIR" 2>/dev/null; then
+            mv -f "$APPS_DIR/${APPS[$app,pkg]}.apk" "$APPS_DIR/$file" 2>/dev/null
+            if [ -f "$APPS_DIR/$file" ] && head -c2 "$APPS_DIR/$file" | grep -q 'PK'; then
+                echo "    -> Downloaded via apkeep (F-Droid): $file"
+                downloaded=true
+            else
+                rm -f "$APPS_DIR/$file" "$APPS_DIR/${APPS[$app,pkg]}.apk" 2>/dev/null
+            fi
+        fi
+
+        # Fallback 3: APKPure (good for apps missing on APKMirror/F-Droid)
+        if ! $downloaded && apkeep -a "${APPS[$app,pkg]}" -d apkpure "$APPS_DIR" 2>/dev/null; then
+            mv -f "$APPS_DIR/${APPS[$app,pkg]}.apk" "$APPS_DIR/$file" 2>/dev/null
+            if [ -f "$APPS_DIR/$file" ] && head -c2 "$APPS_DIR/$file" | grep -q 'PK'; then
+                echo "    -> Downloaded via apkeep (APKPure): $file"
+                downloaded=true
+            else
+                rm -f "$APPS_DIR/$file" "$APPS_DIR/${APPS[$app,pkg]}.apk" 2>/dev/null
+            fi
+        fi
+    fi
+
+    # --- Fallback: wget/curl with URL resolution ---
+    # Only used when apkeep is unavailable OR app has no package name.
+    # For GitHub/GitLab URLs we resolve /latest/ via API first.
+    if ! $downloaded; then
+        # Resolve GitHub/GitLab /latest/ URLs via API
+        resolved_url=$(resolve_release_url "$url")
+        if [ "$resolved_url" != "$url" ]; then
+            echo "    -> Resolved: $resolved_url"
+        fi
+
+        # wget
+        if command -v wget &>/dev/null; then
+            set -o pipefail
+            if wget --show-progress -O "$APPS_DIR/$file" --user-agent="Mozilla/5.0 (Linux; Android 14; TV) AppleWebKit/537.36" "$resolved_url" 2>&1 | tail -5; then
+                set +o pipefail
                 if [ -f "$APPS_DIR/$file" ] && head -c2 "$APPS_DIR/$file" | grep -q 'PK'; then
-                    echo "    -> Downloaded via apkeep (F-Droid): $file"
+                    echo "    -> Downloaded: $file"
                     downloaded=true
                 else
-                    echo "    -> apkeep F-Droid download invalid"
-                    rm -f "$APPS_DIR/$file" "$APPS_DIR/${APPS[$app,pkg]}.apk" 2>/dev/null
+                    echo "    -> wget got invalid file (not APK)"
+                    rm -f "$APPS_DIR/$file"
                 fi
+            else
+                set +o pipefail
+                echo "    -> wget failed (HTTP error)"
+            fi
+        fi
+
+        # curl
+        if ! $downloaded && command -v curl &>/dev/null; then
+            if curl -SL --progress-bar -o "$APPS_DIR/$file" -H "User-Agent: Mozilla/5.0 (Linux; Android 14; TV) AppleWebKit/537.36" "$resolved_url"; then
+                if [ -f "$APPS_DIR/$file" ] && head -c2 "$APPS_DIR/$file" | grep -q 'PK'; then
+                    echo "    -> Downloaded: $file"
+                    downloaded=true
+                else
+                    echo "    -> curl got invalid file (not APK)"
+                    rm -f "$APPS_DIR/$file"
+                fi
+            else
+                echo "    -> curl failed (HTTP error)"
             fi
         fi
     fi
