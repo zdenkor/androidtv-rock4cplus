@@ -271,78 +271,75 @@ for app in "${SELECTED[@]}"; do
         echo "    -> Resolved: $resolved_url"
     fi
     
-    if command -v wget &>/dev/null; then
+    downloaded=false
+
+    # --- Method 1: wget ---
+    if ! $downloaded && command -v wget &>/dev/null; then
         set -o pipefail
         if wget --show-progress -O "$APPS_DIR/$file" --user-agent="Mozilla/5.0 (Linux; Android 14; TV) AppleWebKit/537.36" "$resolved_url" 2>&1 | tail -5; then
             set +o pipefail
-            # Validate: check if downloaded file is actually an APK (starts with PK)
             if [ -f "$APPS_DIR/$file" ] && head -c2 "$APPS_DIR/$file" | grep -q 'PK'; then
                 echo "    -> Downloaded: $file"
-                ((DOWNLOADED++)) || true
+                downloaded=true
             else
-                echo "    -> FAILED (not a valid APK — got HTML/redirect page)"
+                echo "    -> wget got invalid file (not APK), will try fallback..."
                 rm -f "$APPS_DIR/$file"
-                ((FAILED++)) || true
             fi
         else
             set +o pipefail
-            echo "    -> FAILED (HTTP error or network issue)"
-            ((FAILED++)) || true
+            echo "    -> wget failed (HTTP error), will try fallback..."
         fi
-    elif command -v curl &>/dev/null; then
+    fi
+
+    # --- Method 2: curl ---
+    if ! $downloaded && command -v curl &>/dev/null; then
         if curl -SL --progress-bar -o "$APPS_DIR/$file" -H "User-Agent: Mozilla/5.0 (Linux; Android 14; TV) AppleWebKit/537.36" "$resolved_url"; then
-            # Validate: check if downloaded file is actually an APK (starts with PK)
             if [ -f "$APPS_DIR/$file" ] && head -c2 "$APPS_DIR/$file" | grep -q 'PK'; then
                 echo "    -> Downloaded: $file"
-                ((DOWNLOADED++)) || true
+                downloaded=true
             else
-                echo "    -> FAILED (not a valid APK — got HTML/redirect page)"
+                echo "    -> curl got invalid file (not APK), will try fallback..."
                 rm -f "$APPS_DIR/$file"
-                ((FAILED++)) || true
             fi
         else
-            echo "    -> FAILED (HTTP error or network issue)"
-            ((FAILED++)) || true
+            echo "    -> curl failed (HTTP error), will try fallback..."
         fi
-    elif command -v apkeep &>/dev/null && [ -n "${APPS[$app,pkg]}" ]; then
-        # Fallback: apkeep (APKMirror / F-Droid)
+    fi
+
+    # --- Method 3: apkeep (APKMirror -> F-Droid) ---
+    if ! $downloaded && command -v apkeep &>/dev/null && [ -n "${APPS[$app,pkg]}" ]; then
         echo "    -> Trying apkeep fallback for ${APPS[$app,pkg]}..."
+        # Try APKMirror first
         if apkeep -a "${APPS[$app,pkg]}" -d apkmirror "$APPS_DIR" 2>/dev/null; then
-            # apkeep names file as <package>.apk — rename to our expected name
             mv -f "$APPS_DIR/${APPS[$app,pkg]}.apk" "$APPS_DIR/$file" 2>/dev/null
             if [ -f "$APPS_DIR/$file" ] && head -c2 "$APPS_DIR/$file" | grep -q 'PK'; then
                 echo "    -> Downloaded via apkeep (APKMirror): $file"
-                ((DOWNLOADED++)) || true
+                downloaded=true
             else
-                echo "    -> FAILED (apkeep APKMirror download invalid)"
+                echo "    -> apkeep APKMirror download invalid, trying F-Droid..."
                 rm -f "$APPS_DIR/$file" "$APPS_DIR/${APPS[$app,pkg]}.apk" 2>/dev/null
-                ((FAILED++)) || true
             fi
-        else
-            # Try F-Droid via apkeep as second fallback
+        fi
+        # If still not downloaded, try F-Droid
+        if ! $downloaded; then
             if apkeep -a "${APPS[$app,pkg]}" -d fdroid "$APPS_DIR" 2>/dev/null; then
                 mv -f "$APPS_DIR/${APPS[$app,pkg]}.apk" "$APPS_DIR/$file" 2>/dev/null
                 if [ -f "$APPS_DIR/$file" ] && head -c2 "$APPS_DIR/$file" | grep -q 'PK'; then
                     echo "    -> Downloaded via apkeep (F-Droid): $file"
-                    ((DOWNLOADED++)) || true
+                    downloaded=true
                 else
-                    echo "    -> FAILED (apkeep F-Droid download invalid)"
+                    echo "    -> apkeep F-Droid download invalid"
                     rm -f "$APPS_DIR/$file" "$APPS_DIR/${APPS[$app,pkg]}.apk" 2>/dev/null
-                    ((FAILED++)) || true
                 fi
-            else
-                echo "    -> FAILED (apkeep could not download from APKMirror or F-Droid)"
-                ((FAILED++)) || true
             fi
         fi
-    else
-        echo "    -> No download tool available. Install wget, curl, or apkeep."
-        ((FAILED++)) || true
     fi
-done
 
-# ---------------------------------------------------------------------------
-# Create Android.mk for prebuilt apps
+    # --- Final accounting ---
+    if $downloaded; then
+        ((DOWNLOADED++)) || true
+    else
+        echo "    -> FAILED (all download methods exhausted)"
 # ---------------------------------------------------------------------------
 echo ""
 echo "Creating Android.mk for prebuilt apps..."
