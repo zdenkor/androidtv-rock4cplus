@@ -351,21 +351,14 @@ if os.path.exists(build_sh):
             'if [ "$IS_VEHICLE" = "true" ]; then'
         )
         if content != orig:
-            # Try to fix permissions if file is not writable
-            if not os.access(build_sh, os.W_OK):
-                try:
-                    os.chmod(build_sh, 0o644)
-                except OSError:
-                    pass
-            # Check again — if still not writable, skip gracefully
-            if not os.access(build_sh, os.W_OK):
-                print('WARNING: Cannot write build.sh (wrong owner) — skipping. Run: sudo chown -R "$USER" /mnt/aosp-build/androidtv-rock4cplus')
-            else:
+            try:
                 with open(build_sh, 'w') as f:
                     f.write(content)
                 print('Fixed build.sh syntax')
                 changed += 1
-    except PermissionError:
-        print('WARNING: Permission denied for build.sh — skipping (run with sudo if needed)')
+            except PermissionError:
+                print('WARNING: Cannot write build.sh (wrong owner) — skipping. Run: sudo chown -R "$USER" /mnt/aosp-build/androidtv-rock4cplus')
+    except Exception as e:
+        print('WARNING: Could not read build.sh — skipping:', e)
 
 print('Done. Changes made:', changed)
