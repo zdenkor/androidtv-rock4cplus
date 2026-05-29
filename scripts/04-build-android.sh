@@ -42,8 +42,10 @@ fi
 MANIFEST_DIRS=(
     "prebuilts/sdk/current"
     "prebuilts/sdk/current/androidx"
+    "prebuilts/sdk/current/androidx-legacy"
     "prebuilts/sdk/current/extras/app-toolkit"
     "prebuilts/sdk/current/extras/constraint-layout"
+    "prebuilts/sdk/current/extras/constraint-layout-x"
     "prebuilts/sdk/current/extras/material-design"
     "prebuilts/sdk/current/extras/material-design-x"
     "prebuilts/sdk/current/support"

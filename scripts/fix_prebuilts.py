@@ -302,8 +302,10 @@ for path in modules_to_disable:
 manifest_dirs = [
     os.path.join(WORK_DIR, 'prebuilts', 'sdk', 'current'),
     os.path.join(WORK_DIR, 'prebuilts', 'sdk', 'current', 'androidx'),
+    os.path.join(WORK_DIR, 'prebuilts', 'sdk', 'current', 'androidx-legacy'),
     os.path.join(WORK_DIR, 'prebuilts', 'sdk', 'current', 'extras', 'app-toolkit'),
     os.path.join(WORK_DIR, 'prebuilts', 'sdk', 'current', 'extras', 'constraint-layout'),
+    os.path.join(WORK_DIR, 'prebuilts', 'sdk', 'current', 'extras', 'constraint-layout-x'),
     os.path.join(WORK_DIR, 'prebuilts', 'sdk', 'current', 'extras', 'material-design'),
     os.path.join(WORK_DIR, 'prebuilts', 'sdk', 'current', 'extras', 'material-design-x'),
     os.path.join(WORK_DIR, 'prebuilts', 'sdk', 'current', 'support'),
