@@ -135,8 +135,67 @@ case $BSP_CHOICE in
         # This MUST be done before lunch, as lunch will trigger auto_generator.py
         if [ -d "device/rockchip" ]; then
             echo "Scanning and fixing device/rockchip/**/*.py files..."
-            find device/rockchip -name "*.py" -print0 | xargs -0 sed -i 's/\t/    /g' 2>/dev/null || true
-            echo "Converted tabs to spaces in all device/rockchip Python files"
+            python3 << 'PYTHON_FIX_INDENT'
+import os
+import sys
+import re
+
+def fix_python_file(filepath):
+    """Fix Python indentation and syntax issues"""
+    try:
+        with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+            content = f.read()
+        
+        # Replace all tabs with 4 spaces
+        fixed_content = content.replace('\t', '    ')
+        
+        # Also normalize line endings
+        fixed_content = fixed_content.replace('\r\n', '\n').replace('\r', '\n')
+        
+        # Fix specific pattern: if statement followed immediately by continue/pass
+        # Add pass statement if if block is empty
+        lines = fixed_content.split('\n')
+        result_lines = []
+        i = 0
+        while i < len(lines):
+            result_lines.append(lines[i])
+            # Check if line is an if statement (ends with :)
+            if lines[i].rstrip().endswith(':') and 'if ' in lines[i]:
+                indent = len(lines[i]) - len(lines[i].lstrip())
+                # Look ahead to see if next non-empty line has proper indentation
+                if i + 1 < len(lines):
+                    next_line = lines[i + 1]
+                    if next_line.strip() and len(next_line) - len(next_line.lstrip()) <= indent:
+                        # Next line has same or less indent, add pass
+                        result_lines.append(' ' * (indent + 4) + 'pass')
+            i += 1
+        
+        fixed_content = '\n'.join(result_lines)
+        
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(fixed_content)
+        
+        # Verify the file compiles
+        try:
+            compile(fixed_content, filepath, 'exec')
+            print(f"Fixed and verified: {filepath}")
+        except SyntaxError as e:
+            print(f"Warning: {filepath} still has issues after fix: {e}")
+        
+        return True
+    except Exception as e:
+        print(f"Error processing {filepath}: {e}")
+        return False
+
+# Walk through all Python files
+for root, dirs, files in os.walk('device/rockchip'):
+    for file in files:
+        if file.endswith('.py'):
+            filepath = os.path.join(root, file)
+            fix_python_file(filepath)
+
+print("Python indentation fixes completed")
+PYTHON_FIX_INDENT
         fi
         
         # Call lunch with target name and suppress interactive mode
