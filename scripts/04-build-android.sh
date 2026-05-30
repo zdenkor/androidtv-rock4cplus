@@ -42,6 +42,7 @@ fi
 echo "Cleaning ninja cache..."
 rm -rf out/soong/.intermediates out/.module_paths out/soong/host 2>/dev/null
 rm -rf out/target/product/*/obj/RENDERSCRIPT_BITCODE 2>/dev/null
+rm -f out/soong/build.ninja 2>/dev/null
 echo "Cache cleaned."
 
 # Re-fix clang symlinks if needed
