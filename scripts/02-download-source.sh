@@ -121,7 +121,8 @@ case $BUILD_CHOICE in
 
         echo "[4/4] Downloading additional tools..."
         mkdir -p "$WORK_DIR/tools"
-        git clone --depth=1 https://github.com/rockchip-linux/tools.git "$WORK_DIR/tools/rkbin" || true
+        # Radxa uses rkbin from GitLab, not GitHub
+        git clone --depth=1 https://gitlab.com/rk-vendor/rk/rkbin.git "$WORK_DIR/rkbin" || true
         ;;
 
     2)
