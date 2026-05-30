@@ -134,7 +134,15 @@ case $BSP_CHOICE in
         lunch rk3399_box-userdebug < /dev/null
         
         echo ""
-        echo "[3/6] Android 9 Pie — skipping TV config (older system)"
+        echo "[3/6] Fixing Python indentation errors in Radxa Android 9..."
+        # Fix TabError in auto_generator.py (mixed tabs and spaces)
+        AUTO_GEN="device/rockchip/common/auto_generator.py"
+        if [ -f "$AUTO_GEN" ]; then
+            # Convert all tabs to spaces using sed
+            sed -i 's/\t/    /g' "$AUTO_GEN"
+            echo "Fixed: $AUTO_GEN (tabs -> spaces)"
+        fi
+        
         echo "[4/6] Android 9 Pie — device tree already included"
         echo "[5/6] Kernel config — using default (Android 9)"
         echo "[6/6] Prebuilts fixes — minimal (Android 9 prebuilts are stable)"
