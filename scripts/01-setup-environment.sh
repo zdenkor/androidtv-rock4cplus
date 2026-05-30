@@ -113,15 +113,31 @@ echo "[4/8] Installing OpenJDK 11..."
 echo "Checking for broken packages..."
 sudo apt-get install -f -y 2>/dev/null || true
 
+# Try to install libjpeg8 first (required by openjdk-11-jre on Debian)
+echo "Attempting to install libjpeg8..."
+sudo apt-get install -y libjpeg8 2>/dev/null || {
+    echo "libjpeg8 not available, trying alternative..."
+    # Try to download and install manually
+    if command -v wget &>/dev/null; then
+        echo "Downloading libjpeg8 from Debian repos..."
+        sudo apt-get download libjpeg8 2>/dev/null || {
+            echo "Creating dummy libjpeg8 package..."
+            sudo apt-get install -y libjpeg62-turbo 2>/dev/null || true
+        }
+    fi
+}
+
 if apt-cache show openjdk-11-jdk &>/dev/null; then
     # Available directly (Ubuntu 20.04/22.04, Debian 11)
-    # Use --allow-downgrades to fix version conflicts
-    echo "Installing OpenJDK 11 (with dependency resolution)..."
-    sudo apt-get install -y --allow-downgrades openjdk-11-jdk 2>/dev/null || {
+    # Use --allow-downgrades and --force-yes to override dependency conflicts
+    echo "Installing OpenJDK 11 (with forced dependencies)..."
+    sudo apt-get install -y --allow-downgrades --force-yes openjdk-11-jdk 2>/dev/null || {
         echo "Trying alternative approach..."
-        sudo apt-get install -y openjdk-11-jre-headless openjdk-11-jdk-headless 2>/dev/null || true
+        # Try installing jre-headless first, then jdk-headless, then jdk
+        sudo apt-get install -y openjdk-11-jre-headless 2>/dev/null || true
+        sudo apt-get install -y openjdk-11-jdk-headless 2>/dev/null || true
         sudo apt-get install -y --fix-broken 2>/dev/null || true
-        sudo apt-get install -y openjdk-11-jdk 2>/dev/null || {
+        sudo apt-get install -y --allow-downgrades --force-yes openjdk-11-jdk 2>/dev/null || {
             echo "WARNING: OpenJDK 11 installation failed. Trying JDK 17..."
             sudo apt-get install -y openjdk-17-jdk
         }
@@ -131,10 +147,10 @@ elif [ "$DISTRO" = "debian" ]; then
     echo "Debian 12+ detected — pulling OpenJDK 11 from bullseye repo..."
     echo "deb http://deb.debian.org/debian bullseye main" | sudo tee /etc/apt/sources.list.d/bullseye-jdk.list
     sudo apt-get update -y
-    sudo apt-get install -y --allow-downgrades openjdk-11-jdk openjdk-11-jre-headless 2>/dev/null || {
+    sudo apt-get install -y --allow-downgrades --force-yes openjdk-11-jdk openjdk-11-jre-headless 2>/dev/null || {
         echo "Trying alternative approach..."
-        sudo apt-get install -y --allow-downgrades openjdk-11-jre-headless 2>/dev/null || true
-        sudo apt-get install -y --allow-downgrades openjdk-11-jdk 2>/dev/null || {
+        sudo apt-get install -y --allow-downgrades --force-yes openjdk-11-jre-headless 2>/dev/null || true
+        sudo apt-get install -y --allow-downgrades --force-yes openjdk-11-jdk 2>/dev/null || {
             echo "WARNING: OpenJDK 11 installation failed. Trying JDK 17..."
             sudo apt-get install -y openjdk-17-jdk
         }
@@ -144,13 +160,13 @@ elif [ "$DISTRO" = "debian" ]; then
 elif [ "$DISTRO" = "ubuntu" ]; then
     # Ubuntu 24.04+ — try to find any available JDK
     echo "Trying to install OpenJDK 11 from Ubuntu repos..."
-    sudo apt-get install -y openjdk-11-jdk 2>/dev/null || {
+    sudo apt-get install -y --allow-downgrades --force-yes openjdk-11-jdk 2>/dev/null || {
         echo "WARNING: OpenJDK 11 not found. Trying JDK 17 (may cause build issues)..."
         sudo apt-get install -y openjdk-17-jdk
     }
 else
     echo "WARNING: Unknown distro. Trying OpenJDK 11, falling back to 17..."
-    sudo apt-get install -y openjdk-11-jdk 2>/dev/null || sudo apt-get install -y openjdk-17-jdk
+    sudo apt-get install -y --allow-downgrades --force-yes openjdk-11-jdk 2>/dev/null || sudo apt-get install -y openjdk-17-jdk
 fi
 
 # Verify Java
