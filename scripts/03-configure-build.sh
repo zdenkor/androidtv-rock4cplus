@@ -135,13 +135,31 @@ case $BSP_CHOICE in
         
         echo ""
         echo "[3/6] Fixing Python indentation errors in Radxa Android 9..."
-        # Fix TabError in auto_generator.py (mixed tabs and spaces)
-        AUTO_GEN="device/rockchip/common/auto_generator.py"
-        if [ -f "$AUTO_GEN" ]; then
-            # Convert all tabs to spaces using sed
-            sed -i 's/\t/    /g' "$AUTO_GEN"
-            echo "Fixed: $AUTO_GEN (tabs -> spaces)"
-        fi
+        # Fix TabError in auto_generator.py and other files (mixed tabs and spaces)
+        # Use Python to safely convert tabs to spaces in all device/rockchip files
+        python3 << 'PYTHON_INDENT_FIX'
+import os
+import re
+
+root_dir = "device/rockchip"
+if os.path.isdir(root_dir):
+    for root, dirs, files in os.walk(root_dir):
+        for file in files:
+            if file.endswith('.py'):
+                filepath = os.path.join(root, file)
+                try:
+                    with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+                        content = f.read()
+                    # Replace tabs with 4 spaces
+                    fixed_content = content.replace('\t', '    ')
+                    if fixed_content != content:
+                        with open(filepath, 'w', encoding='utf-8') as f:
+                            f.write(fixed_content)
+                        print(f"Fixed: {filepath}")
+                except Exception as e:
+                    print(f"Could not process {filepath}: {e}")
+PYTHON_INDENT_FIX
+        echo "Python indentation fixes completed"
         
         echo "[4/6] Android 9 Pie — device tree already included"
         echo "[5/6] Kernel config — using default (Android 9)"
