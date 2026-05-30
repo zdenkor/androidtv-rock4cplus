@@ -49,47 +49,31 @@ echo "Cache cleaned."
 # (real ones need libLLVM_android which is missing from clang prebuilts)
 mkdir -p out/host/linux-x86/bin
 for tool in bcc_strip_attr llvm-rs-cc bcc_compat bcc mcld; do
-    if [ ! -f "out/host/linux-x86/bin/$tool" ]; then
-        cat > "out/host/linux-x86/bin/$tool" << 'DUMMYEOF'
+    cat > "out/host/linux-x86/bin/$tool" << 'DUMMYEOF'
 #!/bin/bash
-# Dummy tool — real one disabled due to missing libLLVM_android
-# Creates expected output files to satisfy ninja
-for arg in "$@"; do
-    case "$arg" in
-        *.bc) touch "$arg" 2>/dev/null ;;
+# Dummy tool — creates expected .bc output files to satisfy ninja
+# Handles: -o <file>, positional <file>.bc, and --output <file>
+out=""
+args=("$@")
+for ((i=0; i<${#args[@]}; i++)); do
+    case "${args[$i]}" in
+        -o|--output) out="${args[$i+1]}" ;;
+        *.bc) out="${args[$i]}" ;;
     esac
 done
-# Handle -o outputfile pattern
-prev=""
-for arg in "$@"; do
-    if [ "$prev" = "-o" ]; then
-        touch "$arg" 2>/dev/null
-    fi
-    prev="$arg"
-done
+# If no output found, try last argument
+[ -z "$out" ] && out="${args[${#args[@]}-1]}"
+if [ -n "$out" ] && [[ "$out" == *.bc ]]; then
+    mkdir -p "$(dirname "$out")" 2>/dev/null
+    touch "$out"
+fi
 exit 0
 DUMMYEOF
-        chmod +x "out/host/linux-x86/bin/$tool"
-        echo "Created dummy $tool"
-    fi
+    chmod +x "out/host/linux-x86/bin/$tool"
 done
+echo "Created dummy bcc/llvm tools"
 
 # Pre-create ALL RenderScript .bc outputs to satisfy ninja copy rules
-# (real bcc tools need libLLVM_android which is missing from clang prebuilts)
-for bc_dir in out/target/product/*/obj/RENDERSCRIPT_BITCODE \
-              out/target/product/*/obj_arm/RENDERSCRIPT_BITCODE; do
-    for bc_dir_real in $bc_dir; do
-        if [ -d "$bc_dir_real" ]; then
-            # Find all expected .bc intermediates from ninja rules
-            for subdir in "$bc_dir_real"/*_intermediates/; do
-                [ -d "$subdir" ] || continue
-                bc_name=$(basename "$subdir" _intermediates)
-                touch "$subdir/$bc_name" 2>/dev/null
-            done
-        fi
-    done
-done
-# Also pre-create common ones even if dirs don't exist yet
 for bc_name in libclcore.bc libclcore_debug_g.bc libclcore_debug.bc; do
     for base in out/target/product/*/obj/RENDERSCRIPT_BITCODE \
                 out/target/product/*/obj_arm/RENDERSCRIPT_BITCODE; do
