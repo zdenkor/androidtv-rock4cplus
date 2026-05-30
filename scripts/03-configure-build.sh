@@ -128,11 +128,13 @@ case $BSP_CHOICE in
             LUNCH_TARGET="rk3399_box-userdebug"
         else
             echo "ERROR: lunch rk3399_box-userdebug failed"
-            echo "Available targets:"
-            lunch 2>/dev/null | grep -i rk3399 || true
+            echo ""
+            echo "Available lunch targets:"
+            lunch 2>/dev/null | grep -E "^[0-9]+\." | grep -i rk3399 || true
             echo ""
             echo "Please select target 57 (rk3399_box-userdebug) manually"
-            read -rp "Enter lunch target: " LUNCH_TARGET
+            echo "Type: 57"
+            read -rp "Enter target number: " LUNCH_TARGET
             lunch "$LUNCH_TARGET"
         fi
         
