@@ -1,27 +1,100 @@
 #!/bin/bash
 # =============================================================================
 # 04-build-android.sh (Multi-BSP version)
-# Builds Android for RK3399 BSP selected in 02-download-source.sh
-# Automatically uses correct build command per BSP
+# Builds Android for RK3399 BSP
+# Detects all downloaded BSPs and prompts user to select which to build
 # =============================================================================
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+BASE_DIR="/mnt/aosp-build"
 
-# Load .build-config with BSP_CHOICE and WORK_DIR
-CONFIG_FILE="$SCRIPT_DIR/../.build-config"
-if [ ! -f "$CONFIG_FILE" ]; then
-    echo "ERROR: .build-config not found!"
-    echo "Run 02-download-source.sh and 03-configure-build-multi.sh first."
+# Check if BASE_DIR exists
+if [ ! -d "$BASE_DIR" ]; then
+    echo "ERROR: Base directory not found: $BASE_DIR"
+    echo "Run 02-download-source.sh first to download a BSP."
     exit 1
 fi
 
-source "$CONFIG_FILE"
+# Detect all downloaded BSP directories
+declare -a BSP_DIRS=()
+declare -a BSP_NAMES=()
+
+for dir in "$BASE_DIR"/androidtv-rock4cplus-*; do
+    if [ -d "$dir" ]; then
+        BSP_DIRS+=("$dir")
+        BSP_NAMES+=("$(basename "$dir")")
+    fi
+done
+
+# If no BSPs found, check for .build-config
+if [ ${#BSP_DIRS[@]} -eq 0 ]; then
+    CONFIG_FILE="$SCRIPT_DIR/../.build-config"
+    if [ -f "$CONFIG_FILE" ]; then
+        source "$CONFIG_FILE"
+        if [ -d "$WORK_DIR" ]; then
+            BSP_DIRS+=("$WORK_DIR")
+            BSP_NAMES+=("$(basename "$WORK_DIR")")
+        fi
+    fi
+fi
+
+# Prompt user to select BSP if multiple found or none in .build-config
+if [ ${#BSP_DIRS[@]} -eq 0 ]; then
+    echo "ERROR: No BSP directories found in $BASE_DIR"
+    echo "Run 02-download-source.sh first to download a BSP."
+    exit 1
+elif [ ${#BSP_DIRS[@]} -eq 1 ]; then
+    WORK_DIR="${BSP_DIRS[0]}"
+    BSP_NAME="${BSP_NAMES[0]}"
+    echo "Found BSP: $BSP_NAME"
+    echo "Building this BSP..."
+else
+    echo "============================================"
+    echo " Multiple BSPs Found"
+    echo "============================================"
+    echo ""
+    echo "Select which BSP to build:"
+    echo ""
+    for i in "${!BSP_DIRS[@]}"; do
+        echo "  $((i+1)). ${BSP_NAMES[$i]}"
+        echo "     Path: ${BSP_DIRS[$i]}"
+        echo ""
+    done
+    read -rp "Enter choice (1-${#BSP_DIRS[@]}): " CHOICE
+    if [[ ! "$CHOICE" =~ ^[0-9]+$ ]] || [ "$CHOICE" -lt 1 ] || [ "$CHOICE" -gt ${#BSP_DIRS[@]} ]; then
+        echo "ERROR: Invalid choice"
+        exit 1
+    fi
+    WORK_DIR="${BSP_DIRS[$((CHOICE-1))]}"
+    BSP_NAME="${BSP_NAMES[$((CHOICE-1))]}"
+    echo ""
+fi
+
+# Determine BSP type from directory name
+if [[ "$BSP_NAME" == *radxa9* ]]; then
+    BSP_CHOICE=1
+    BSP_TYPE="Radxa Android 9 Pie"
+elif [[ "$BSP_NAME" == *vicharak12* ]]; then
+    BSP_CHOICE=2
+    BSP_TYPE="Vicharak Android 12 (kernel 5.10)"
+elif [[ "$BSP_NAME" == *advantech12* ]]; then
+    BSP_CHOICE=3
+    BSP_TYPE="Advantech Android 12 (kernel 4.19)"
+elif [[ "$BSP_NAME" == *aosp12* ]]; then
+    BSP_CHOICE=4
+    BSP_TYPE="AOSP Android 12"
+else
+    echo "WARNING: Unknown BSP type: $BSP_NAME"
+    echo "Defaulting to Vicharak (option 2)"
+    BSP_CHOICE=2
+    BSP_TYPE="Vicharak Android 12 (kernel 5.10)"
+fi
 
 echo "============================================"
 echo " Building Android"
-echo " BSP_CHOICE: $BSP_CHOICE"
+echo " BSP: $BSP_TYPE"
 echo " WORK_DIR: $WORK_DIR"
 echo "============================================"
 echo ""
