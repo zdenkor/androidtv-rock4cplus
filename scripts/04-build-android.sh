@@ -122,6 +122,9 @@ fi
 
 START_TIME=$(date +%s)
 
+# Fix: allow missing dependencies for bcc_strip_attr / libLLVM_android
+export ALLOW_MISSING_DEPENDENCIES=true
+
 case $BUILD_CHOICE in
     1)
         # Full build: U-Boot + Android + Kernel + update image
