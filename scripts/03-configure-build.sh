@@ -127,16 +127,14 @@ case $BSP_CHOICE in
         echo " LUNCH TARGET SELECTION"
         echo "============================================"
         echo ""
-        echo "Available lunch targets for Radxa Android 9 Pie:"
+        echo "For ROCK 4C+, please select target 57 (rk3399_box-userdebug):"
         echo ""
-        lunch 2>/dev/null | grep -E "^[0-9]+\." | grep -i rk3399 || true
-        echo ""
-        echo "For ROCK 4C+, please select target 57:"
-        echo "  57. rk3399_box-userdebug"
-        echo ""
-        echo "Type: 57"
-        echo ""
+        read -rp "Enter target number: " LUNCH_TARGET
         
+        # Call lunch with the selected target
+        lunch "$LUNCH_TARGET" || echo "Lunch target selection failed. Trying with default 57..."
+        
+        echo ""
         echo "[3/6] Android 9 Pie — skipping TV config (older system)"
         echo "[4/6] Android 9 Pie — device tree already included"
         echo "[5/6] Kernel config — using default (Android 9)"
