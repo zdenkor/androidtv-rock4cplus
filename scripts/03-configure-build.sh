@@ -130,19 +130,17 @@ case $BSP_CHOICE in
         echo "For ROCK 4C+, using target 57 (rk3399_box-userdebug)..."
         echo ""
         
+        echo "[3/6] Fixing Python indentation errors BEFORE lunch..."
+        # Proactively fix ALL Python indentation in device/rockchip (convert tabs to spaces)
+        # This MUST be done before lunch, as lunch will trigger auto_generator.py
+        if [ -d "device/rockchip" ]; then
+            echo "Scanning and fixing device/rockchip/**/*.py files..."
+            find device/rockchip -name "*.py" -print0 | xargs -0 sed -i 's/\t/    /g' 2>/dev/null || true
+            echo "Converted tabs to spaces in all device/rockchip Python files"
+        fi
+        
         # Call lunch with target name and suppress interactive mode
         lunch rk3399_box-userdebug < /dev/null
-        
-        echo ""
-        echo "[3/6] Fixing Python indentation errors in Radxa Android 9..."
-        # Fix TabError/IndentationError in auto_generator.py and other files
-        if [ -d "device/rockchip" ]; then
-            find device/rockchip -name "*.py" -exec python3 -m py_compile {} \; 2>&1 | grep -q "IndentationError\|TabError" && {
-                echo "Found Python indentation errors, fixing..."
-                find device/rockchip -name "*.py" -exec sed -i 's/\t/    /g' {} \;
-                echo "Fixed all tabs to spaces in device/rockchip/**/*.py"
-            } || echo "No Python indentation errors found"
-        fi
         
         echo "[4/6] Android 9 Pie — device tree already included"
         echo "[5/6] Kernel config — using default (Android 9)"
