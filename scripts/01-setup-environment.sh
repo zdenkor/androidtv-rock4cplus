@@ -140,19 +140,10 @@ sudo apt-get install -y libjpeg8 2>/dev/null || {
 if apt-cache show openjdk-11-jdk &>/dev/null; then
     # Available directly (Ubuntu 20.04/22.04, Debian 11)
     echo "Installing OpenJDK 11 using aptitude..."
+    # Try to install with aptitude, but if it fails, use JDK 17
     sudo aptitude install -y openjdk-11-jdk 2>/dev/null || {
-        echo "Trying apt-get with --force-yes..."
-        sudo apt-get install -y --allow-downgrades --force-yes openjdk-11-jdk 2>/dev/null || {
-            echo "Trying alternative approach..."
-            # Try installing jre-headless first, then jdk-headless, then jdk
-            sudo apt-get install -y openjdk-11-jre-headless 2>/dev/null || true
-            sudo apt-get install -y openjdk-11-jdk-headless 2>/dev/null || true
-            sudo apt-get install -y --fix-broken 2>/dev/null || true
-            sudo apt-get install -y --allow-downgrades --force-yes openjdk-11-jdk 2>/dev/null || {
-                echo "WARNING: OpenJDK 11 installation failed. Trying JDK 17..."
-                sudo apt-get install -y openjdk-17-jdk
-            }
-        }
+        echo "WARNING: OpenJDK 11 not available. Using OpenJDK 17 instead..."
+        sudo apt-get install -y openjdk-17-jdk
     }
 elif [ "$DISTRO" = "debian" ]; then
     # Debian 12+ removed OpenJDK 11 — pull from bullseye repo temporarily
@@ -160,11 +151,8 @@ elif [ "$DISTRO" = "debian" ]; then
     echo "deb http://deb.debian.org/debian bullseye main" | sudo tee /etc/apt/sources.list.d/bullseye-jdk.list
     sudo apt-get update -y
     sudo aptitude install -y --allow-downgrades openjdk-11-jdk openjdk-11-jre-headless 2>/dev/null || {
-        echo "Trying apt-get with --force-yes..."
-        sudo apt-get install -y --allow-downgrades --force-yes openjdk-11-jdk openjdk-11-jre-headless 2>/dev/null || {
-            echo "WARNING: OpenJDK 11 installation failed. Trying JDK 17..."
-            sudo apt-get install -y openjdk-17-jdk
-        }
+        echo "WARNING: OpenJDK 11 not available. Using OpenJDK 17 instead..."
+        sudo apt-get install -y openjdk-17-jdk
     }
     sudo rm /etc/apt/sources.list.d/bullseye-jdk.list
     sudo apt-get update -y
@@ -172,7 +160,7 @@ elif [ "$DISTRO" = "ubuntu" ]; then
     # Ubuntu 24.04+ — try to find any available JDK
     echo "Trying to install OpenJDK 11 from Ubuntu repos..."
     sudo aptitude install -y openjdk-11-jdk 2>/dev/null || {
-        echo "WARNING: OpenJDK 11 not found. Trying JDK 17 (may cause build issues)..."
+        echo "WARNING: OpenJDK 11 not found. Using OpenJDK 17 (may cause build issues)..."
         sudo apt-get install -y openjdk-17-jdk
     }
 else
