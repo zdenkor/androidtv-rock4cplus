@@ -136,10 +136,7 @@ case $BSP_CHOICE in
         echo ""
         echo "Type: 57"
         echo ""
-        read -rp "Enter target number: " LUNCH_TARGET
-        lunch "$LUNCH_TARGET"
         
-        echo "Using lunch target: $LUNCH_TARGET (rk3399_box-userdebug for ROCK 4C+)"
         echo "[3/6] Android 9 Pie — skipping TV config (older system)"
         echo "[4/6] Android 9 Pie — device tree already included"
         echo "[5/6] Kernel config — using default (Android 9)"
