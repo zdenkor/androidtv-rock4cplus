@@ -280,9 +280,9 @@ echo "Source location: $WORK_DIR"
 echo ""
 
 # Print disk usage
-echo "Disk usage:"
-du -sh "$WORK_DIR" 2>/dev/null || true
-echo ""
+# echo "Disk usage:"
+# du -sh "$WORK_DIR" 2>/dev/null || true
+# echo ""
 
 echo "Next step: Run 03-configure-build.sh"
 echo ""

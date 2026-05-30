@@ -122,27 +122,22 @@ case $BSP_CHOICE in
         # ====================================================================
         echo "[2/6] Configuring Radxa Android 9 Pie..."
         
-        # Select lunch target - automatically choose rk3399_box-userdebug (target 57)
-        # ROCK 4C+ uses the box configuration
-        echo "Attempting to lunch rk3399_box-userdebug..."
-        if lunch rk3399_box-userdebug 2>/dev/null; then
-            LUNCH_TARGET="rk3399_box-userdebug"
-        else
-            echo "lunch rk3399_box-userdebug failed, trying target 57..."
-            # Get the 57th target from lunch output
-            LUNCH_TARGET=$(lunch 2>/dev/null | sed -n '57p' | awk '{print $2}' | cut -d'-' -f1-2)
-            if [ -z "$LUNCH_TARGET" ]; then
-                echo "ERROR: Could not determine target 57"
-                echo "Available targets:"
-                lunch 2>/dev/null | grep -E "^[0-9]+\." | grep -i rk3399 || true
-                exit 1
-            fi
-            echo "Selected target: $LUNCH_TARGET"
-            lunch "$LUNCH_TARGET" 2>/dev/null || {
-                echo "ERROR: Failed to lunch $LUNCH_TARGET"
-                exit 1
-            }
-        fi
+        # Select lunch target - ROCK 4C+ uses rk3399_box-userdebug (target 57)
+        echo "============================================"
+        echo " LUNCH TARGET SELECTION"
+        echo "============================================"
+        echo ""
+        echo "Available lunch targets for Radxa Android 9 Pie:"
+        echo ""
+        lunch 2>/dev/null | grep -E "^[0-9]+\." | grep -i rk3399 || true
+        echo ""
+        echo "For ROCK 4C+, please select target 57:"
+        echo "  57. rk3399_box-userdebug"
+        echo ""
+        echo "Type: 57"
+        echo ""
+        read -rp "Enter target number: " LUNCH_TARGET
+        lunch "$LUNCH_TARGET"
         
         echo "Using lunch target: $LUNCH_TARGET (rk3399_box-userdebug for ROCK 4C+)"
         echo "[3/6] Android 9 Pie — skipping TV config (older system)"
