@@ -122,17 +122,21 @@ case $BSP_CHOICE in
         # ====================================================================
         echo "[2/6] Configuring Radxa Android 9 Pie..."
         
-        # Select lunch target
+        # Select lunch target - automatically choose rk3399_box-userdebug (target 57)
+        # ROCK 4C+ uses the box configuration
         if lunch rk3399_box-userdebug 2>/dev/null; then
             LUNCH_TARGET="rk3399_box-userdebug"
         else
+            echo "ERROR: lunch rk3399_box-userdebug failed"
             echo "Available targets:"
             lunch 2>/dev/null | grep -i rk3399 || true
+            echo ""
+            echo "Please select target 57 (rk3399_box-userdebug) manually"
             read -rp "Enter lunch target: " LUNCH_TARGET
             lunch "$LUNCH_TARGET"
         fi
         
-        echo "Using lunch target: $LUNCH_TARGET"
+        echo "Using lunch target: $LUNCH_TARGET (rk3399_box-userdebug for ROCK 4C+)"
         echo "[3/6] Android 9 Pie — skipping TV config (older system)"
         echo "[4/6] Android 9 Pie — device tree already included"
         echo "[5/6] Kernel config — using default (Android 9)"
