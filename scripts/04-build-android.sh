@@ -42,8 +42,23 @@ fi
 echo "Cleaning ninja cache..."
 rm -rf out/soong/.intermediates out/.module_paths out/soong/host 2>/dev/null
 rm -rf out/target/product/*/obj/RENDERSCRIPT_BITCODE 2>/dev/null
-rm -f out/soong/build.ninja 2>/dev/null
+rm -f out/soong/build.ninja out/build-*.ninja 2>/dev/null
 echo "Cache cleaned."
+
+# Create dummy bcc_strip_attr and llvm-rs-cc to satisfy ninja dependencies
+# (real ones need libLLVM_android which is missing from clang prebuilts)
+mkdir -p out/host/linux-x86/bin
+for tool in bcc_strip_attr llvm-rs-cc bcc_compat bcc mcld; do
+    if [ ! -f "out/host/linux-x86/bin/$tool" ]; then
+        cat > "out/host/linux-x86/bin/$tool" << 'DUMMYEOF'
+#!/bin/bash
+# Dummy tool — real one disabled due to missing libLLVM_android
+exit 0
+DUMMYEOF
+        chmod +x "out/host/linux-x86/bin/$tool"
+        echo "Created dummy $tool"
+    fi
+done
 
 # Re-fix clang symlinks if needed
 CLANG_LIB_DIR="prebuilts/clang/host/linux-x86/clang-3289846/lib64"
