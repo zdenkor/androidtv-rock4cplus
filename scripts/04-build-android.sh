@@ -53,10 +53,32 @@ for tool in bcc_strip_attr llvm-rs-cc bcc_compat bcc mcld; do
         cat > "out/host/linux-x86/bin/$tool" << 'DUMMYEOF'
 #!/bin/bash
 # Dummy tool — real one disabled due to missing libLLVM_android
+# Creates expected output files to satisfy ninja
+for arg in "$@"; do
+    case "$arg" in
+        *.bc) touch "$arg" 2>/dev/null ;;
+    esac
+done
+# Handle -o outputfile pattern
+prev=""
+for arg in "$@"; do
+    if [ "$prev" = "-o" ]; then
+        touch "$arg" 2>/dev/null
+    fi
+    prev="$arg"
+done
 exit 0
 DUMMYEOF
         chmod +x "out/host/linux-x86/bin/$tool"
         echo "Created dummy $tool"
+    fi
+done
+
+# Pre-create libclcore.bc outputs to satisfy copy rules
+for bc_path in out/target/product/*/obj/RENDERSCRIPT_BITCODE/libclcore.bc_intermediates/libclcore.bc \
+               out/target/product/*/obj_arm/RENDERSCRIPT_BITCODE/libclcore.bc_intermediates/libclcore.bc; do
+    if [ -d "$(dirname "$bc_path")" ] || mkdir -p "$(dirname "$bc_path")" 2>/dev/null; then
+        touch "$bc_path" 2>/dev/null
     fi
 done
 
