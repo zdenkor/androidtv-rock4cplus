@@ -134,33 +134,7 @@ case $BSP_CHOICE in
         lunch rk3399_box-userdebug < /dev/null
         
         echo ""
-        echo "[3/6] Fixing Python indentation errors in Radxa Android 9..."
-        # Fix TabError in auto_generator.py and other files (mixed tabs and spaces)
-        # Use Python to safely convert tabs to spaces in all device/rockchip files
-        python3 << 'PYTHON_INDENT_FIX'
-import os
-import re
-
-root_dir = "device/rockchip"
-if os.path.isdir(root_dir):
-    for root, dirs, files in os.walk(root_dir):
-        for file in files:
-            if file.endswith('.py'):
-                filepath = os.path.join(root, file)
-                try:
-                    with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
-                        content = f.read()
-                    # Replace tabs with 4 spaces
-                    fixed_content = content.replace('\t', '    ')
-                    if fixed_content != content:
-                        with open(filepath, 'w', encoding='utf-8') as f:
-                            f.write(fixed_content)
-                        print(f"Fixed: {filepath}")
-                except Exception as e:
-                    print(f"Could not process {filepath}: {e}")
-PYTHON_INDENT_FIX
-        echo "Python indentation fixes completed"
-        
+        echo "[3/6] Android 9 Pie — skipping TV config (older system)"
         echo "[4/6] Android 9 Pie — device tree already included"
         echo "[5/6] Kernel config — using default (Android 9)"
         echo "[6/6] Prebuilts fixes — minimal (Android 9 prebuilts are stable)"
@@ -185,13 +159,7 @@ PYTHON_INDENT_FIX
         fi
         
         # Lunch target
-        if lunch rk3399-userdebug 2>/dev/null; then
-            LUNCH_TARGET="rk3399-userdebug"
-        else
-            read -rp "Enter lunch target: " LUNCH_TARGET
-            lunch "$LUNCH_TARGET"
-        fi
-        echo "Using lunch target: $LUNCH_TARGET"
+        lunch rk3399-userdebug < /dev/null
         
         echo "[3/6] Configuring for Android TV 12..."
         # Configure Android TV (Leanback, system properties)
@@ -243,12 +211,7 @@ EOF
         fi
         
         # Lunch target
-        if lunch rk3399-userdebug 2>/dev/null; then
-            LUNCH_TARGET="rk3399-userdebug"
-        else
-            read -rp "Enter lunch target: " LUNCH_TARGET
-            lunch "$LUNCH_TARGET"
-        fi
+        lunch rk3399-userdebug < /dev/null
         
         echo "[3/6] [4/6] [5/6] [6/6] Configuration complete (Advantech BSP uses default settings)"
         ;;
