@@ -288,6 +288,15 @@ modules_to_disable = [
     os.path.join(WORK_DIR, 'hardware', 'rockchip', 'libgralloc', 'bifrost', 'interfaces', 'capabilities', 'Android.bp'),
     os.path.join(WORK_DIR, 'hardware', 'rockchip', 'libgralloc', 'bifrost', 'interfaces', 'aidl', 'Android.bp'),
     os.path.join(WORK_DIR, 'external', 'kotlinx.atomicfu', 'Android.bp'),
+    # bcc tools require libLLVM_android which is missing from clang prebuilts.
+    # These are build-time tools only — not needed for the final image.
+    os.path.join(WORK_DIR, 'frameworks', 'compile', 'libbcc', 'tools', 'bcc', 'Android.bp'),
+    os.path.join(WORK_DIR, 'frameworks', 'compile', 'libbcc', 'tools', 'bcc_strip_attr', 'Android.bp'),
+    os.path.join(WORK_DIR, 'frameworks', 'compile', 'libbcc', 'tools', 'bcc_compat', 'Android.bp'),
+    os.path.join(WORK_DIR, 'frameworks', 'compile', 'libbcc', 'bcinfo', 'Android.bp'),
+    os.path.join(WORK_DIR, 'frameworks', 'compile', 'libbcc', 'lib', 'Android.bp'),
+    os.path.join(WORK_DIR, 'frameworks', 'compile', 'mclinker', 'tools', 'mcld', 'Android.bp'),
+    os.path.join(WORK_DIR, 'frameworks', 'compile', 'slang', 'Android.bp'),
 ]
 
 for path in modules_to_disable:
@@ -361,17 +370,5 @@ if os.path.exists(build_sh):
                 print('WARNING: Cannot write build.sh (wrong owner) — skipping. Run: sudo chown -R "$USER" /mnt/aosp-build/androidtv-rock4cplus')
     except Exception as e:
         print('WARNING: Could not read build.sh — skipping:', e)
-
-# ---------------------------------------------------------------------------
-# 10. Fix missing libLLVM_android for bcc_strip_attr
-# ---------------------------------------------------------------------------
-import glob
-for clang_dir in glob.glob(os.path.join(WORK_DIR, 'prebuilts', 'clang', 'host', 'linux-x86', 'clang-*', 'lib64')):
-    llvm_so = os.path.join(clang_dir, 'libLLVM.so')
-    llvm_android = os.path.join(clang_dir, 'libLLVM_android.so')
-    if os.path.isfile(llvm_so) and not os.path.exists(llvm_android):
-        os.symlink('libLLVM.so', llvm_android)
-        print('Fixed symlink', llvm_android, '-> libLLVM.so')
-        changed += 1
 
 print('Done. Changes made:', changed)
