@@ -301,6 +301,9 @@ modules_to_disable = [
     os.path.join(WORK_DIR, 'frameworks', 'compile', 'slang', 'BitWriter_2_9_func', 'Android.bp'),
     os.path.join(WORK_DIR, 'frameworks', 'compile', 'slang', 'BitWriter_3_2', 'Android.bp'),
     os.path.join(WORK_DIR, 'frameworks', 'compile', 'slang', 'StripUnkAttr', 'Android.bp'),
+    # libstagefright_mediafilter needs llvm-rs-cc (RenderScript compiler)
+    # which depends on disabled slang/bcc modules.
+    os.path.join(WORK_DIR, 'frameworks', 'av', 'media', 'libstagefright', 'filters', 'Android.bp'),
 ]
 
 for path in modules_to_disable:
