@@ -74,12 +74,30 @@ DUMMYEOF
     fi
 done
 
-# Pre-create libclcore.bc outputs to satisfy copy rules
-for bc_path in out/target/product/*/obj/RENDERSCRIPT_BITCODE/libclcore.bc_intermediates/libclcore.bc \
-               out/target/product/*/obj_arm/RENDERSCRIPT_BITCODE/libclcore.bc_intermediates/libclcore.bc; do
-    if [ -d "$(dirname "$bc_path")" ] || mkdir -p "$(dirname "$bc_path")" 2>/dev/null; then
-        touch "$bc_path" 2>/dev/null
-    fi
+# Pre-create ALL RenderScript .bc outputs to satisfy ninja copy rules
+# (real bcc tools need libLLVM_android which is missing from clang prebuilts)
+for bc_dir in out/target/product/*/obj/RENDERSCRIPT_BITCODE \
+              out/target/product/*/obj_arm/RENDERSCRIPT_BITCODE; do
+    for bc_dir_real in $bc_dir; do
+        if [ -d "$bc_dir_real" ]; then
+            # Find all expected .bc intermediates from ninja rules
+            for subdir in "$bc_dir_real"/*_intermediates/; do
+                [ -d "$subdir" ] || continue
+                bc_name=$(basename "$subdir" _intermediates)
+                touch "$subdir/$bc_name" 2>/dev/null
+            done
+        fi
+    done
+done
+# Also pre-create common ones even if dirs don't exist yet
+for bc_name in libclcore.bc libclcore_debug_g.bc libclcore_debug.bc; do
+    for base in out/target/product/*/obj/RENDERSCRIPT_BITCODE \
+                out/target/product/*/obj_arm/RENDERSCRIPT_BITCODE; do
+        for b in $base; do
+            mkdir -p "$b/${bc_name}_intermediates" 2>/dev/null
+            touch "$b/${bc_name}_intermediates/$bc_name" 2>/dev/null
+        done
+    done
 done
 
 # Re-fix clang symlinks if needed
