@@ -38,17 +38,11 @@ if [ -f "$SCRIPT_DIR_FIX/fix_prebuilts.py" ]; then
     python3 "$SCRIPT_DIR_FIX/fix_prebuilts.py" 2>/dev/null || true
 fi
 
-# Clean ninja cache if modules were disabled (avoids stale references)
-if ls prebuilts/sdk/current/*/Android.bp.disabled 2>/dev/null || \
-   ls frameworks/compile/libbcc/**/Android.bp.disabled 2>/dev/null || \
-   ls frameworks/compile/slang/**/Android.bp.disabled 2>/dev/null || \
-   ls frameworks/compile/mclinker/**/Android.bp.disabled 2>/dev/null || \
-   ls frameworks/av/media/libstagefright/filters/Android.bp.disabled 2>/dev/null; then
-    echo "Cleaning ninja cache (modules were disabled)..."
-    rm -rf out/soong/.intermediates out/.module_paths out/soong/host 2>/dev/null
-    rm -rf out/target/product/*/obj/RENDERSCRIPT_BITCODE 2>/dev/null
-    echo "Cache cleaned."
-fi
+# Clean ninja cache to avoid stale references from disabled modules
+echo "Cleaning ninja cache..."
+rm -rf out/soong/.intermediates out/.module_paths out/soong/host 2>/dev/null
+rm -rf out/target/product/*/obj/RENDERSCRIPT_BITCODE 2>/dev/null
+echo "Cache cleaned."
 
 # Re-fix clang symlinks if needed
 CLANG_LIB_DIR="prebuilts/clang/host/linux-x86/clang-3289846/lib64"
