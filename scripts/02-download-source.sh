@@ -120,28 +120,8 @@ case $BUILD_CHOICE in
         repo sync -c -j$(nproc) --no-tags --no-clone-bundle
 
         echo "[4/4] Downloading additional tools..."
-        mkdir -p "$WORK_DIR/tools"
-        # Radxa uses rkbin from GitLab, not GitHub
-        # Only clone if directory doesn't exist or is empty
-        if [ ! -d "$WORK_DIR/rkbin" ] || [ -z "$(ls -A "$WORK_DIR/rkbin" 2>/dev/null)" ]; then
-            echo "Cloning rkbin from GitLab..."
-            git clone --depth=1 https://gitlab.com/rk-vendor/rk/rkbin.git "$WORK_DIR/rkbin" || true
-        else
-            # Check if it's the correct repo
-            if [ -d "$WORK_DIR/rkbin/.git" ]; then
-                REMOTE_URL=$(cd "$WORK_DIR/rkbin" && git remote get-url origin 2>/dev/null || true)
-                if [[ "$REMOTE_URL" == *"gitlab.com/rk-vendor/rk/rkbin"* ]]; then
-                    echo "rkbin already exists, updating..."
-                    cd "$WORK_DIR/rkbin" && git pull --rebase || true
-                else
-                    echo "WARNING: rkbin exists but is from a different repo"
-                    echo "Please remove it manually if you want to use the correct one"
-                fi
-            else
-                echo "WARNING: rkbin exists but is not a git repo"
-                echo "Please remove it manually if you want to use the correct one"
-            fi
-        fi
+        # rkbin is already included in Radxa manifest, no need to clone separately
+        echo "rkbin is included in Radxa manifest, skipping manual clone"
         ;;
 
     2)
