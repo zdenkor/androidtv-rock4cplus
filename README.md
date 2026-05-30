@@ -1,5 +1,7 @@
 # Android TV for Radxa ROCK 4C+
 
+!!! WORK IN POGRESS, DO NOT USE IT RIGHT NOW !!!
+
 Build **Android 9–12** for the **Radxa ROCK 4C+** (Rockchip RK3399-T) from source using **multiple BSP options**.
 
 > **Supported BSPs:**
