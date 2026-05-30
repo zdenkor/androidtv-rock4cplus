@@ -358,16 +358,7 @@ if os.path.exists(build_sh):
                 print('Fixed build.sh syntax')
                 changed += 1
             except PermissionError:
-                import subprocess
-                print('Permission denied on build.sh — fixing ownership...')
-                subprocess.run(['sudo', 'chown', '-R', os.environ.get('USER', os.environ.get('USERNAME', 'root')), WORK_DIR], check=False)
-                try:
-                    with open(build_sh, 'w') as f:
-                        f.write(content)
-                    print('Fixed build.sh syntax (after chown)')
-                    changed += 1
-                except PermissionError:
-                    print('WARNING: Still cannot write build.sh — skipping. Run manually: sudo chown -R "$USER" /mnt/aosp-build/androidtv-rock4cplus')
+                print('WARNING: Cannot write build.sh (wrong owner). Run: sudo chown -R "$USER" /mnt/aosp-build/androidtv-rock4cplus')
     except Exception as e:
         print('WARNING: Could not read build.sh — skipping:', e)
 
