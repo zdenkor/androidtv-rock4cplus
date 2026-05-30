@@ -45,45 +45,6 @@ rm -rf out/target/product/*/obj/RENDERSCRIPT_BITCODE 2>/dev/null
 rm -f out/soong/build.ninja out/build-*.ninja 2>/dev/null
 echo "Cache cleaned."
 
-# Create dummy bcc_strip_attr and llvm-rs-cc to satisfy ninja dependencies
-# (real ones need libLLVM_android which is missing from clang prebuilts)
-mkdir -p out/host/linux-x86/bin
-for tool in bcc_strip_attr llvm-rs-cc bcc_compat bcc mcld; do
-    cat > "out/host/linux-x86/bin/$tool" << 'DUMMYEOF'
-#!/bin/bash
-# Dummy tool — creates expected .bc output files to satisfy ninja
-# Handles: -o <file>, positional <file>.bc, and --output <file>
-out=""
-args=("$@")
-for ((i=0; i<${#args[@]}; i++)); do
-    case "${args[$i]}" in
-        -o|--output) out="${args[$i+1]}" ;;
-        *.bc) out="${args[$i]}" ;;
-    esac
-done
-# If no output found, try last argument
-[ -z "$out" ] && out="${args[${#args[@]}-1]}"
-if [ -n "$out" ] && [[ "$out" == *.bc ]]; then
-    mkdir -p "$(dirname "$out")" 2>/dev/null
-    touch "$out"
-fi
-exit 0
-DUMMYEOF
-    chmod +x "out/host/linux-x86/bin/$tool"
-done
-echo "Created dummy bcc/llvm tools"
-
-# Pre-create ALL RenderScript .bc outputs to satisfy ninja copy rules
-for bc_name in libclcore.bc libclcore_debug_g.bc libclcore_debug.bc; do
-    for base in out/target/product/*/obj/RENDERSCRIPT_BITCODE \
-                out/target/product/*/obj_arm/RENDERSCRIPT_BITCODE; do
-        for b in $base; do
-            mkdir -p "$b/${bc_name}_intermediates" 2>/dev/null
-            touch "$b/${bc_name}_intermediates/$bc_name" 2>/dev/null
-        done
-    done
-done
-
 # Re-fix clang symlinks if needed
 CLANG_LIB_DIR="prebuilts/clang/host/linux-x86/clang-3289846/lib64"
 GCC_SYSROOT="prebuilts/gcc/linux-x86/host/x86_64-linux-glibc2.17-4.8/sysroot/usr/lib"
