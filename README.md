@@ -1,15 +1,22 @@
 # Android TV for Radxa ROCK 4C+
 
-Build **Android TV 12** for the **Radxa ROCK 4C+** (Rockchip RK3399-T) from source using the Vicharak BSP.
+Build **Android 9–12** for the **Radxa ROCK 4C+** (Rockchip RK3399-T) from source using **multiple BSP options**.
 
-> BSP: [Vicharak Android 12](https://github.com/vicharak-in/rockchip-android-manifest) — kernel 5.10, full Rockchip HALs, last updated Dec 2025.
+> **Supported BSPs:**
+> - [Vicharak Android 12](https://github.com/vicharak-in/rockchip-android-manifest) — kernel 5.10, full Rockchip HALs, last updated Dec 2025 (**recommended**)
+> - Radxa Android 9 Pie — kernel 4.4, official Radxa BSP
+> - Advantech Android 12 — kernel 4.19, industrial Rockchip variant
+> - AOSP 12 — experimental, requires manual BSP integration
 
 ---
 
 ## What This Project Does
 
-This repository provides a complete, automated build system for compiling Android TV 12 from AOSP source for the Radxa ROCK 4C+ single-board computer. It includes:
+This repository provides a complete, automated build system for compiling Android from AOSP source for the Radxa ROCK 4C+ single-board computer. It includes:
 
+- **Multi-BSP support** — choose between Vicharak (Android 12), Radxa (Android 9), Advantech (Android 12), or AOSP 12 during `02-download-source.sh`
+- **Isolated build directories** — each BSP downloads to its own directory (`/mnt/aosp-build/androidtv-rock4cplus-{vicharak12,radxa9,advantech12,aosp12}`)
+- **BSP-aware scripts** — all build scripts auto-detect which BSP was selected and apply correct configuration
 - **Automated scripts** for USB setup, environment preparation, source download, configuration, building, and flashing
 - **Prebuilts compatibility fixes** for Debian 13 / WSL2 (Soong sanitization, missing manifests, symlink fixes)
 - **Android TV configuration** (Leanback Launcher, HDMI-CEC, IR remote support)
@@ -18,13 +25,24 @@ This repository provides a complete, automated build system for compiling Androi
 
 ### Key Components
 
-| Component | Source | Version |
-|-----------|--------|---------|
-| AOSP | Vicharak BSP | Android 12 |
-| Linux Kernel | Rockchip | 5.10 |
+**Android Versions & BSPs:**
+
+| BSP | Android | Kernel | Status | Use Case |
+|-----|---------|--------|--------|----------|
+| **Vicharak** | 12 | 5.10 | ✅ Recommended | Latest, most features |
+| Radxa | 9 Pie | 4.4 | ✅ Stable | Official support, mature |
+| Advantech | 12 | 4.19 | ⚠️ Experimental | Industrial variant |
+| AOSP | 12 | 5.10+ | ⚠️ Manual | Minimal, research |
+
+**Hardware Components (all BSPs):**
+
+| Component | Source | Notes |
+|-----------|--------|-------|
+| SoC | Rockchip | RK3399-T (A72@1.5GHz + A53@1.0GHz) |
+| Linux Kernel | Rockchip | 4.4, 4.19, or 5.10 (BSP-dependent) |
 | U-Boot | Rockchip | 2023+ |
 | GPU (Mali-T860) | ARM | Panfrost / Mali |
-| VPU | Rockchip | MPP |
+| VPU | Rockchip | MPP video processor |
 
 ### Android TV Features
 
@@ -146,33 +164,44 @@ cd androidtv-rock4cplus
 
 All scripts are designed to run inside **WSL2 or native Debian/Ubuntu**.
 
+### How It Works (Multi-BSP)
+
+1. **02-download-source.sh** prompts you to select a BSP (1-4)
+2. Downloads the BSP source to a **separate directory** (e.g., `/mnt/aosp-build/androidtv-rock4cplus-vicharak12`)
+3. Creates `.build-config` storing `BSP_CHOICE` and `WORK_DIR`
+4. **Remaining scripts automatically detect and use the correct BSP**
+
+### Quick Start Steps
+
 ```bash
 chmod +x scripts/*.sh
 ./scripts/00-setup-usb.sh         # Format USB, mount it, copy repo to USB
 ./scripts/01-setup-environment.sh # Install dependencies
-./scripts/02-download-source.sh   # Download AOSP + Rockchip BSP (~80GB)
-./scripts/03-configure-build.sh   # Configure device, TV, apply prebuilts fixes
+./scripts/02-download-source.sh   # Select BSP (1-4), download source (~80GB)
+./scripts/03-configure-build.sh   # Auto-detect BSP, apply correct config
 ./scripts/03a-preinstall-apps.sh   # Optional: preinstall apps
-./scripts/04-build-android.sh     # Build Android TV (4-8 hours)
-./scripts/05-flash-device.sh    # Flash to ROCK 4C+
+./scripts/04-build-android.sh     # Auto-detect BSP, use correct build command
+./scripts/05-flash-device.sh      # Flash to ROCK 4C+
 ```
 
 After `00-setup-usb.sh`, you can continue from the USB copy to avoid cross-filesystem issues:
 ```bash
-cd /mnt/aosp-build/androidtv-rock4cplus-repo
+cd /mnt/aosp-build/androidtv-rock4cplus
 ./scripts/01-setup-environment.sh
 # ... continue with remaining steps
 ```
 
-| Step | Script | Description |
-|------|--------|-------------|
-| 0 | `./scripts/00-setup-usb.sh` | Format & mount USB drive as ext4, copy repo to USB |
-| 1 | `./scripts/01-setup-environment.sh` | Install build dependencies & JDK 11 |
-| 2 | `./scripts/02-download-source.sh` | Download AOSP + Rockchip BSP (~80GB) |
-| 3 | `./scripts/03-configure-build.sh` | Configure for ROCK 4C+, Android TV, and **auto-apply prebuilts fixes** |
-| 3b | `./scripts/03a-preinstall-apps.sh` | (Optional) Preinstall apps into build |
-| 4 | `./scripts/04-build-android.sh` | Build Android TV (4-8 hours) |
-| 5 | `./scripts/05-flash-device.sh` | Flash to ROCK 4C+ |
+### Build Scripts Reference
+
+| Step | Script | Description | Multi-BSP Support |
+|------|--------|-------------|-------------------|
+| 0 | `./scripts/00-setup-usb.sh` | Format & mount USB drive as ext4, copy repo | — |
+| 1 | `./scripts/01-setup-environment.sh` | Install build dependencies & JDK 11 | — |
+| 2 | `./scripts/02-download-source.sh` | **Select BSP (1-4), download source** (~80GB) | ✅ Prompts for choice |
+| 3 | `./scripts/03-configure-build.sh` | **Auto-detect BSP, apply correct config** | ✅ Reads `.build-config` |
+| 3b | `./scripts/03a-preinstall-apps.sh` | (Optional) Preinstall apps into build | — |
+| 4 | `./scripts/04-build-android.sh` | **Auto-detect BSP, use correct build command** | ✅ Reads `.build-config` |
+| 5 | `./scripts/05-flash-device.sh` | Flash to ROCK 4C+ | — |
 
 ---
 
@@ -181,25 +210,45 @@ cd /mnt/aosp-build/androidtv-rock4cplus-repo
 ```
 AndroidTV for Radxa4C+/
 ├── README.md
-├── .build-config                    # Generated: USB mount & work dir paths
+├── .build-config                    # Auto-generated: stores BSP_CHOICE, WORK_DIR, BASE_DIR
 ├── .gitignore
 ├── scripts/
 │   ├── 00-setup-usb.sh              # Format & mount USB drive (ext4)
 │   ├── 01-setup-environment.sh      # Install dependencies & tools
-│   ├── 02-download-source.sh        # Download AOSP + Rockchip BSP
-│   ├── 03-configure-build.sh        # Configure device, kernel, TV, GApps
-│   ├── 04-build-android.sh          # Build the image
+│   ├── 02-download-source.sh        # Select BSP (1-4), download to separate dir
+│   ├── 03-configure-build.sh        # Detect BSP from .build-config, apply config
+│   ├── 04-build-android.sh          # Detect BSP from .build-config, build
 │   ├── 05-flash-device.sh           # Flash to device
-│   └── 03a-preinstall-apps.sh        # Download & integrate apps
+│   ├── 03a-preinstall-apps.sh       # Download & integrate apps
+│   └── fix_prebuilts.py             # Sanitize Soong modules (called by 03)
 ├── patches/
-│   └── rk3399-rock-4c-plus.dts      # ROCK 4C+ device tree (RK3399-T)
+│   └── rk3399-rock-4c-plus.dts      # ROCK 4C+ device tree (RK3399-T OPP table)
 ├── configs/
 │   └── BoardConfig.mk               # Board configuration reference
 └── docs/
     ├── device-tree.md               # Device tree reference
     ├── kernel-config.md             # Kernel configuration
     └── troubleshooting.md           # Common issues & fixes
+
+# Build Directory Structure (created by scripts):
+/mnt/aosp-build/
+├── androidtv-rock4cplus/            # Main repo (git cloned here)
+├── androidtv-rock4cplus-vicharak12/ # Vicharak BSP (option 2)
+├── androidtv-rock4cplus-radxa9/     # Radxa Android 9 (option 1)
+├── androidtv-rock4cplus-advantech12/# Advantech Android 12 (option 3)
+└── androidtv-rock4cplus-aosp12/     # AOSP 12 (option 4)
 ```
+
+### .build-config (Auto-generated)
+
+After running `02-download-source.sh`, this file stores:
+```bash
+BSP_CHOICE=2                                              # Selected BSP (1-4)
+WORK_DIR=/mnt/aosp-build/androidtv-rock4cplus-vicharak12 # Work directory
+BASE_DIR=/mnt/aosp-build                                  # Base directory
+```
+
+All subsequent scripts read this file to detect which BSP was selected and apply appropriate configuration.
 
 ---
 
@@ -271,16 +320,33 @@ sudo mount /mnt/aosp-build
 
 ## Important Notes
 
-1. **RK3399-T vs RK3399**: The ROCK 4C+ uses RK3399-T (lower-clocked). The device tree in `patches/` includes the correct OPP table (A72 @ 1.5GHz, A53 @ 1.0GHz).
+### BSP Selection
 
-2. **Build Time**: First build takes 4-8 hours. Subsequent builds are faster (incremental).
+- **Vicharak (Option 2)** — **Recommended** for Android TV 12. Latest kernel (5.10), most features, actively maintained.
+- **Radxa 9 (Option 1)** — Android 9 Pie. Officially supported by Radxa, stable, older features.
+- **Advantech (Option 3)** — Android 12 with kernel 4.19. Requires manual prebuilts extraction from Dropbox links.
+- **AOSP (Option 4)** — Experimental. Pure AOSP requires manual Rockchip BSP integration (kernel, HALs, device tree).
 
-3. **Disk Space**: The source tree is ~80GB, build output adds ~50GB. Total: ~130GB minimum.
+Each BSP downloads to its own directory. You can build multiple BSPs in sequence without conflicts.
+
+### Build Characteristics
+
+1. **RK3399-T vs RK3399**: The ROCK 4C+ uses RK3399-T (lower-clocked). The device tree includes the correct OPP table (A72 @ 1.5GHz, A53 @ 1.0GHz).
+
+2. **Build Time**: 
+   - First build: 4-8 hours (full Soong compilation)
+   - Incremental builds: 30 mins - 2 hours (depends on changes)
+
+3. **Disk Space**: 
+   - Source tree: ~80GB per BSP
+   - Build output: ~50GB per BSP
+   - **Minimum total: 150GB** for one BSP, 300GB+ for multiple
 
 4. **Known Limitations**:
    - Widevine L3 only (no HD Netflix/Prime)
    - HDMI audio may need per-TV tuning
    - Wi-Fi firmware may need manual placement
+   - Some BSPs may have missing prebuilts (handled by `ALLOW_MISSING_DEPENDENCIES=true`)
 
 ---
 
