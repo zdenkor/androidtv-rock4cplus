@@ -114,7 +114,7 @@ Run `03a-preinstall-apps.sh` to bake apps directly into the system image.
 - **CPU**: 8+ cores recommended
 - **RAM**: 32GB+ (16GB minimum with swap)
 - **Disk**: 300GB+ free space — **USB 3.0 external drive strongly recommended**
-- **OS**: **Ubuntu 22.04 LTS** (recommended) or Ubuntu 20.04 / Debian 11+ (via WSL2 or native)
+- **OS**: **Ubuntu 22.04 LTS**
 
 ### Why Use a USB Drive?
 AOSP source + build output requires **300GB+**. An external USB 3.0 SSD/HDD formatted as **ext4** is required — NTFS/exFAT will corrupt the source tree (AOSP needs case-sensitive filesystem).
@@ -140,14 +140,12 @@ processors=8
 swap=32GB
 ```
 
-### Native Linux (Debian/Ubuntu)
+### Native Linux (Ubuntu 22.04 LTS or Ubuntu 20.04 LTS)
 If you are on native Linux, simply plug in your USB drive and skip the WSL2 steps above.
 
 **Recommended distributions:**
 - **Ubuntu 22.04 LTS** — Recommended (all JDKs available, no extra repos)
 - Ubuntu 20.04 LTS — Works well
-- Debian 11 (bullseye) — Works with bullseye repos for OpenJDK 8
-- Debian 12 (bookworm) — Works with bookworm repos
 
 ---
 
