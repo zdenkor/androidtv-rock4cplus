@@ -167,6 +167,25 @@ BUILD_TIME=$((END_TIME - START_TIME))
 echo ""
 echo "[4/4] Build summary..."
 echo ""
+
+if [ "$BUILD_EXIT" -ne 0 ]; then
+    echo "============================================"
+    echo " BUILD FAILED (exit code: $BUILD_EXIT)"
+    echo "============================================"
+    echo ""
+    echo "Build time: $((BUILD_TIME / 60)) minutes $((BUILD_TIME % 60)) seconds"
+    echo ""
+    if [ -f build.log ]; then
+        echo "Last 30 lines of build.log:"
+        echo "----------------------------------------"
+        tail -n 30 build.log
+        echo "----------------------------------------"
+    fi
+    echo ""
+    echo "Fix the errors above and re-run this script."
+    exit 1
+fi
+
 echo "============================================"
 echo " Build Complete!"
 echo "============================================"
