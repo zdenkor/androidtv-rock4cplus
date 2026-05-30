@@ -20,10 +20,20 @@ This repository provides a complete, automated build system for compiling Androi
 - **Isolated build directories** — each BSP downloads to its own directory (`/mnt/aosp-build/androidtv-rock4cplus-{vicharak12,radxa9,advantech12,aosp12}`)
 - **BSP-aware scripts** — all build scripts auto-detect which BSP was selected and apply correct configuration
 - **Automated scripts** for USB setup, environment preparation, source download, configuration, building, and flashing
-- **Prebuilts compatibility fixes** for Debian 13 / WSL2 (Soong sanitization, missing manifests, symlink fixes)
+- **Prebuilts compatibility fixes** for Ubuntu 22.04 / WSL2 (Soong sanitization, missing manifests, symlink fixes)
 - **Android TV configuration** (Leanback Launcher, HDMI-CEC, IR remote support)
 - **Optional GApps integration** (MindTheGapps or NikGApps)
 - **Optional preinstalled apps** (SmartTube, Kodi, Projectivy Launcher, etc.)
+
+### Recommended OS: Ubuntu 22.04 LTS
+
+| Component | Ubuntu 22.04 | Notes |
+|-----------|--------------|-------|
+| OpenJDK 8 | ✅ Available | For Android 9 (Radxa) |
+| OpenJDK 11 | ✅ Available | For Android 12 (Vicharak) |
+| OpenJDK 17 | ✅ Available | For Android 12 (all BSPs) |
+| Dependencies | ✅ All in repos | No extra repos needed |
+| WSL2 Support | ✅ | Works perfectly |
 
 ### Key Components
 
@@ -104,7 +114,7 @@ Run `03a-preinstall-apps.sh` to bake apps directly into the system image.
 - **CPU**: 8+ cores recommended
 - **RAM**: 32GB+ (16GB minimum with swap)
 - **Disk**: 300GB+ free space — **USB 3.0 external drive strongly recommended**
-- **OS**: Ubuntu 20.04+ or Debian 11+ (via WSL2 or native)
+- **OS**: **Ubuntu 22.04 LTS** (recommended) or Ubuntu 20.04 / Debian 11+ (via WSL2 or native)
 
 ### Why Use a USB Drive?
 AOSP source + build output requires **300GB+**. An external USB 3.0 SSD/HDD formatted as **ext4** is required — NTFS/exFAT will corrupt the source tree (AOSP needs case-sensitive filesystem).
@@ -113,7 +123,7 @@ AOSP source + build output requires **300GB+**. An external USB 3.0 SSD/HDD form
 If you are on Windows, use WSL2 with a USB drive:
 ```powershell
 # In PowerShell (Admin):
-wsl --install -d Debian          # or Ubuntu-20.04
+wsl --install -d Ubuntu-22.04  # or Ubuntu-20.04
 wsl --set-default-version 2
 
 # Attach USB drive to WSL2:
@@ -132,6 +142,12 @@ swap=32GB
 
 ### Native Linux (Debian/Ubuntu)
 If you are on native Linux, simply plug in your USB drive and skip the WSL2 steps above.
+
+**Recommended distributions:**
+- **Ubuntu 22.04 LTS** — Recommended (all JDKs available, no extra repos)
+- Ubuntu 20.04 LTS — Works well
+- Debian 11 (bullseye) — Works with bullseye repos for OpenJDK 8
+- Debian 12 (bookworm) — Works with bookworm repos
 
 ---
 
@@ -178,7 +194,7 @@ All scripts are designed to run inside **WSL2 or native Debian/Ubuntu**.
 ```bash
 chmod +x scripts/*.sh
 ./scripts/00-setup-usb.sh         # Format USB, mount it, copy repo to USB
-./scripts/01-setup-environment.sh # Install dependencies
+./scripts/01-setup-environment.sh # Install dependencies (Ubuntu 22.04 recommended)
 ./scripts/02-download-source.sh   # Select BSP (1-4), download source (~80GB)
 ./scripts/03-configure-build.sh   # Auto-detect BSP, apply correct config
 ./scripts/03a-preinstall-apps.sh   # Optional: preinstall apps
@@ -198,7 +214,7 @@ cd /mnt/aosp-build/androidtv-rock4cplus
 | Step | Script | Description | Multi-BSP Support |
 |------|--------|-------------|-------------------|
 | 0 | `./scripts/00-setup-usb.sh` | Format & mount USB drive as ext4, copy repo | — |
-| 1 | `./scripts/01-setup-environment.sh` | Install build dependencies & JDK 11 | — |
+| 1 | `./scripts/01-setup-environment.sh` | Install build dependencies & JDK (Ubuntu 22.04 recommended) | — |
 | 2 | `./scripts/02-download-source.sh` | **Select BSP (1-4), download source** (~80GB) | ✅ Prompts for choice |
 | 3 | `./scripts/03-configure-build.sh` | **Auto-detect BSP, apply correct config** | ✅ Reads `.build-config` |
 | 3b | `./scripts/03a-preinstall-apps.sh` | (Optional) Preinstall apps into build | — |
