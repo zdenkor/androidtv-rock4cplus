@@ -295,6 +295,7 @@ modules_to_disable = [
     os.path.join(WORK_DIR, 'frameworks', 'compile', 'libbcc', 'tools', 'bcc_compat', 'Android.bp'),
     os.path.join(WORK_DIR, 'frameworks', 'compile', 'libbcc', 'bcinfo', 'Android.bp'),
     os.path.join(WORK_DIR, 'frameworks', 'compile', 'libbcc', 'lib', 'Android.bp'),
+    os.path.join(WORK_DIR, 'frameworks', 'compile', 'libbcc', 'tools', 'Android.bp'),
     os.path.join(WORK_DIR, 'frameworks', 'compile', 'mclinker', 'tools', 'mcld', 'Android.bp'),
     os.path.join(WORK_DIR, 'frameworks', 'compile', 'slang', 'Android.bp'),
     os.path.join(WORK_DIR, 'frameworks', 'compile', 'slang', 'BitWriter_2_9', 'Android.bp'),
