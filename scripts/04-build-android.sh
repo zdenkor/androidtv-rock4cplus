@@ -129,6 +129,9 @@ fi
 
 START_TIME=$(date +%s)
 
+# Allow missing dependencies (libLLVM_android has no srcs in prebuilts)
+export ALLOW_MISSING_DEPENDENCIES=true
+
 case $BUILD_CHOICE in
     1)
         # Full build: U-Boot + Android + Kernel + update image
