@@ -362,4 +362,16 @@ if os.path.exists(build_sh):
     except Exception as e:
         print('WARNING: Could not read build.sh — skipping:', e)
 
+# ---------------------------------------------------------------------------
+# 10. Fix missing libLLVM_android for bcc_strip_attr
+# ---------------------------------------------------------------------------
+import glob
+for clang_dir in glob.glob(os.path.join(WORK_DIR, 'prebuilts', 'clang', 'host', 'linux-x86', 'clang-*', 'lib64')):
+    llvm_so = os.path.join(clang_dir, 'libLLVM.so')
+    llvm_android = os.path.join(clang_dir, 'libLLVM_android.so')
+    if os.path.isfile(llvm_so) and not os.path.exists(llvm_android):
+        os.symlink('libLLVM.so', llvm_android)
+        print('Fixed symlink', llvm_android, '-> libLLVM.so')
+        changed += 1
+
 print('Done. Changes made:', changed)
