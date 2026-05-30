@@ -96,6 +96,24 @@ case $BUILD_CHOICE in
             -b rockpi-box-9.0 \
             -m rockpi-release.xml
 
+        echo ""
+        echo "============================================"
+        echo " GitHub Authentication Required"
+        echo "============================================"
+        echo ""
+        echo "If GitHub asks for username/password:"
+        echo "  - Username: your GitHub username"
+        echo "  - Password: **Personal Access Token (PAT)** (NOT your password)"
+        echo ""
+        echo "To create a PAT:"
+        echo "  1. Go to https://github.com/settings/tokens"
+        echo "  2. Click 'Generate new token (classic)'"
+        echo "  3. Set 'repo' scope"
+        echo "  4. Copy the token and use it as password"
+        echo ""
+        echo "============================================"
+        echo ""
+
         echo "[3/4] Syncing repositories (this will take a while)..."
         echo "Estimated download: ~80GB"
         echo ""

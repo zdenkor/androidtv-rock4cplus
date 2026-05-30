@@ -2,7 +2,7 @@
 # =============================================================================
 # 01-setup-environment.sh
 # Sets up the build environment for Android TV 12 (AOSP)
-# Supports: Ubuntu 20.04+ / Debian 11+ (on WSL2 or native)
+# Supports: Ubuntu 22.04+ / Debian 11+ (on WSL2 or native)
 # Target: Radxa ROCK 4C+ (RK3399-T)
 # =============================================================================
 
@@ -47,6 +47,26 @@ echo " Detected: $DISTRO $DISTRO_VERSION"
 echo " Target: Radxa ROCK 4C+ (RK3399-T)"
 echo "============================================"
 echo ""
+
+# Recommended OS check
+if [ "$DISTRO" = "debian" ] && [ "$DISTRO_VERSION" = "13" ]; then
+    echo "============================================"
+    echo " WARNING: Debian 13 (trixie) detected"
+    echo "============================================"
+    echo ""
+    echo "Debian 13 has limited OpenJDK 8 support."
+    echo "For best compatibility, consider using Ubuntu 22.04 LTS instead."
+    echo ""
+    echo "To install Ubuntu 22.04 in WSL2:"
+    echo "  wsl --install -d Ubuntu-22.04"
+    echo ""
+    read -rp "Continue with Debian 13? [y/N]: " CONFIRM
+    if [ "$CONFIRM" != "y" ]; then
+        echo "Aborted. Please install Ubuntu 22.04 and try again."
+        exit 1
+    fi
+    echo ""
+fi
 
 # Helper: install packages, skipping any that don't exist in the repo
 install_safe() {
