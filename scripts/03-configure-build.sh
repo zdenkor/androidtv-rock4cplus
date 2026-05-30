@@ -127,12 +127,11 @@ case $BSP_CHOICE in
         echo " LUNCH TARGET SELECTION"
         echo "============================================"
         echo ""
-        echo "For ROCK 4C+, please select target 57 (rk3399_box-userdebug):"
+        echo "For ROCK 4C+, using target 57 (rk3399_box-userdebug)..."
         echo ""
-        read -rp "Enter target number: " LUNCH_TARGET
         
-        # Call lunch with the selected target
-        lunch "$LUNCH_TARGET" || echo "Lunch target selection failed. Trying with default 57..."
+        # Call lunch with target name and suppress interactive mode
+        lunch rk3399_box-userdebug < /dev/null
         
         echo ""
         echo "[3/6] Android 9 Pie — skipping TV config (older system)"
