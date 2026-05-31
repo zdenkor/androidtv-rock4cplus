@@ -239,89 +239,107 @@ download_app() {
     
     echo "  Downloading $app_name..."
     
-    # 1) Try apkeep (Google Play as primary, then other sources)
-    if command -v apkeep &>/dev/null; then
-        # Load AUTH token if available
+    # Download based on source selection
+    if $USE_GOOGLE_PLAY && command -v apkeep &>/dev/null; then
+        # Load credentials from ini file
+        local ini_file="$HOME/.config/apkeep/apkeep.ini"
         local email_opt=""
         local token_opt=""
-        if [ -f "$APKEEP_EMAIL_FILE" ] && [ -f "$APKEEP_TOKEN_FILE" ]; then
-            email_opt="-e $(cat "$APKEEP_EMAIL_FILE")"
-            token_opt="--auth-token $(cat "$APKEEP_TOKEN_FILE")"
+        if [ -f "$ini_file" ]; then
+            email=$(grep "^email" "$ini_file" 2>/dev/null | cut -d'=' -f2 | tr -d ' ')
+            if [ -n "$email" ]; then
+                email_opt="-e $email"
+            fi
+            if grep -q "aas_token" "$ini_file" 2>/dev/null; then
+                token_opt="-t $(grep "^aas_token" "$ini_file" | cut -d'=' -f2 | tr -d ' ')"
+            elif grep -q "auth_token" "$ini_file" 2>/dev/null; then
+                token_opt="--auth-token $(grep "^auth_token" "$ini_file" | cut -d'=' -f2 | tr -d ' ')"
+            fi
         fi
         
-        # Try Google Play first
+        # Try Google Play only
         if [[ -n "$pkg" && "$pkg" != "$app_name" ]]; then
-            if eval apkeep -a \"$pkg\" -d google-play $email_opt $token_opt --accept-tos \"$APPS_DIR\" 2>/dev/null; then
+            if apkeep -a "$pkg" -d google-play $email_opt $token_opt --accept-tos "$APPS_DIR" 2>/dev/null; then
                 for downloaded in "$APPS_DIR"/*.apk; do
                     if [[ -f "$downloaded" && "$downloaded" != "$dest" ]]; then
                         mv "$downloaded" "$dest" 2>/dev/null && success=true && break
                     fi
                 done
                 if $success; then
-                    echo "  [OK] $app_name (apkeep/GP)"
+                    echo "  [OK] $app_name (Google Play)"
                     return 0
                 fi
             fi
         fi
         
-        # Try APKPure
-        if [[ -n "$apkpure" && "$apkpure" != "$app_name" ]]; then
-            if apkeep -a "$apkpure" -d apkpure "$APPS_DIR" 2>/dev/null; then
-                for downloaded in "$APPS_DIR"/*.apk; do
-                    if [[ -f "$downloaded" && "$downloaded" != "$dest" ]]; then
-                        mv "$downloaded" "$dest" 2>/dev/null && success=true && break
-                    fi
-                done
-                if $success; then
-                    echo "  [OK] $app_name (apkeep/APKPure)"
-                    return 0
-                fi
-            fi
-        fi
-        
-        # Try GitHub
-        if [[ -n "$github" && "$github" != "$app_name" ]]; then
-            if apkeep -a "$github" -d github "$APPS_DIR" 2>/dev/null; then
-                for downloaded in "$APPS_DIR"/*.apk; do
-                    if [[ -f "$downloaded" && "$downloaded" != "$dest" ]]; then
-                        mv "$downloaded" "$dest" 2>/dev/null && success=true && break
-                    fi
-                done
-                if $success; then
-                    echo "  [OK] $app_name (apkeep/GitHub)"
-                    return 0
-                fi
-            fi
-        fi
-        
-        # Try APKMonk
-        if [[ -n "$apkmonk" && "$apkmonk" != "$app_name" ]]; then
-            if apkeep -a "$apkmonk" -d apkmonk "$APPS_DIR" 2>/dev/null; then
-                for downloaded in "$APPS_DIR"/*.apk; do
-                    if [[ -f "$downloaded" && "$downloaded" != "$dest" ]]; then
-                        mv "$downloaded" "$dest" 2>/dev/null && success=true && break
-                    fi
-                done
-                if $success; then
-                    echo "  [OK] $app_name (apkeep/APKMonk)"
-                    return 0
-                fi
+        # Google Play failed - ask user if they want alternatives
+        echo "  [FAIL] $app_name (Google Play)"
+        if [[ "$pkg" != "$app_name" ]]; then
+            read -rp "    Try alternatives? (y/n): " try_alt
+            if [[ "$try_alt" != "y" && "$try_alt" != "Y" ]]; then
+                return 1
             fi
         fi
     fi
     
-    # 2) Fallback: direct URL via curl
-    if [[ -n "$direct" && "$direct" == http* ]]; then
+    # Try alternatives: APKPure, GitHub, APKMonk, direct URLs
+    # Try APKPure via apkeep
+    if [[ -n "$apkpure" && "$apkpure" != "$app_name" && -z "$success" ]]; then
+        if command -v apkeep &>/dev/null && apkeep -a "$apkpure" -d apkpure "$APPS_DIR" 2>/dev/null; then
+            for downloaded in "$APPS_DIR"/*.apk; do
+                if [[ -f "$downloaded" && "$downloaded" != "$dest" ]]; then
+                    mv "$downloaded" "$dest" 2>/dev/null && success=true && break
+                fi
+            done
+            if $success; then
+                echo "  [OK] $app_name (APKPure)"
+                return 0
+            fi
+        fi
+    fi
+    
+    # Try GitHub
+    if [[ -n "$github" && "$github" != "$app_name" && -z "$success" ]]; then
+        if command -v apkeep &>/dev/null && apkeep -a "$github" -d github "$APPS_DIR" 2>/dev/null; then
+            for downloaded in "$APPS_DIR"/*.apk; do
+                if [[ -f "$downloaded" && "$downloaded" != "$dest" ]]; then
+                    mv "$downloaded" "$dest" 2>/dev/null && success=true && break
+                fi
+            done
+            if $success; then
+                echo "  [OK] $app_name (GitHub)"
+                return 0
+            fi
+        fi
+    fi
+    
+    # Try APKMonk
+    if [[ -n "$apkmonk" && "$apkmonk" != "$app_name" && -z "$success" ]]; then
+        if command -v apkeep &>/dev/null && apkeep -a "$apkmonk" -d apkmonk "$APPS_DIR" 2>/dev/null; then
+            for downloaded in "$APPS_DIR"/*.apk; do
+                if [[ -f "$downloaded" && "$downloaded" != "$dest" ]]; then
+                    mv "$downloaded" "$dest" 2>/dev/null && success=true && break
+                fi
+            done
+            if $success; then
+                echo "  [OK] $app_name (APKMonk)"
+                return 0
+            fi
+        fi
+    fi
+    
+    # Try direct URL via curl
+    if [[ -n "$direct" && "$direct" == http* && -z "$success" ]]; then
         if curl -L -o "$dest" --progress-bar "$direct" 2>/dev/null; then
-            echo "  [OK] $app_name (curl/direct)"
+            echo "  [OK] $app_name (direct)"
             return 0
         fi
     fi
     
-    # 3) Fallback: GitHub URL via curl
-    if [[ -n "$github" && "$github" == http* ]]; then
+    # Try GitHub URL via curl
+    if [[ -n "$github" && "$github" == http* && -z "$success" ]]; then
         if curl -L -o "$dest" --progress-bar "$github" 2>/dev/null; then
-            echo "  [OK] $app_name (curl/GitHub)"
+            echo "  [OK] $app_name (GitHub curl)"
             return 0
         fi
     fi
