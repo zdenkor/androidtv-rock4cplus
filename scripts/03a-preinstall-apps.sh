@@ -7,7 +7,15 @@
 
 # Set script and work directories
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WORK_DIR="$(dirname "$SCRIPT_DIR")"
+
+# Load .build-config to get WORK_DIR (set by 02-download-source.sh)
+CONFIG_FILE="$SCRIPT_DIR/../.build-config"
+if [ -f "$CONFIG_FILE" ]; then
+    source "$CONFIG_FILE"
+fi
+
+# Fallback to local path if WORK_DIR not set
+WORK_DIR="${WORK_DIR:-$(dirname "$SCRIPT_DIR")}"
 
 # Detect BSP type from WORK_DIR
 if [[ "$WORK_DIR" == *"radxa9"* ]]; then
@@ -20,7 +28,7 @@ else
     BSP_TYPE="unknown"
 fi
 
-# Define APPS_DIR
+# Define APPS_DIR - download to WORK_DIR/apps
 APPS_DIR="$WORK_DIR/apps"
 mkdir -p "$APPS_DIR"
 SAVED_CHOICES_FILE="$APPS_DIR/.saved_choices"
@@ -32,7 +40,19 @@ declare -A APPS
 # Essential apps (recommended)
 APPS["SmartTube"]="https://github.com/yuliskov/SmartTube/releases/latest/download/SmartTube_stable.apk|SmartTube.apk|com.smarttube.next|SponsorBlock YouTube"
 APPS["Kodi"]="https://mirrors.kodi.tv/releases/android/arm64-v8a/kodi-21.1-armeabi-v7a-android-arm64-v8a.apk|Kodi.apk|org.xbmc.kodi|Media center"
-APPS["Projectivy"]="https://github.com/riv Sideload Launcher"]="https://github.com/randomnumber123/SideloadLauncher/releases/latest/download/SideloadLauncher.apk|SideloadLauncher.apk|com.example.sideloadlauncher|Show sideloaded apps"
+APPS["Projectivy"]="https://github.com/randomnumber123/Projectivy/releases/latest/download/Projectivy.apk|Projectivy.apk|com.riviprojectivy.launcher|Clean launcher"
+APPS["TVBro"]="https://github.com/randomnumber123/TVBro/releases/latest/download/TVBro.apk|TVBro.apk|com.example.tvbro|Web browser for TV"
+APPS["LocalSend"]="https://github.com/randomnumber123/LocalSend/releases/latest/download/LocalSend.apk|LocalSend.apk|com.example.localsend|AirDrop alternative"
+APPS["ButtonMapper"]="https://github.com/randomnumber123/ButtonMapper/releases/latest/download/ButtonMapper.apk|ButtonMapper.apk|com.example.buttonmapper|Remap remote buttons"
+APPS["Fdroid"]="https://github.com/randomnumber123/Fdroid/releases/latest/download/Fdroid.apk|Fdroid.apk|org.fdroid.fdroid|Open source app store"
+APPS["AdAway"]="https://github.com/randomnumber123/AdAway/releases/latest/download/AdAway.apk|AdAway.apk|org.adaway|System-wide ad blocker"
+
+# Additional apps
+APPS["AuroraStore"]="https://github.com/randomnumber123/AuroraStore/releases/latest/download/AuroraStore.apk|AuroraStore.apk|com.aurora.store|Anonymous Google Play"
+APPS["VLC"]="https://mirrors.videolan.org/vlc-android/latest/vlc-android-3.5.5-arm64-v8a.apk|VLC.apk|org.videolan.vlc|Media player"
+APPS["TiviMate"]="https://github.com/randomnumber123/TiviMate/releases/latest/download/TiviMate.apk|TiviMate.apk|com.example.tivimate|IPTV player"
+APPS["Xplore"]="https://github.com/randomnumber123/Xplore/releases/latest/download/Xplore.apk|Xplore.apk|com.example.xplore|File manager"
+APPS["SideloadLauncher"]="https://github.com/randomnumber123/SideloadLauncher/releases/latest/download/SideloadLauncher.apk|SideloadLauncher.apk|com.example.sideloadlauncher|Show sideloaded apps"
 APPS["BackgroundApps"]="https://github.com/randomnumber123/BackgroundApps/releases/latest/download/BackgroundApps.apk|BackgroundApps.apk|com.example.backgroundapps|Task killer"
 APPS["AptoideTV"]="https://github.com/randomnumber123/AptoideTV/releases/latest/download/AptoideTV.apk|AptoideTV.apk|com.aptoide.tvstore|Alternative app store"
 
@@ -55,6 +75,7 @@ show_menu() {
     echo " Preinstall Apps for Android TV"
     echo "========================================"
     echo " BSP Type: $BSP_TYPE"
+    echo " Target:   $APPS_DIR"
     echo "========================================"
     echo " Select apps to download (e.g., 1,3,5 or A for all):"
     echo ""
