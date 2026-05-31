@@ -337,11 +337,15 @@ download_app() {
     # Try direct URL via curl
     echo "    DEBUG: Trying direct URL: $direct" >&2
     if [[ -n "$direct" && "$direct" == http* && -z "$success" ]]; then
-        if curl -L -o "$dest" --progress-bar "$direct" 2>/dev/null; then
+        echo "    DEBUG: executing curl -L -o $dest $direct" >&2
+        curl -L -o "$dest" "$direct" 2>&1
+        local exit_code=$?
+        echo "    DEBUG: curl exit code=$exit_code" >&2
+        if [[ -f "$dest" && -s "$dest" ]]; then
             echo "  [OK] $app_name (direct)"
             return 0
         else
-            echo "    DEBUG: direct curl failed with exit code $?" >&2
+            echo "    DEBUG: file not created or empty" >&2
         fi
     fi
     
