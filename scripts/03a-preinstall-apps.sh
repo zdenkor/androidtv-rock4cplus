@@ -449,11 +449,11 @@ if command -v apkeep &>/dev/null; then
         [[ -z "$apk_id" || "$apk_id" == "app_id" || "$apk_id" =~ ^# ]] && continue
         dest="$APPS_DIR/$dest_name"
 
-        # Skip if already downloaded and valid (> 1MB to avoid corrupted/partial files)
+        # Skip if file exists and is valid (> 1MB to avoid corrupted/partial files)
         if [[ -f "$dest" ]]; then
             existing_size=$(stat -c%s "$dest" 2>/dev/null || stat -f%z "$dest" 2>/dev/null)
             if [[ "$existing_size" -gt 1048576 ]]; then
-                echo "  [SKIP] $dest_name ($existing_size bytes, already exists)"
+                echo "  [SKIP] $dest_name ($existing_size bytes)"
                 continue
             fi
         fi
