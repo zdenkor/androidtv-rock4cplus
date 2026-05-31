@@ -62,16 +62,11 @@ echo "     - Manifest: vicharak-in/rockchip-android-manifest (GitHub)"
 echo "     - Full Rockchip BSP included, no separate downloads needed"
 echo "     - Directory: $BASE_DIR/androidtv-rock4cplus-vicharak12"
 echo ""
-echo "  3) Android 12 (Advantech BSP, kernel 4.19.232)"
-echo "     - Manifest: ADVANTECH-Rockchip Azure DevOps"
-echo "     - Requires separate prebuilts/external downloads"
-echo "     - Directory: $BASE_DIR/androidtv-rock4cplus-advantech12"
-echo ""
-echo "  4) Android 12 AOSP (pure Google, EXPERIMENTAL)"
+echo "  3) Android 12 AOSP (pure Google, EXPERIMENTAL)"
 echo "     - No Rockchip BSP — manual integration required"
 echo "     - Directory: $BASE_DIR/androidtv-rock4cplus-aosp12"
 echo ""
-read -rp "Enter choice [1-4]: " BUILD_CHOICE
+read -rp "Enter choice [1-3]: " BUILD_CHOICE
 
 # ---------------------------------------------------------------------------
 # Set BSP-specific work directory
@@ -79,8 +74,7 @@ read -rp "Enter choice [1-4]: " BUILD_CHOICE
 case $BUILD_CHOICE in
     1) WORK_DIR="$BASE_DIR/androidtv-rock4cplus-radxa9" ;;
     2) WORK_DIR="$BASE_DIR/androidtv-rock4cplus-vicharak12" ;;
-    3) WORK_DIR="$BASE_DIR/androidtv-rock4cplus-advantech12" ;;
-    4) WORK_DIR="$BASE_DIR/androidtv-rock4cplus-aosp12" ;;
+    3) WORK_DIR="$BASE_DIR/androidtv-rock4cplus-aosp12" ;;
     *) echo "Invalid choice. Exiting."; exit 1 ;;
 esac
 
@@ -203,90 +197,6 @@ case $BUILD_CHOICE in
         ;;
 
     3)
-        # ====================================================================
-        # OPTION 3: Android 12 (Advantech BSP for RK3399)
-        # ====================================================================
-        echo "============================================"
-        echo " WARNING: Advantech BSP NOT SUPPORTED"
-        echo "============================================"
-        echo ""
-        echo "The Advantech manifest downloads Python 2-only repo tool"
-        echo "which is incompatible with Python 3."
-        echo ""
-        echo "RECOMMENDATION: Use Option 2 (Vicharak) instead!"
-        echo ""
-        echo "  Vicharak Android 12 (kernel 5.10):"
-        echo "    - Fully working with Python 3"
-        echo "    - All prebuilts included (no separate downloads)"
-        echo "    - Recommended for ROCK 4C+"
-        echo ""
-        read -rp "Continue anyway? [y/N]: " CONTINUE_ADV
-        if [ "$CONTINUE_ADV" != "y" ]; then
-            echo ""
-            echo "Skipping Advantech BSP."
-            echo "Please run 02-download-source.sh again and select Option 2 (Vicharak)."
-            exit 0
-        fi
-        
-        echo ""
-        echo "[2/4] Attempting Advantech Android 12 manifest..."
-        echo ""
-        echo "Manifest: https://kag-sw.visualstudio.com/RK3399-Android/_git/android-s12-manifest"
-        echo "Branch:   rk3399-androidS12"
-        echo "XML:      default.xml"
-        echo ""
-        echo "NOTE: This may fail due to Python 2 compatibility issues."
-        echo ""
-
-        # Download latest repo tool directly from Google to avoid old Python 2 repo issues
-        echo "Downloading latest repo tool..."
-        if command -v curl >/dev/null 2>&1; then
-            curl -fsSL https://storage.googleapis.com/git-repo-downloads/repo -o "$WORK_DIR/repo-local"
-        elif command -v wget >/dev/null 2>&1; then
-            wget -qO "$WORK_DIR/repo-local" https://storage.googleapis.com/git-repo-downloads/repo
-        else
-            echo "ERROR: curl or wget is required to download the repo tool."
-            exit 1
-        fi
-        chmod a+x "$WORK_DIR/repo-local"
-
-        echo "[3/4] Initializing Advantech manifest with up-to-date repo tool..."
-        "$WORK_DIR/repo-local" init -u \
-            https://kag-sw.visualstudio.com/RK3399-Android/_git/android-s12-manifest \
-            -b rk3399-androidS12 \
-            -m default.xml
-
-        echo "[4/4] Syncing repositories..."
-        echo "Estimated download: ~80GB"
-        echo ""
-        "$WORK_DIR/repo-local" sync -c -f --no-clone-bundle -j$(nproc) || {
-            echo ""
-            echo "ERROR: Advantech sync failed with updated repo tool."
-            echo "If this is due to Python 2, install python2 and rerun."
-            exit 1
-        }
-
-        echo ""
-        echo "============================================"
-        echo " IMPORTANT: Download prebuilts & external!"
-        echo "============================================"
-        echo ""
-        echo "The Advantech BSP requires additional tarballs:"
-        echo ""
-        echo "  Dropbox:"
-        echo "    prebuilts: https://www.dropbox.com/scl/fi/plwys31je681795kt4fvy/prebuilts-rk3399-AndroidS12-20230518.tar.gz"
-        echo "    external:  https://www.dropbox.com/scl/fi/lszmpsjr9mqhm8xxpxhmp/external-rk3399-AndroidS12-20230522.tar.gz"
-        echo ""
-        echo "  Baidu (Key: 1234):"
-        echo "    https://pan.baidu.com/s/1jDOMJTM6jTNGqpNdgNKC7w?pwd=1234"
-        echo ""
-        echo "After downloading, extract them into the source tree:"
-        echo "  tar zxvf prebuilts-rk3399-AndroidS12-20230518.tar.gz -C $WORK_DIR/"
-        echo "  tar zxvf external-rk3399-AndroidS12-20230522.tar.gz -C $WORK_DIR/"
-        echo ""
-        ;;
-
-    4)
         # ====================================================================
         # OPTION 4: Android 12 AOSP (Experimental, automatic Rockchip overlay)
         # ====================================================================

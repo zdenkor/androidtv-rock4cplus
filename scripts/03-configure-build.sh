@@ -22,8 +22,8 @@ declare -a BSP_DIRS=()
 declare -a BSP_NAMES=()
 
 # Find all BSP directories and sort them in the desired order:
-# 1. Radxa Android 9, 2. Vicharak Android 12, 3. Advantech Android 12, 4. AOSP Android 12
-for pattern in "radxa9" "vicharak12" "advantech12" "aosp12"; do
+# 1. Radxa Android 9, 2. Vicharak Android 12, 3. AOSP Android 12
+for pattern in "radxa9" "vicharak12" "aosp12"; do
     for dir in "$BASE_DIR"/androidtv-rock4cplus-"$pattern"*; do
         if [ -d "$dir" ]; then
             BSP_DIRS+=("$dir")
@@ -83,11 +83,8 @@ if [[ "$BSP_NAME" == *radxa9* ]]; then
 elif [[ "$BSP_NAME" == *vicharak12* ]]; then
     BSP_CHOICE=2
     BSP_TYPE="Vicharak Android 12 (kernel 5.10)"
-elif [[ "$BSP_NAME" == *advantech12* ]]; then
-    BSP_CHOICE=3
-    BSP_TYPE="Advantech Android 12 (kernel 4.19)"
 elif [[ "$BSP_NAME" == *aosp12* ]]; then
-    BSP_CHOICE=4
+    BSP_CHOICE=3
     BSP_TYPE="AOSP Android 12"
 else
     echo "WARNING: Unknown BSP type: $BSP_NAME"
@@ -279,31 +276,6 @@ EOF
     
     3)
         # ====================================================================
-        # ADVANTECH ANDROID 12 (NOT SUPPORTED - Python 2 only repo tool)
-        # ====================================================================
-        echo "============================================"
-        echo " ERROR: Advantech BSP NOT SUPPORTED"
-        echo "============================================"
-        echo ""
-        echo "The Advantech manifest requires Python 2 repo tool"
-        echo "which is incompatible with modern Python 3 environments."
-        echo ""
-        echo "RECOMMENDATION: Use Option 2 (Vicharak) instead!"
-        echo ""
-        echo "Vicharak Android 12 features:"
-        echo "  ✓ Fully compatible with Python 3"
-        echo "  ✓ All prebuilts included (no manual downloads)"
-        echo "  ✓ Works out of the box on modern systems"
-        echo "  ✓ Recommended for ROCK 4C+"
-        echo ""
-        echo "Please run 02-download-source.sh again and select:"
-        echo "  Option 2: Android 12 (Vicharak BSP, kernel 5.10)"
-        echo ""
-        exit 1
-        ;;
-    
-    4)
-        # ====================================================================
         # AOSP ANDROID 12 (EXPERIMENTAL)
         # ====================================================================
         echo "[2/6] Configuring AOSP Android 12..."
@@ -311,7 +283,7 @@ EOF
 
         if [ ! -d "device/rockchip/rk3399" ] || [ ! -d "kernel" ] || [ ! -d "hardware/rockchip" ]; then
             echo "ERROR: AOSP Rockchip overlay not fully installed."
-            echo "Please run 02-download-source.sh and select Option 4 again."
+            echo "Please run 02-download-source.sh and select Option 3 again."
             echo "Required directories:"
             echo "  device/rockchip/rk3399"
             echo "  hardware/rockchip"

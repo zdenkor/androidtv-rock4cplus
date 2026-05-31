@@ -7,7 +7,6 @@ Build **Android 9–12** for the **Radxa ROCK 4C+** (Rockchip RK3399-T) from sou
 > **Supported BSPs:**
 > - [Vicharak Android 12](https://github.com/vicharak-in/rockchip-android-manifest) — kernel 5.10, full Rockchip HALs, last updated Dec 2025 (**recommended**)
 > - Radxa Android 9 Pie — kernel 4.4, official Radxa BSP
-> - Advantech Android 12 — kernel 4.19, industrial Rockchip variant
 > - AOSP 12 — experimental, partially automated Rockchip BSP overlay
 
 ---
@@ -16,8 +15,8 @@ Build **Android 9–12** for the **Radxa ROCK 4C+** (Rockchip RK3399-T) from sou
 
 This repository provides a complete, automated build system for compiling Android from AOSP source for the Radxa ROCK 4C+ single-board computer. It includes:
 
-- **Multi-BSP support** — choose between Vicharak (Android 12), Radxa (Android 9), Advantech (Android 12), or AOSP 12 during `02-download-source.sh`
-- **Isolated build directories** — each BSP downloads to its own directory (`/mnt/aosp-build/androidtv-rock4cplus-{vicharak12,radxa9,advantech12,aosp12}`)
+- **Multi-BSP support** — choose between Vicharak (Android 12), Radxa (Android 9), or AOSP 12 during `02-download-source.sh`
+- **Isolated build directories** — each BSP downloads to its own directory (`/mnt/aosp-build/androidtv-rock4cplus-{vicharak12,radxa9,aosp12}`)
 - **BSP-aware scripts** — all build scripts auto-detect which BSP was selected and apply correct configuration
 - **Automated scripts** for USB setup, environment preparation, source download, configuration, building, and flashing
 - **Prebuilts compatibility fixes** for Ubuntu 22.04 / WSL2 (Soong sanitization, missing manifests, symlink fixes)
@@ -43,7 +42,6 @@ This repository provides a complete, automated build system for compiling Androi
 |-----|---------|--------|--------|----------|
 | **Vicharak** | 12 | 5.10 | ✅ Recommended | Latest, most features |
 | Radxa | 9 Pie | 4.4 | ✅ Stable | Official support, mature |
-| Advantech | 12 | 4.19 | ⚠️ Experimental | Industrial variant |
 | AOSP | 12 | 5.10+ | ⚠️ Partial | Rockchip overlay installed automatically |
 
 **Hardware Components (all BSPs):**
@@ -251,8 +249,7 @@ AndroidTV for Radxa4C+/
 ├── androidtv-rock4cplus/            # Main repo (git cloned here)
 ├── androidtv-rock4cplus-vicharak12/ # Vicharak BSP (option 2)
 ├── androidtv-rock4cplus-radxa9/     # Radxa Android 9 (option 1)
-├── androidtv-rock4cplus-advantech12/# Advantech Android 12 (option 3)
-└── androidtv-rock4cplus-aosp12/     # AOSP 12 (option 4)
+└── androidtv-rock4cplus-aosp12/     # AOSP 12 (option 3)
 ```
 
 ### .build-config (Auto-generated)
@@ -340,8 +337,7 @@ sudo mount /mnt/aosp-build
 
 - **Vicharak (Option 2)** — **Recommended** for Android TV 12. Latest kernel (5.10), most features, actively maintained.
 - **Radxa 9 (Option 1)** — Android 9 Pie. Officially supported by Radxa, stable, older features.
-- **Advantech (Option 3)** — Android 12 with kernel 4.19. Requires manual prebuilts extraction from Dropbox links.
-- **AOSP (Option 4)** — Experimental. Pure AOSP requires manual Rockchip BSP integration (kernel, HALs, device tree).
+- **AOSP (Option 3)** — Experimental. Pure AOSP requires manual Rockchip BSP integration (kernel, HALs, device tree).
 
 Each BSP downloads to its own directory. You can build multiple BSPs in sequence without conflicts.
 
@@ -370,6 +366,5 @@ Each BSP downloads to its own directory. You can build multiple BSPs in sequence
 
 - [Radxa ROCK 4C+ Wiki](https://wiki.radxa.com/Rock4/4cplus)
 - [Vicharak Android 12 BSP](https://github.com/vicharak-in/rockchip-android-manifest)
-- [Advantech RK3399 Android 12 Guide](https://ess-wiki.advantech.com.tw/view/Android_BSP_User_Guide_for_rk3399_series_12.0)
 - [AOSP Source](https://source.android.com/)
 - [RK3399 TRM](https://opensource.rock-chips.com/wiki_RK3399)
