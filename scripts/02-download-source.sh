@@ -227,6 +227,9 @@ case $BUILD_CHOICE in
         if [ ! -d "$WORK_DIR/device/rockchip/rk3399" ]; then
             git clone --depth=1 https://github.com/khadas/android_device_rockchip_rk3399.git "$WORK_DIR/device/rockchip/rk3399" || true
         fi
+        if [ ! -d "$WORK_DIR/device/rockchip/common" ]; then
+            git clone --depth=1 https://github.com/khadas/android_device_rockchip_common.git "$WORK_DIR/device/rockchip/common" || true
+        fi
         if [ ! -d "$WORK_DIR/hardware/rockchip" ]; then
             git clone --depth=1 https://github.com/lineageos-on-rockchip/android_hardware_rockchip.git "$WORK_DIR/hardware/rockchip" || true
         fi
