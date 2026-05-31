@@ -189,33 +189,27 @@ declare -A APPS
 # Essential apps (recommended)
 APPS["SmartTube"]="com.smarttube.next|||https://github.com/yuliskov/SmartTube/releases/latest/download/SmartTube_stable.apk|SmartTube.apk|SponsorBlock YouTube"
 APPS["Kodi"]="org.xbmc.kodi|||https://mirrors.kodi.tv/releases/android/arm64-v8a/kodi-21.1-armeabi-v7a-android-arm64-v8a.apk|Kodi.apk|Media center"
-APPS["Projectivy"]="com.riviprojectivy.launcher|||||Projectivy.apk|Clean launcher"
-APPS["TVBro"]="com.example.tvbro|||||TVBro.apk|Web browser for TV"
-APPS["LocalSend"]="com.example.localsend|||||LocalSend.apk|AirDrop alternative"
-APPS["ButtonMapper"]="com.example.buttonmapper|||||ButtonMapper.apk|Remap remote buttons"
+APPS["Projectivy"]="com.riviprojectivy.launcher||||Projectivy.apk|Clean launcher"
+APPS["TVBro"]="com.example.tvbro||||TVBro.apk|Web browser for TV"
+APPS["LocalSend"]="com.example.localsend||||LocalSend.apk|AirDrop alternative"
+APPS["ButtonMapper"]="com.example.buttonmapper||||ButtonMapper.apk|Remap remote buttons"
 APPS["Fdroid"]="org.fdroid.fdroid||||https://f-droid.org/F-Droid.apk|Fdroid.apk|Open source app store"
 APPS["AdAway"]="org.adaway|||https://f-droid.org/repo/org.adaway_20191010.apk|AdAway.apk|System-wide ad blocker"
 
 # Additional apps
-APPS["AuroraStore"]="com.aurora.store|com.aurora.store||||AuroraStore.apk|Anonymous Google Play"
+APPS["AuroraStore"]="com.aurora.store||||AuroraStore.apk|Anonymous Google Play"
 APPS["VLC"]="org.videolan.vlc|||https://mirrors.videolan.org/vlc/android/3.5.5/vlc-android-3.5.5-arm64-v8a.apk|VLC.apk|Media player"
-APPS["TiviMate"]="com.example.tivimate|||||TiviMate.apk|IPTV player"
-APPS["Xplore"]="com.lonelycatgame.xplore|||||Xplore.apk|File manager"
-APPS["SideloadLauncher"]="com.example.sideloadlauncher|||||SideloadLauncher.apk|Show sideloaded apps"
-APPS["AptoideTV"]="com.aptoide.tvstore|||||AptoideTV.apk|Alternative app store"
+APPS["TiviMate"]="com.example.tivimate||||TiviMate.apk|IPTV player"
+APPS["Xplore"]="com.lonelycatgame.xplore||||Xplore.apk|File manager"
+APPS["SideloadLauncher"]="com.example.sideloadlauncher||||SideloadLauncher.apk|Show sideloaded apps"
+APPS["AptoideTV"]="com.aptoide.tvstore||||AptoideTV.apk|Alternative app store"
 
 # Filter apps based on BSP type (Android 9 API 28 compatibility)
-# radxa9 (Android 9) can run these with compatible versions
 filter_apps() {
     local app_name="$1"
     if [[ "$BSP_TYPE" == "radxa9" ]]; then
         case "$app_name" in
-            # AuroraStore 4.3.4 works on Android 9
-            AuroraStore) return 0 ;;
-            # SideloadLauncher - use older version
-            SideloadLauncher) return 0 ;;
-            # AptoideTV - use version 10.2.1.2019 compatible with Android 9
-            AptoideTV) return 0 ;;
+            AuroraStore|SideloadLauncher|AptoideTV) return 1 ;;
         esac
     fi
     return 0
@@ -246,7 +240,8 @@ download_app() {
     echo "    DEBUG: direct='$direct' file='$file' desc='$desc'" >&2
     
     local dest="$APPS_DIR/$file"
-    local success=""
+    local success=false
+    local debug_curl_output=""
     
     echo "  Downloading $app_name..."
     echo "    DEBUG: USE_GOOGLE_PLAY='$USE_GOOGLE_PLAY'" >&2
@@ -297,12 +292,8 @@ download_app() {
     
     # Try alternatives: APKPure, GitHub, APKMonk, direct URLs
     # Try APKPure via apkeep
-    echo "    DEBUG: apkpure='$apkpure' apkpure!=app_name=$([[ "$apkpure" != "$app_name" ]] && echo true || echo false) success=$success" >&2
     if [[ -n "$apkpure" && "$apkpure" != "$app_name" && -z "$success" ]]; then
-        echo "    DEBUG: APKPure condition TRUE - trying apkeep" >&2
-        if command -v apkeep &>/dev/null; then
-            echo "    DEBUG: apkeep found, running: apkeep -a $apkpure -d apkpure $APPS_DIR" >&2
-            if apkeep -a "$apkpure" -d apkpure "$APPS_DIR" 2>&1 | head -5; then
+        if command -v apkeep &>/dev/null && apkeep -a "$apkpure" -d apkpure "$APPS_DIR" 2>/dev/null; then
             for downloaded in "$APPS_DIR"/*.apk; do
                 if [[ -f "$downloaded" && "$downloaded" != "$dest" ]]; then
                     mv "$downloaded" "$dest" 2>/dev/null && success=true && break
@@ -403,7 +394,6 @@ show_menu() {
     echo "   E) Select ESSENTIAL only"
     echo "   Q) Quit"
     echo ""
-    echo "    DEBUG: BSP_TYPE=$BSP_TYPE" >&2
 }
 
 # Main
