@@ -42,12 +42,49 @@ if [ ${#BSP_DIRS[@]} -eq 0 ]; then
     exit 1
 fi
 
-# Gmail credentials for apkeep (Google Play downloads)
-# To create an App Password:
-#   1. Enable 2-Factor Authentication on your Google account
-#   2. Go to https://myaccount.google.com/security
-#   3. Select "App passwords" (under 2-Step Verification)
-#   4. Create a new app password for "Mail" or "Other (Custom name)"
+# Gmail setup for Google Play downloads via apkeep
+# apkeep uses AUTH token - see https://github.com/EFForg/apkeep/blob/master/USAGE-google-play.md
+
+setup_apkeep_credentials() {
+    APKEEP_EMAIL_FILE="$APPS_DIR/.apkkeep_email"
+    APKEEP_TOKEN_FILE="$APPS_DIR/.apkkeep_token"
+    echo ""
+    echo "============================================"
+    echo " Gmail Setup for Google Play Downloads"
+    echo "============================================"
+    echo ""
+    echo "apkeep requires AUTH token for Google Play."
+    echo "Get free AUTH token from Aurora Store:"
+    echo "  https://auroraoss.com/AuroraStore/Download"
+    echo ""
+    
+    if [ -f "$APKEEP_TOKEN_FILE" ] && [ -s "$APKEEP_TOKEN_FILE" ]; then
+        read -rp "Use saved AUTH token? (y/n): " use_saved
+        if [[ "$use_saved" != "y" && "$use_saved" != "Y" ]]; then
+            setup_new_credentials
+        fi
+    else
+        setup_new_credentials
+    fi
+}
+
+setup_new_credentials() {
+    echo ""
+    read -rp "Gmail address: " APKEEP_EMAIL
+    echo ""
+    echo "AUTH token (from Aurora Store, starts with 'ya29.'):"
+    read -rsp "AUTH token: " APKEEP_TOKEN
+    echo ""
+    
+    if [ -n "$APKEEP_EMAIL" ] && [ -n "$APKEEP_TOKEN" ]; then
+        echo "$APKEEP_EMAIL" > "$APPS_DIR/.apkkeep_email"
+        echo "$APKEEP_TOKEN" > "$APPS_DIR/.apkkeep_token"
+        chmod 600 "$APPS_DIR/.apkkeep_email" "$APPS_DIR/.apkkeep_token" 2>/dev/null
+        echo "Credentials saved."
+    fi
+}
+
+# Select BSP
 #   5. Use the 16-character password (no spaces)
 
 setup_apkeep_credentials() {
@@ -194,17 +231,17 @@ download_app() {
     
     # 1) Try apkeep (Google Play as primary, then other sources)
     if command -v apkeep &>/dev/null; then
-        # Load credentials if available
+        # Load AUTH token if available
         local email_opt=""
-        local pass_opt=""
-        if [ -f "$APKEEP_EMAIL_FILE" ] && [ -f "$APKEEP_PASS_FILE" ]; then
+        local token_opt=""
+        if [ -f "$APKEEP_EMAIL_FILE" ] && [ -f "$APKEEP_TOKEN_FILE" ]; then
             email_opt="-e $(cat "$APKEEP_EMAIL_FILE")"
-            pass_opt="-p $(cat "$APKEEP_PASS_FILE")"
+            token_opt="--auth-token $(cat "$APKEEP_TOKEN_FILE")"
         fi
         
         # Try Google Play first
         if [[ -n "$pkg" && "$pkg" != "$app_name" ]]; then
-            if eval apkeep -a \"$pkg\" $email_opt $pass_opt -d \"$APPS_DIR\" 2>/dev/null; then
+            if eval apkeep -a \"$pkg\" -d google-play $email_opt $token_opt --accept-tos -d \"$APPS_DIR\" 2>/dev/null; then
                 for downloaded in "$APPS_DIR"/*.apk; do
                     if [[ -f "$downloaded" && "$downloaded" != "$dest" ]]; then
                         mv "$downloaded" "$dest" 2>/dev/null && success=true && break
