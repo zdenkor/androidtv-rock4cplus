@@ -324,10 +324,13 @@ EOF
             LUNCH_TARGET="rk3399_all-userdebug"
         fi
 
-        # Fix BUILD_NUMBER readonly issue - use := instead of = for override
+        # Fix BUILD_NUMBER readonly issue - comment out BUILD_NUMBER in makefile before lunch
+        if [ -f "device/rockchip/rk3399/rk3399_all.mk" ]; then
+            sed -i 's/^\(BUILD_NUMBER.*\)/#\1  # commented by build fix/' "device/rockchip/rk3399/rk3399_all.mk" 2>/dev/null || true
+        fi
+
         echo "Using lunch target: $LUNCH_TARGET"
-        # Override BUILD_NUMBER at lunch call - Android allows command-line override
-        lunch "$LUNCH_TARGET" BUILD_NUMBER="1" < /dev/null || {
+        lunch "$LUNCH_TARGET" < /dev/null || {
             echo "ERROR: lunch target '$LUNCH_TARGET' failed"
             echo "Please inspect device/rockchip/rk3399/AndroidProducts.mk and available lunch targets."
             exit 1
