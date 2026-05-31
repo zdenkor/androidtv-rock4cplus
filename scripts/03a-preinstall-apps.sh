@@ -450,7 +450,7 @@ if [[ -f "$dest" && -s "$dest" ]]; then
             rm -f "$APPS_DIR/$apk_id.apk" 2>/dev/null
             if apkeep -a "$apk_id" -d apk-pure "$APPS_DIR"; then
                 for downloaded in "$APPS_DIR"/*.apk; do
-                    if [[ -f "$downloaded" && "$downloaded" != "$dest" ]]; then
+                    if [[ -f "$downloaded" && "$downloaded" != "$dest" && "$downloaded" == *"$apk_id"* ]]; then
                         mv "$downloaded" "$dest" 2>/dev/null && echo "  [OK] $dest_name" && break
                     fi
                 done
