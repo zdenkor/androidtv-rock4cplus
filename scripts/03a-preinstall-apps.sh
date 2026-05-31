@@ -1,4 +1,4 @@
-#!/bin/bash
+﻿#!/bin/bash
 
 # ============================================================================
 # 03a-preinstall-apps.sh
@@ -94,7 +94,7 @@ setup_oauth_credentials() {
     echo "  1. Visit https://accounts.google.com/EmbeddedSetup"
     echo "  2. Login with your Gmail"
     echo "  3. Accept ToS if popup appears"
-    echo "  4. Open browser dev console (F12) → Network tab"
+    echo "  4. Open browser dev console (F12) Ôćĺ Network tab"
     echo "  5. Find last request to accounts.google.com"
     echo "  6. In Cookies tab, find 'oauth_token' (starts with 'oauth2_4/')"
     echo "  7. Copy the value"
