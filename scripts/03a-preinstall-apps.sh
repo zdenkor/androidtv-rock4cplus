@@ -193,7 +193,7 @@ APPS["Projectivy"]="com.riviprojectivy.launcher||||Projectivy.apk|Clean launcher
 APPS["TVBro"]="com.example.tvbro||||TVBro.apk|Web browser for TV"
 APPS["LocalSend"]="com.example.localsend||||LocalSend.apk|AirDrop alternative"
 APPS["ButtonMapper"]="com.example.buttonmapper||||ButtonMapper.apk|Remap remote buttons"
-APPS["Fdroid"]="org.fdroid.fdroid|||https://f-droid.org/repo/org.fdroid.fdroid_160900.apk|Fdroid.apk|Open source app store"
+APPS["Fdroid"]="org.fdroid.fdroid|||https://f-droid.org/F-Droid.apk|Fdroid.apk|Open source app store"
 APPS["AdAway"]="org.adaway|||https://f-droid.org/repo/org.adaway_20191010.apk|AdAway.apk|System-wide ad blocker"
 
 # Additional apps
