@@ -43,7 +43,8 @@ if [ ${#BSP_DIRS[@]} -eq 0 ]; then
 fi
 
 # Gmail setup for Google Play downloads via apkeep
-# Uses OAuth flow: https://github.com/EFForg/apkeep/blob/master/USAGE-google-play.md
+# Supports OAuth token (official) or AUTH token (Aurora Store dispenser)
+# See: https://github.com/EFForg/apkeep/blob/master/USAGE-google-play.md
 
 setup_apkeep_credentials() {
     echo ""
@@ -51,7 +52,26 @@ setup_apkeep_credentials() {
     echo " Gmail Setup for Google Play Downloads"
     echo "============================================"
     echo ""
-    echo "Option 1: Use OAuth token (official method)"
+    echo "Choose authentication method:"
+    echo "  1) OAuth token (official method - requires browser)"
+    echo "  2) AUTH token (from Aurora Store dispenser)"
+    echo ""
+    read -rp "Select (1/2): " auth_method
+    
+    local ini_file="$HOME/.config/apkeep/apkeep.ini"
+    mkdir -p "$(dirname "$ini_file")"
+    
+    case "$auth_method" in
+        1) setup_oauth_credentials "$ini_file" ;;
+        2) setup_auth_credentials "$ini_file" ;;
+        *) echo "Invalid selection"; return 1 ;;
+    esac
+}
+
+setup_oauth_credentials() {
+    local ini_file="$1"
+    echo ""
+    echo "OAuth Token Method:"
     echo "  1. Visit https://accounts.google.com/EmbeddedSetup"
     echo "  2. Login with your Gmail"
     echo "  3. Accept ToS if popup appears"
@@ -60,34 +80,12 @@ setup_apkeep_credentials() {
     echo "  6. In Cookies tab, find 'oauth_token' (starts with 'oauth2_4/')"
     echo "  7. Copy the value"
     echo ""
-    echo "Option 2: Use AAS token (from previous OAuth exchange)"
-    echo ""
-    
-    local ini_file="$HOME/.config/apkeep/apkeep.ini"
-    mkdir -p "$(dirname "$ini_file")"
-    
-    if [ -f "$ini_file" ] && grep -q "aas_token\|auth_token" "$ini_file" 2>/dev/null; then
-        echo "Found apkeep.ini with saved token."
-        read -rp "Use saved credentials? (y/n): " use_saved
-        if [[ "$use_saved" != "y" && "$use_saved" != "Y" ]]; then
-            setup_new_credentials "$ini_file"
-        fi
-    else
-        setup_new_credentials "$ini_file"
-    fi
-}
-
-setup_new_credentials() {
-    local ini_file="$1"
-    echo ""
     read -rp "Gmail address: " APKEEP_EMAIL
     echo ""
-    echo "OAuth token (from https://accounts.google.com/EmbeddedSetup):"
     read -rsp "OAuth token (starts with 'oauth2_4/'): " OAUTH_TOKEN
     echo ""
     
     if [ -n "$APKEEP_EMAIL" ] && [ -n "$OAUTH_TOKEN" ]; then
-        # Exchange OAuth token for AAS token
         echo "Exchanging OAuth token for AAS token..."
         AAS_TOKEN=$(apkeep -e "$APKEEP_EMAIL" --oauth-token "$OAUTH_TOKEN" 2>/dev/null | tail -1)
         
@@ -102,6 +100,29 @@ EOF
         else
             echo "Failed to obtain AAS token. Check your OAuth token."
         fi
+    fi
+}
+
+setup_auth_credentials() {
+    local ini_file="$1"
+    echo ""
+    echo "AUTH Token Method (from Aurora Store):"
+    echo "  Get free AUTH token from: https://auroraoss.com/AuroraStore/Download"
+    echo "  AUTH tokens start with 'ya29.'"
+    echo ""
+    read -rp "Gmail address: " APKEEP_EMAIL
+    echo ""
+    read -rsp "AUTH token (starts with 'ya29.'): " AUTH_TOKEN
+    echo ""
+    
+    if [ -n "$APKEEP_EMAIL" ] && [ -n "$AUTH_TOKEN" ]; then
+        cat > "$ini_file" << EOF
+[google]
+email = $APKEEP_EMAIL
+auth_token = $AUTH_TOKEN
+EOF
+        chmod 600 "$ini_file"
+        echo "Credentials saved to $ini_file"
     fi
 }
 
