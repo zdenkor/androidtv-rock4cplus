@@ -271,7 +271,7 @@ EOF
         fi
         
         echo "[6/6] Applying prebuilts fixes..."
-        python3 "$SCRIPT_DIR/fix_prebuilts.py"
+        # fix_prebuilts.py removed - using universal fix scripts instead
         ;;
     
     3)
