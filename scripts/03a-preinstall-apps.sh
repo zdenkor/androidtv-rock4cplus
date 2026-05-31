@@ -221,7 +221,10 @@ download_app() {
     local app_data="${APPS[$app_name]}"
     
     # Parse: pkg|apkpure|github|apkmonk|direct|filename|desc
-    echo "    DEBUG: raw app_data='$app_data'" >&2
+    # Handle empty fields - count pipes to determine position
+    local field_count=$(echo "$app_data" | awk -F'|' '{print NF}')
+    echo "    DEBUG: fields in app_data=$field_count" >&2
+    
     local pkg="${app_data%%|*}"
     app_data="${app_data#*|}"
     local apkpure="${app_data%%|*}"
@@ -234,7 +237,7 @@ download_app() {
     app_data="${app_data#*|}"
     local file="${app_data%%|*}"
     local desc="${app_data##*|}"
-    echo "    DEBUG: direct='$direct' file='$file'" >&2
+    echo "    DEBUG: direct='$direct' file='$file' desc='$desc'" >&2
     
     local dest="$APPS_DIR/$file"
     local success=false
