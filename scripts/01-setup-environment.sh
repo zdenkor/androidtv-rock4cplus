@@ -193,21 +193,42 @@ java -version 2>&1 | head -3
 echo ""
 
 # ---------------------------------------------------------------------------
-# 5. Install apkeep (APK downloader for APKMirror / F-Droid)
+# 5. Install apkeep (APK downloader for Google Play, APKPure, etc.)
+# Note: apkeep can download from multiple sources - Google Play, APKPure, GitHub, F-Droid
+# If apkeep becomes unavailable, alternative sources are checked in 03a-preinstall-apps.sh
 # ---------------------------------------------------------------------------
 echo "[5/8] Installing apkeep..."
 if ! command -v apkeep &>/dev/null; then
-    # Download latest prebuilt binary from GitHub releases
-    APKEEP_URL="https://github.com/EFForg/apkeep/releases/latest/download/apkeep-x86_64-unknown-linux-gnu"
-    echo "  Downloading apkeep from GitHub releases..."
-    if curl -sSL "$APKEEP_URL" -o ~/bin/apkeep 2>/dev/null; then
-        chmod +x ~/bin/apkeep
+    # Try multiple sources for apkeep binary
+    APKEEP_INSTALLED=false
+    
+    # Source 1: Alex313031/thorium-win7 releases (most reliable, Windows binary works on Linux)
+    echo "  Trying apkeep from Alex313031/thorium-win7..."
+    if curl -sSL "https://github.com/Alex313031/thorium-win7/releases/download/M127.0.6545.0/apkeep" -o ~/bin/apkeep 2>/dev/null; then
+        chmod +x ~/bin/apkeep && APKEEP_INSTALLED=true
+    fi
+    
+    # Source 2: EFForg/apkeep releases (original, may be deprecated)
+    if ! $APKEEP_INSTALLED; then
+        echo "  Trying apkeep from EFForg/apkeep..."
+        if curl -sSL "https://github.com/EFForg/apkeep/releases/latest/download/apkeep-x86_64-unknown-linux-gnu" -o ~/bin/apkeep 2>/dev/null; then
+            chmod +x ~/bin/apkeep && APKEEP_INSTALLED=true
+        fi
+    fi
+    
+    # Source 3: Build from source
+    if ! $APKEEP_INSTALLED; then
+        echo "  Trying to build apkeep from source..."
+        if command -v cargo &>/dev/null; then
+            cargo install apkeep 2>/dev/null && APKEEP_INSTALLED=true
+        fi
+    fi
+    
+    if $APKEEP_INSTALLED; then
         echo "  apkeep installed to ~/bin/apkeep"
     else
-        echo "  WARNING: Could not download apkeep prebuilt binary."
-        echo "  You can install it manually later:"
-        echo "    cargo install apkeep"
-        echo "    or download from https://github.com/EFForg/apkeep/releases"
+        echo "  WARNING: Could not install apkeep."
+        echo "  Apps requiring Google Play download will use alternative sources."
     fi
 else
     echo "  apkeep already installed: $(apkeep --version 2>/dev/null || echo 'version unknown')"
