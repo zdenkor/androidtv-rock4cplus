@@ -449,11 +449,10 @@ if [[ -f "$dest" && -s "$dest" ]]; then
             # Clean up any leftover with package name before downloading
             rm -f "$APPS_DIR/$apk_id.apk" 2>/dev/null
             if apkeep -a "$apk_id" -d apk-pure "$APPS_DIR"; then
-                for downloaded in "$APPS_DIR"/*.apk; do
-                    if [[ -f "$downloaded" && "$downloaded" != "$dest" && "$downloaded" == *"$apk_id"* ]]; then
-                        mv "$downloaded" "$dest" 2>/dev/null && echo "  [OK] $dest_name" && break
-                    fi
-                done
+                # Move the downloaded file (apkeep names it with package id)
+                if [[ -f "$APPS_DIR/$apk_id.apk" ]]; then
+                    mv "$APPS_DIR/$apk_id.apk" "$dest" && echo "  [OK] $dest_name"
+                fi
             else
                 # apkeep failed - try fallback URL
                 if [[ -n "$fallback_url" && "$fallback_url" == http* ]]; then
