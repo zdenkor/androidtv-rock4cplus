@@ -8,7 +8,7 @@ Build **Android 9–12** for the **Radxa ROCK 4C+** (Rockchip RK3399-T) from sou
 > - [Vicharak Android 12](https://github.com/vicharak-in/rockchip-android-manifest) — kernel 5.10, full Rockchip HALs, last updated Dec 2025 (**recommended**)
 > - Radxa Android 9 Pie — kernel 4.4, official Radxa BSP
 > - Advantech Android 12 — kernel 4.19, industrial Rockchip variant
-> - AOSP 12 — experimental, requires manual BSP integration
+> - AOSP 12 — experimental, partially automated Rockchip BSP overlay
 
 ---
 
@@ -44,7 +44,7 @@ This repository provides a complete, automated build system for compiling Androi
 | **Vicharak** | 12 | 5.10 | ✅ Recommended | Latest, most features |
 | Radxa | 9 Pie | 4.4 | ✅ Stable | Official support, mature |
 | Advantech | 12 | 4.19 | ⚠️ Experimental | Industrial variant |
-| AOSP | 12 | 5.10+ | ⚠️ Manual | Minimal, research |
+| AOSP | 12 | 5.10+ | ⚠️ Partial | Rockchip overlay installed automatically |
 
 **Hardware Components (all BSPs):**
 
