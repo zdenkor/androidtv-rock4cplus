@@ -18,6 +18,29 @@ if [ -f "$CONFIG_FILE" ]; then
     source "$CONFIG_FILE"
 fi
 
+REPO_TOOL="$SCRIPT_DIR/../repo-local"
+REPO_CMD="repo"
+
+download_repo_tool() {
+    echo "Downloading repo tool..."
+    if command -v curl >/dev/null 2>&1; then
+        curl -fsSL https://storage.googleapis.com/git-repo-downloads/repo -o "$REPO_TOOL"
+    elif command -v wget >/dev/null 2>&1; then
+        wget -qO "$REPO_TOOL" https://storage.googleapis.com/git-repo-downloads/repo
+    else
+        echo "ERROR: curl or wget is required to download the repo tool."
+        exit 1
+    fi
+    chmod a+x "$REPO_TOOL"
+}
+
+if ! command -v repo >/dev/null 2>&1; then
+    if [ ! -x "$REPO_TOOL" ]; then
+        download_repo_tool
+    fi
+    REPO_CMD="$REPO_TOOL"
+fi
+
 echo "============================================"
 echo " Downloading Android Source Code"
 echo " Target: Radxa ROCK 4C+ (RK3399-T)"
@@ -91,7 +114,7 @@ case $BUILD_CHOICE in
         echo "XML:      rockpi-release.xml"
         echo ""
 
-        repo init --depth=1 \
+        "$REPO_CMD" init --depth=1 \
             -u https://github.com/radxa/manifests.git \
             -b rockpi-box-9.0 \
             -m rockpi-release.xml
@@ -117,7 +140,7 @@ case $BUILD_CHOICE in
         echo "[3/4] Syncing repositories (this will take a while)..."
         echo "Estimated download: ~80GB"
         echo ""
-        repo sync -c -j$(nproc) --no-tags --no-clone-bundle
+        "$REPO_CMD" sync -c -j$(nproc) --no-tags --no-clone-bundle
 
         echo "[4/4] Downloading additional tools..."
         # rkbin is already included in Radxa manifest, no need to clone separately
@@ -135,7 +158,7 @@ case $BUILD_CHOICE in
         echo "XML:      rockchip-s-vicharak.xml"
         echo ""
 
-        repo init --no-tags --no-clone-bundle \
+        "$REPO_CMD" init --no-tags --no-clone-bundle \
             -u https://github.com/vicharak-in/rockchip-android-manifest \
             -b master \
             -m rockchip-s-vicharak.xml
@@ -145,7 +168,7 @@ case $BUILD_CHOICE in
         echo ""
 
         # First attempt: sync with reduced parallelism to avoid rate limits
-        repo sync -j4 --no-clone-bundle || {
+        "$REPO_CMD" sync -j4 --no-clone-bundle || {
             echo ""
             echo "=== Sync had errors, fixing known issues ==="
             echo ""
@@ -164,9 +187,9 @@ case $BUILD_CHOICE in
 
             # Fix 2: Retry remaining repos with single thread
             echo "Retrying remaining repos..."
-            repo sync -j1 --no-clone-bundle --fail-fast || {
+            "$REPO_CMD" sync -j1 --no-clone-bundle --fail-fast || {
                 echo "Some repos still failed. Retrying one more time..."
-                repo sync -j1 -c --no-clone-bundle
+                "$REPO_CMD" sync -j1 -c --no-clone-bundle
             }
         }
 
@@ -276,14 +299,14 @@ case $BUILD_CHOICE in
         echo "Some device tuning may still be required, but the initial BSP components will be installed."
         echo ""
 
-        repo init --depth=1 \
+        "$REPO_CMD" init --depth=1 \
             -u https://android.googlesource.com/platform/manifest \
             -b android-12.1.0_r11
 
         echo "[3/4] Syncing repositories (this will take a while)..."
         echo "Estimated download: ~60GB"
         echo ""
-        repo sync -c -j$(nproc) --no-tags --no-clone-bundle
+        "$REPO_CMD" sync -c -j$(nproc) --no-tags --no-clone-bundle
 
         echo "[4/4] Downloading Rockchip BSP overlay..."
         mkdir -p "$WORK_DIR/device/rockchip"
