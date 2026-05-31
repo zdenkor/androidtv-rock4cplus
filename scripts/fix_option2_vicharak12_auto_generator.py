@@ -1,32 +1,68 @@
 #!/usr/bin/env python3
-"""
-Fix auto_generator.py for Vicharak Android 12 (Option 2)
-Placeholder - Vicharak BSP typically doesn't need this fix
-"""
-
 import os
+import ast
+import re
+
+def find_syntax_errors(content):
+    errors = []
+    try:
+        ast.parse(content)
+        return errors
+    except SyntaxError as e:
+        errors.append({'lineno': e.lineno, 'msg': e.msg, 'text': e.text})
+    return errors
 
 def fix_auto_generator():
-    """Check and fix auto_generator.py if needed for Vicharak BSP"""
-    
-    filepath = "device/rockchip/common/auto_generator.py"
+    filepath = 'device/rockchip/common/auto_generator.py'
     
     if not os.path.exists(filepath):
-        print(f"File not found: {filepath}")
-        return True  # Not an error - file might not exist in Vicharak BSP
+        print(f'File not found: {filepath}')
+        return False
     
     try:
-        # Try to compile
         with open(filepath, 'rb') as f:
             content = f.read().decode('utf-8', errors='ignore')
         
-        compile(content, filepath, 'exec')
-        print(f"Vicharak BSP: auto_generator.py is valid")
-        return True
+        content = content.replace('\r\n', '\n').replace('\r', '\n')
         
-    except SyntaxError as e:
-        print(f"Vicharak BSP: auto_generator.py has syntax error: {e}")
-        return True  # Let it pass - Vicharak might handle this differently
+        errors = find_syntax_errors(content)
+        if not errors:
+            print(f'File compiles OK: {filepath}')
+            return True
+        
+        print(f'Found {len(errors)} syntax error(s)')
+        
+        # Remove duplicate pass at same indent
+        fixed = re.sub(r'^(\s*)pass\s*\n\s*pass\s*$', r'\1pass', content, flags=re.MULTILINE)
+        
+        # Check if fixed
+        errors = find_syntax_errors(fixed)
+        if not errors:
+            print(f'Fixed: removed duplicate pass')
+            with open(filepath, 'w', encoding='utf-8') as f:
+                f.write(fixed)
+            return True
+        
+        # Last resort: remove all pass
+        lines = fixed.split('\n')
+        result = [l for l in lines if l.strip() != 'pass']
+        no_pass = '\n'.join(result)
+        
+        try:
+            compile(no_pass, filepath, 'exec')
+            print(f'Fixed: removed all pass')
+            with open(filepath, 'w', encoding='utf-8') as f:
+                f.write(no_pass)
+            return True
+        except:
+            pass
+        
+        print('Could not auto-fix')
+        return False
+        
+    except Exception as e:
+        print(f'Error: {e}')
+        return False
 
 if __name__ == '__main__':
     success = fix_auto_generator()

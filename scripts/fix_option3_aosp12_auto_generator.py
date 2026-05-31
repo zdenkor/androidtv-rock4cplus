@@ -1,121 +1,67 @@
 #!/usr/bin/env python3
-"""
-Fix auto_generator.py by removing orphaned else and fixing indentation
-"""
-
 import os
+import ast
+import re
+
+def find_syntax_errors(content):
+    errors = []
+    try:
+        ast.parse(content)
+        return errors
+    except SyntaxError as e:
+        errors.append({'lineno': e.lineno, 'msg': e.msg, 'text': e.text})
+    return errors
 
 def fix_auto_generator():
-    """Fix auto_generator.py by removing orphaned else clause"""
-    
-    filepath = "device/rockchip/common/auto_generator.py"
+    filepath = 'device/rockchip/common/auto_generator.py'
     
     if not os.path.exists(filepath):
-        print(f"File not found: {filepath}")
+        print(f'File not found: {filepath}')
         return False
     
     try:
-        # Read file
         with open(filepath, 'rb') as f:
-            content_bytes = f.read()
+            content = f.read().decode('utf-8', errors='ignore')
         
-        # Decode
-        try:
-            content = content_bytes.decode('utf-8')
-        except:
-            content = content_bytes.decode('latin-1')
-        
-        # Normalize line endings
         content = content.replace('\r\n', '\n').replace('\r', '\n')
         
-        lines = content.split('\n')
-        
-        # Find and fix the orphaned else at line 119
-        # Line 119 is "                else:" which has wrong indentation
-        # It should be removed because the if at line 117 has content at line 118
-        
-        fixed_lines = []
-        for i, line in enumerate(lines):
-            line_num = i + 1
-            
-            # Line 118 is the continue that has wrong indentation (20 instead of 36)
-            # Line 119 is the orphaned else at indent 16
-            if line_num == 118:
-                # Fix the indentation of this continue statement
-                fixed_lines.append(' ' * 36 + 'continue')
-            elif line_num == 119:
-                # Skip the orphaned else
-                print(f"Removing orphaned else at line {line_num}")
-                continue
-            else:
-                fixed_lines.append(line)
-        
-        fixed_content = '\n'.join(fixed_lines)
-        
-        try:
-            compile(fixed_content, filepath, 'exec')
-            print(f"Fixed: {filepath}")
-            with open(filepath, 'w', encoding='utf-8') as f:
-                f.write(fixed_content)
+        errors = find_syntax_errors(content)
+        if not errors:
+            print(f'File compiles OK: {filepath}')
             return True
-        except SyntaxError as e:
-            print(f"Still syntax error: {e}")
         
-        # Try a more aggressive fix - remove all lines from 115 to 135 and rebuild
-        print("Trying more aggressive fix...")
+        print(f'Found {len(errors)} syntax error(s)')
         
-        result = []
-        for i, line in enumerate(lines):
-            line_num = i + 1
-            
-            # Skip the problematic block (lines 115-135)
-            if 115 <= line_num <= 135:
-                if line_num == 115:
-                    # Replace with properly indented version
-                    result.append(' ' * 32 + 'if(os.path.isdir(libfile)):')
-                    result.append(' ' * 36 + 'continue')
-                elif line_num == 116:
-                    result.append(' ' * 32 + 'if not cmp(lib_name,find_name):')
-                    result.append(' ' * 36 + 'continue')
-                continue
-            
-            result.append(line)
+        # Remove duplicate pass at same indent
+        fixed = re.sub(r'^(\s*)pass\s*\n\s*pass\s*$', r'\1pass', content, flags=re.MULTILINE)
         
-        fixed_content = '\n'.join(result)
-        
-        try:
-            compile(fixed_content, filepath, 'exec')
-            print(f"Fixed aggressive: {filepath}")
+        # Check if fixed
+        errors = find_syntax_errors(fixed)
+        if not errors:
+            print(f'Fixed: removed duplicate pass')
             with open(filepath, 'w', encoding='utf-8') as f:
-                f.write(fixed_content)
+                f.write(fixed)
             return True
-        except SyntaxError as e2:
-            print(f"Aggressive fix failed: {e2}")
         
-        # Last resort: remove all pass statements
-        print("Trying to remove all pass statements...")
-        
-        clean_lines = []
-        for line in lines:
-            if line.strip() != 'pass':
-                clean_lines.append(line)
-        
-        final_content = '\n'.join(clean_lines)
+        # Last resort: remove all pass
+        lines = fixed.split('\n')
+        result = [l for l in lines if l.strip() != 'pass']
+        no_pass = '\n'.join(result)
         
         try:
-            compile(final_content, filepath, 'exec')
+            compile(no_pass, filepath, 'exec')
+            print(f'Fixed: removed all pass')
             with open(filepath, 'w', encoding='utf-8') as f:
-                f.write(final_content)
-            print(f"Fixed by removing all pass: {filepath}")
+                f.write(no_pass)
             return True
         except:
-            print("ERROR: Cannot fix automatically")
-            return False
-    
+            pass
+        
+        print('Could not auto-fix')
+        return False
+        
     except Exception as e:
-        print(f"Error: {e}")
-        import traceback
-        traceback.print_exc()
+        print(f'Error: {e}')
         return False
 
 if __name__ == '__main__':
