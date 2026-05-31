@@ -214,31 +214,33 @@ case $BUILD_CHOICE in
         echo "NOTE: This may fail due to Python 2 compatibility issues."
         echo ""
 
-        repo init -u \
+        # Download latest repo tool directly from Google to avoid old Python 2 repo issues
+        echo "Downloading latest repo tool..."
+        if command -v curl >/dev/null 2>&1; then
+            curl -fsSL https://storage.googleapis.com/git-repo-downloads/repo -o "$WORK_DIR/repo-local"
+        elif command -v wget >/dev/null 2>&1; then
+            wget -qO "$WORK_DIR/repo-local" https://storage.googleapis.com/git-repo-downloads/repo
+        else
+            echo "ERROR: curl or wget is required to download the repo tool."
+            exit 1
+        fi
+        chmod a+x "$WORK_DIR/repo-local"
+
+        echo "[3/4] Initializing Advantech manifest with up-to-date repo tool..."
+        "$WORK_DIR/repo-local" init -u \
             https://kag-sw.visualstudio.com/RK3399-Android/_git/android-s12-manifest \
             -b rk3399-androidS12 \
             -m default.xml
 
-        echo "[3/4] Syncing repositories..."
+        echo "[4/4] Syncing repositories..."
         echo "Estimated download: ~80GB"
         echo ""
-        
-        # Attempt sync, but provide Python 2 workaround if available
-        if command -v python2 &> /dev/null; then
-            echo "Python 2 detected, using it for repo..."
-            python2 .repo/repo/main.py sync -c -f --no-clone-bundle -j4 || {
-                echo "Python 2 sync failed, trying standard repo..."
-                repo sync -c -f --no-clone-bundle -j$(nproc)
-            }
-        else
-            echo "Python 2 not found, using standard repo (may fail)..."
-            repo sync -c -f --no-clone-bundle -j$(nproc) || {
-                echo ""
-                echo "ERROR: Advantech sync failed (expected due to Python 2 requirement)"
-                echo "Please use Option 2 (Vicharak) instead."
-                exit 1
-            }
-        fi
+        "$WORK_DIR/repo-local" sync -c -f --no-clone-bundle -j$(nproc) || {
+            echo ""
+            echo "ERROR: Advantech sync failed with updated repo tool."
+            echo "If this is due to Python 2, install python2 and rerun."
+            exit 1
+        }
 
         echo ""
         echo "============================================"

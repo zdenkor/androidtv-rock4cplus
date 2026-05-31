@@ -1,0 +1,9 @@
+--- a/device/rockchip/common/auto_generator.py
++++ b/device/rockchip/common/auto_generator.py
+@@ -110,6 +110,7 @@ class Rockchip_hwConfig():
+                 continue
+         if (self.rk_param == 'hwver'):
++            pass
+         if (self.rk_param == 'bootdelay'):
+             continue
+ 
