@@ -446,6 +446,8 @@ if [[ -f "$dest" && -s "$dest" ]]; then
         fi
         
         if $use_apkeep && [[ -n "$apk_id" ]] && command -v apkeep &>/dev/null; then
+            # Clean up any leftover with package name before downloading
+            rm -f "$APPS_DIR/$apk_id.apk" 2>/dev/null
             if apkeep -a "$apk_id" -d apk-pure "$APPS_DIR"; then
                 for downloaded in "$APPS_DIR"/*.apk; do
                     if [[ -f "$downloaded" && "$downloaded" != "$dest" ]]; then
