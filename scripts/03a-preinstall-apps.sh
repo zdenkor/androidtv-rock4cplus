@@ -65,6 +65,21 @@ echo "============================================"
 echo ""
 
 # ---------------------------------------------------------------------------
+# Detect BSP type for app compatibility
+# ---------------------------------------------------------------------------
+BSP_TYPE="unknown"
+if [[ "$WORK_DIR" == *radxa9* ]]; then
+    BSP_TYPE="radxa9"
+elif [[ "$WORK_DIR" == *vicharak12* ]]; then
+    BSP_TYPE="vicharak12"
+elif [[ "$WORK_DIR" == *aosp12* ]]; then
+    BSP_TYPE="aosp12"
+fi
+
+echo "Detected BSP: $BSP_TYPE"
+echo ""
+
+# ---------------------------------------------------------------------------
 # Optional: Google Play credentials setup
 # ---------------------------------------------------------------------------
 if [ -z "${APKEEP_GP_EMAIL}" ] || [ -z "${APKEEP_GP_PASS}" ]; then
@@ -233,6 +248,35 @@ else
         fi
     done
 fi
+
+# ---------------------------------------------------------------------------
+# BSP-specific app compatibility filtering
+# ---------------------------------------------------------------------------
+case "$BSP_TYPE" in
+    radxa9)
+        # Android 9 - filter out apps that require Android 10+
+        echo ""
+        echo "Note: Radxa Android 9 detected — filtering for API 28 compatibility"
+        FILTERED=()
+        for app in "${SELECTED[@]}"; do
+            case "$app" in
+                AuroraStore|SideloadLauncher)
+                    echo "  [SKIP] $app — requires Android 10+"
+                    ;;
+                *)
+                    FILTERED+=("$app")
+                    ;;
+            esac
+        done
+        SELECTED=("${FILTERED[@]}")
+        ;;
+    vicharak12|aosp12)
+        # Android 12 - all apps work
+        ;;
+    *)
+        echo "Warning: Unknown BSP type, not filtering apps"
+        ;;
+esac
 
 # ---------------------------------------------------------------------------
 # Helper: resolve GitHub /latest/download/ and GitLab /permalink/latest/ URLs
