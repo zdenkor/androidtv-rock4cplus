@@ -243,6 +243,7 @@ download_app() {
     local success=false
     
     echo "  Downloading $app_name..."
+    echo "    DEBUG: USE_GOOGLE_PLAY='$USE_GOOGLE_PLAY'" >&2
     
     # Download based on source selection
     if $USE_GOOGLE_PLAY && command -v apkeep &>/dev/null; then
