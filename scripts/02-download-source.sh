@@ -265,19 +265,15 @@ case $BUILD_CHOICE in
 
     4)
         # ====================================================================
-        # OPTION 4: Android 12 AOSP (Experimental, no official BSP)
+        # OPTION 4: Android 12 AOSP (Experimental, automatic Rockchip overlay)
         # ====================================================================
         echo "[2/4] Initializing repo with AOSP Android 12 manifest..."
         echo ""
         echo "Manifest: https://android.googlesource.com/platform/manifest"
         echo "Branch:   android-12.1.0_r11"
         echo ""
-        echo "WARNING: This is pure AOSP without Rockchip BSP."
-        echo "You will need to manually add:"
-        echo "  - Rockchip kernel (4.19/5.10)"
-        echo "  - Mali GPU drivers"
-        echo "  - Rockchip HALs (gralloc, hwcomposer, etc.)"
-        echo "  - Device tree for ROCK 4C+"
+        echo "NOTICE: This downloads AOSP core and installs a Rockchip BSP overlay automatically."
+        echo "Some device tuning may still be required, but the initial BSP components will be installed."
         echo ""
 
         repo init --depth=1 \
@@ -289,11 +285,35 @@ case $BUILD_CHOICE in
         echo ""
         repo sync -c -j$(nproc) --no-tags --no-clone-bundle
 
-        echo "[4/4] Downloading Rockchip BSP components..."
+        echo "[4/4] Downloading Rockchip BSP overlay..."
+        mkdir -p "$WORK_DIR/device/rockchip"
+        mkdir -p "$WORK_DIR/hardware/rockchip"
+        mkdir -p "$WORK_DIR/tools"
         mkdir -p "$WORK_DIR/vendor/rockchip"
-        git clone --depth=1 https://github.com/radxa/kernel.git "$WORK_DIR/kernel" || true
-        git clone --depth=1 https://github.com/rockchip-linux/tools.git "$WORK_DIR/tools/rkbin" || true
-        git clone --depth=1 https://github.com/rockchip-linux/mpp.git "$WORK_DIR/vendor/rockchip/mpp" || true
+
+        if [ ! -d "$WORK_DIR/device/rockchip/rk3399" ]; then
+            git clone --depth=1 https://github.com/khadas/android_device_rockchip_rk3399.git "$WORK_DIR/device/rockchip/rk3399" || true
+        fi
+        if [ ! -d "$WORK_DIR/hardware/rockchip" ]; then
+            git clone --depth=1 https://github.com/lineageos-on-rockchip/android_hardware_rockchip.git "$WORK_DIR/hardware/rockchip" || true
+        fi
+        if [ ! -d "$WORK_DIR/kernel" ]; then
+            git clone --depth=1 https://github.com/rockchip-linux/kernel.git "$WORK_DIR/kernel" || true
+        fi
+        if [ ! -d "$WORK_DIR/tools/rkbin" ]; then
+            git clone --depth=1 https://github.com/rockchip-linux/rkbin.git "$WORK_DIR/tools/rkbin" || true
+        fi
+        if [ ! -d "$WORK_DIR/vendor/rockchip/mpp" ]; then
+            git clone --depth=1 https://github.com/rockchip-linux/mpp.git "$WORK_DIR/vendor/rockchip/mpp" || true
+        fi
+
+        echo "[4/4] Applying local ROCK 4C+ files..."
+        if [ -f "$SCRIPT_DIR/../configs/BoardConfig.mk" ] && [ -d "$WORK_DIR/device/rockchip/rk3399" ]; then
+            cp -f "$SCRIPT_DIR/../configs/BoardConfig.mk" "$WORK_DIR/device/rockchip/rk3399/BoardConfig.mk"
+        fi
+        if [ -f "$SCRIPT_DIR/../patches/rk3399-rock-4c-plus.dts" ] && [ -d "$WORK_DIR/kernel/arch/arm64/boot/dts/rockchip" ]; then
+            cp -f "$SCRIPT_DIR/../patches/rk3399-rock-4c-plus.dts" "$WORK_DIR/kernel/arch/arm64/boot/dts/rockchip/"
+        fi
         ;;
     *)
         echo "Invalid choice. Exiting."
