@@ -293,7 +293,7 @@ download_app() {
     # Try alternatives: APKPure, GitHub, APKMonk, direct URLs
     # Try APKPure via apkeep
     if [[ -n "$apkpure" && "$apkpure" != "$app_name" && -z "$success" ]]; then
-        if command -v apkeep &>/dev/null && apkeep -a "$apkpure" -d apkpure "$APPS_DIR" 2>/dev/null; then
+        if command -v apkeep &>/dev/null && apkeep -a "$apkpure" -d apk-pure "$APPS_DIR" 2>/dev/null; then
             for downloaded in "$APPS_DIR"/*.apk; do
                 if [[ -f "$downloaded" && "$downloaded" != "$dest" ]]; then
                     mv "$downloaded" "$dest" 2>/dev/null && success=true && break
@@ -323,7 +323,7 @@ download_app() {
     
     # Try APKMonk
     if [[ -n "$apkmonk" && "$apkmonk" != "$app_name" && -z "$success" ]]; then
-        if command -v apkeep &>/dev/null && apkeep -a "$apkmonk" -d apkmonk "$APPS_DIR" 2>/dev/null; then
+        if command -v apkeep &>/dev/null && apkeep -a "$apkmonk" -d apk-pure "$APPS_DIR" 2>/dev/null; then
             for downloaded in "$APPS_DIR"/*.apk; do
                 if [[ -f "$downloaded" && "$downloaded" != "$dest" ]]; then
                     mv "$downloaded" "$dest" 2>/dev/null && success=true && break
