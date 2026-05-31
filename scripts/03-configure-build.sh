@@ -305,7 +305,7 @@ EOF
 
         echo "[4/6] Fixing Python indentation / build scripts..."
         if [ -d "device/rockchip" ]; then
-            python3 "$SCRIPT_DIR/fix_option4_aosp12_auto_generator.py" || true
+            python3 "$SCRIPT_DIR/fix_option3_aosp12_auto_generator.py" || true
         fi
 
         echo "[5/6] Detecting AOSP Rockchip lunch target..."
