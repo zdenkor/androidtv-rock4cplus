@@ -106,6 +106,13 @@ fi
 
 cd "$WORK_DIR"
 
+if [ ! -f "build/envsetup.sh" ]; then
+    echo "ERROR: Android source tree not found in: $WORK_DIR"
+    echo "Expected file missing: $WORK_DIR/build/envsetup.sh"
+    echo "Please run ./scripts/02-download-source.sh first and download a BSP into /mnt/aosp-build."
+    exit 1
+fi
+
 # ---------------------------------------------------------------------------
 # Common: Set up build environment
 # ---------------------------------------------------------------------------
