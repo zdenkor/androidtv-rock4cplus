@@ -189,20 +189,20 @@ declare -A APPS
 # Essential apps (recommended)
 APPS["SmartTube"]="com.smarttube.next|||https://github.com/yuliskov/SmartTube/releases/latest/download/SmartTube_stable.apk|SmartTube.apk|SponsorBlock YouTube"
 APPS["Kodi"]="org.xbmc.kodi|||https://mirrors.kodi.tv/releases/android/arm64-v8a/kodi-21.1-armeabi-v7a-android-arm64-v8a.apk|Kodi.apk|Media center"
-APPS["Projectivy"]="com.riviprojectivy.launcher||||Projectivy.apk|Clean launcher"
-APPS["TVBro"]="com.example.tvbro||||TVBro.apk|Web browser for TV"
+APPS["Projectivy"]="com.riviprojectivy.launcher|||||Projectivy.apk|Clean launcher"
+APPS["TVBro"]="com.example.tvbro|||||TVBro.apk|Web browser for TV"
 APPS["LocalSend"]="com.example.localsend|||||LocalSend.apk|AirDrop alternative"
-APPS["ButtonMapper"]="com.example.buttonmapper||||ButtonMapper.apk|Remap remote buttons"
+APPS["ButtonMapper"]="com.example.buttonmapper|||||ButtonMapper.apk|Remap remote buttons"
 APPS["Fdroid"]="org.fdroid.fdroid||||https://f-droid.org/F-Droid.apk|Fdroid.apk|Open source app store"
 APPS["AdAway"]="org.adaway|||https://f-droid.org/repo/org.adaway_20191010.apk|AdAway.apk|System-wide ad blocker"
 
 # Additional apps
 APPS["AuroraStore"]="com.aurora.store|||||AuroraStore.apk|Anonymous Google Play"
 APPS["VLC"]="org.videolan.vlc|||https://mirrors.videolan.org/vlc/android/3.5.5/vlc-android-3.5.5-arm64-v8a.apk|VLC.apk|Media player"
-APPS["TiviMate"]="com.example.tivimate||||TiviMate.apk|IPTV player"
-APPS["Xplore"]="com.lonelycatgame.xplore||||Xplore.apk|File manager"
-APPS["SideloadLauncher"]="com.example.sideloadlauncher||||SideloadLauncher.apk|Show sideloaded apps"
-APPS["AptoideTV"]="com.aptoide.tvstore||||AptoideTV.apk|Alternative app store"
+APPS["TiviMate"]="com.example.tivimate|||||TiviMate.apk|IPTV player"
+APPS["Xplore"]="com.lonelycatgame.xplore|||||Xplore.apk|File manager"
+APPS["SideloadLauncher"]="com.example.sideloadlauncher|||||SideloadLauncher.apk|Show sideloaded apps"
+APPS["AptoideTV"]="com.aptoide.tvstore|||||AptoideTV.apk|Alternative app store"
 
 # Filter apps based on BSP type (Android 9 API 28 compatibility)
 # radxa9 (Android 9) can run these with compatible versions
