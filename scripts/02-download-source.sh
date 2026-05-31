@@ -291,7 +291,7 @@ case $BUILD_CHOICE in
 
         echo "[4/4] Downloading Rockchip BSP components..."
         mkdir -p "$WORK_DIR/vendor/rockchip"
-        git clone --depth=1 https://github.com/rockchip-linux/kernel.git "$WORK_DIR/kernel" || true
+        git clone --depth=1 https://github.com/radxa/kernel.git "$WORK_DIR/kernel" || true
         git clone --depth=1 https://github.com/rockchip-linux/tools.git "$WORK_DIR/tools/rkbin" || true
         git clone --depth=1 https://github.com/rockchip-linux/mpp.git "$WORK_DIR/vendor/rockchip/mpp" || true
         ;;
