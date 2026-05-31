@@ -240,8 +240,7 @@ download_app() {
     echo "    DEBUG: direct='$direct' file='$file' desc='$desc'" >&2
     
     local dest="$APPS_DIR/$file"
-    local success=false
-    local debug_curl_output=""
+    local success=""
     
     echo "  Downloading $app_name..."
     echo "    DEBUG: USE_GOOGLE_PLAY='$USE_GOOGLE_PLAY'" >&2
