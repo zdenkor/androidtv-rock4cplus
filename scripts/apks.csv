@@ -8,7 +8,7 @@ com.example.buttonmapper,ButtonMapper.apk,https://github.com/marcowch/LazyBeeper
 org.fdroid.fdroid,Fdroid.apk,https://f-droid.org/F-Droid.apk
 org.adaway,AdAway.apk,https://f-droid.org/repo/org.adaway_20191010.apk
 com.aurora.store,AuroraStore.apk,SKIP|https://www.auroraoss.com/files/AuroraStore/Release/AuroraStore-4.8.3.apk
-org.videolan.vlc,VLC.apk,https://mirrors.videolan.org/vlc/android/3.5.5/vlc-android-3.5.5-arm64-v8a.apk
+org.videolan.vlc,VLC.apk,
 com.example.tivimate,TiviMate.apk,https://files.tivimate.com/tivimate.apk
 com.lonelycatgame.xplore,Xplore.apk,https://apkpure.com/xplore/com.lonelycatgame.xplore
 eu.chainfire.tv.sideloadlauncher,SideloadLauncher.apk,
