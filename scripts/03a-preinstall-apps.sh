@@ -448,6 +448,13 @@ if command -v apkeep &>/dev/null; then
     while IFS=, read -r apk_id dest_name fallback_url rest; do
         [[ -z "$apk_id" || "$apk_id" == "app_id" || "$apk_id" =~ ^# ]] && continue
         dest="$APPS_DIR/$dest_name"
+
+        # Skip if already downloaded
+        if [[ -f "$dest" && -s "$dest" ]]; then
+            echo "  [SKIP] $dest_name (already exists)"
+            continue
+        fi
+
         echo "  Downloading $apk_id..."
         if apkeep -a "$apk_id" -d apk-pure "$APPS_DIR"; then
             for downloaded in "$APPS_DIR"/*.apk; do
