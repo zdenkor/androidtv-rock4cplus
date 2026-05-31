@@ -208,11 +208,7 @@ APPS["AptoideTV"]="com.aptoide.tvstore||||AptoideTV.apk|Alternative app store"
 # Filter apps based on BSP type (Android 9 API 28 compatibility)
 filter_apps() {
     local app_name="$1"
-    if [[ "$BSP_TYPE" == "radxa9" ]]; then
-        case "$app_name" in
-            AuroraStore|SideloadLauncher|AptoideTV) return 1 ;;
-        esac
-    fi
+    # Show all apps for all BSP types
     return 0
 }
 
