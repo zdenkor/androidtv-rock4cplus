@@ -324,8 +324,11 @@ EOF
             LUNCH_TARGET="rk3399_all-userdebug"
         fi
 
-        # Fix BUILD_NUMBER readonly issue
-        export BUILD_NUMBER="1"
+        # Fix BUILD_NUMBER readonly issue - modify the makefile directly
+        if [ -f "device/rockchip/rk3399/rk3399_all.mk" ]; then
+            sed -i 's/^BUILD_NUMBER :=.*/BUILD_NUMBER := 1/' "device/rockchip/rk3399/rk3399_all.mk" 2>/dev/null || true
+            sed -i 's/^BUILD_NUMBER:=.*/BUILD_NUMBER := 1/' "device/rockchip/rk3399/rk3399_all.mk" 2>/dev/null || true
+        fi
 
         echo "Using lunch target: $LUNCH_TARGET"
         lunch "$LUNCH_TARGET" < /dev/null || {
