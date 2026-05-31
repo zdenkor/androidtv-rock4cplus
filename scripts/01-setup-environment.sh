@@ -137,11 +137,6 @@ sudo apt-get install -y aptitude 2>/dev/null || true
 echo "Checking for broken packages..."
 sudo apt-get install -f -y 2>/dev/null || true
 
-# Remove any conflicting OpenJDK packages first
-echo "Removing conflicting packages..."
-sudo apt-get remove -y openjdk-11-jre openjdk-11-jre-headless openjdk-11-jdk openjdk-11-jdk-headless 2>/dev/null || true
-sudo apt-get autoremove -y 2>/dev/null || true
-
 # Try to install libjpeg8 first (required by openjdk-11-jre on Debian)
 echo "Attempting to install libjpeg8..."
 sudo apt-get install -y libjpeg8 2>/dev/null || {
