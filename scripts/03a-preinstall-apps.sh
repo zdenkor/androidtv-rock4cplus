@@ -459,17 +459,12 @@ if [[ -f "$dest" && -s "$dest" ]]; then
             fi
         elif command -v apkeep &>/dev/null; then
             rm -f "$APPS_DIR/$apk_id.apk" 2>/dev/null
-            if apkeep -a "$apk_id" -d apk-pure "$APPS_DIR"; then
-                if [[ -f "$APPS_DIR/$apk_id.apk" ]]; then
-                    mv "$APPS_DIR/$apk_id.apk" "$dest" && echo "  [OK] $dest_name"
-                fi
+            apkeep -a "$apk_id" -d apk-pure "$APPS_DIR"
+            if [[ -f "$APPS_DIR/$apk_id.apk" ]]; then
+                mv "$APPS_DIR/$apk_id.apk" "$dest" && echo "  [OK] $dest_name"
             elif [[ -n "$fallback_url" && "$fallback_url" == http* ]]; then
                 echo "  Trying direct URL: $fallback_url"
-                if curl -L -o "$dest" "$fallback_url" && [[ -f "$dest" && -s "$dest" ]]; then
-                    echo "  [OK] $dest_name (direct)"
-                else
-                    echo "  [FAIL] $apk_id"
-                fi
+                curl -L -o "$dest" "$fallback_url" && echo "  [OK] $dest_name (direct)" || echo "  [FAIL] $apk_id"
             else
                 echo "  [FAIL] $apk_id"
             fi
