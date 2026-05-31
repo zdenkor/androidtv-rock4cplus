@@ -413,32 +413,17 @@ echo "$APPS_CHOICES" > "$SAVED_CHOICES_FILE"
 echo ""
 echo "Downloading..."
 
-# Auto-generate CSV from APPS array
-CSV_FILE="$APPS_DIR/apks.csv"
-{
-    echo "app_id,filename,fallback_url"
-    for app in SmartTube Kodi Projectivy TVBro LocalSend ButtonMapper Fdroid AdAway AuroraStore VLC TiviMate Xplore SideloadLauncher AptoideTV; do
-        if filter_apps "$app"; then
-            app_data="${APPS[$app]}"
-            # Parse: pkg|apkpure|github|apkmonk|direct|filename|desc
-            pkg="${app_data%%|*}"
-            rest="${app_data#*|}"  # apkpure|github|apkmonk|direct|filename|desc
-            apkpure="${rest%%|*}"
-            rest="${rest#*|}"  # github|apkmonk|direct|filename|desc
-            github="${rest%%|*}"
-            rest="${rest#*|}"  # apkmonk|direct|filename|desc
-            apkmonk="${rest%%|*}"
-            rest="${rest#*|}"  # direct|filename|desc
-            direct="${rest%%|*}"
-            rest="${rest#*|}"  # filename|desc
-            file="${rest%%|*}"
-            fallback_url="${direct}"
-            echo "$pkg,$file,$fallback_url"
-        fi
-    done
-} > "$CSV_FILE"
+# Use apks.csv from scripts directory (manual configuration)
+CSV_FILE="$SCRIPT_DIR/apks.csv"
 
-echo "Generated $CSV_FILE"
+if [[ ! -f "$CSV_FILE" ]]; then
+    echo "ERROR: $CSV_FILE not found!"
+    echo "Please create apks.csv in scripts directory with format:"
+    echo "  app_id,filename,fallback_url"
+    exit 1
+fi
+
+echo "Using $CSV_FILE"
 cat "$CSV_FILE"
 
 # Download all apps from CSV using apkeep (default source: APKPure)
