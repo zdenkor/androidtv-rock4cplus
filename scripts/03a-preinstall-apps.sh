@@ -5,24 +5,71 @@
 # Pre-install application selection script
 # ============================================================================
 
-# Set script and work directories
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+set -e
 
-# Load .build-config to get WORK_DIR (set by 02-download-source.sh)
-CONFIG_FILE="$SCRIPT_DIR/../.build-config"
-if [ -f "$CONFIG_FILE" ]; then
-    source "$CONFIG_FILE"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BASE_DIR="/mnt/aosp-build"
+
+# Detect all downloaded BSP directories
+declare -a BSP_DIRS=()
+declare -a BSP_NAMES=()
+
+for pattern in "radxa9" "vicharak12" "aosp12"; do
+    for dir in "$BASE_DIR"/androidtv-rock4cplus-"$pattern"*; do
+        if [ -d "$dir" ]; then
+            BSP_DIRS+=("$dir")
+            BSP_NAMES+=("$(basename "$dir")")
+        fi
+    done
+done
+
+# Check .build-config if no BSPs found
+if [ ${#BSP_DIRS[@]} -eq 0 ]; then
+    CONFIG_FILE="$SCRIPT_DIR/../.build-config"
+    if [ -f "$CONFIG_FILE" ]; then
+        source "$CONFIG_FILE"
+        if [ -d "$WORK_DIR" ]; then
+            BSP_DIRS+=("$WORK_DIR")
+            BSP_NAMES+=("$(basename "$WORK_DIR")")
+        fi
+    fi
 fi
 
-# Fallback to local path if WORK_DIR not set
-WORK_DIR="${WORK_DIR:-$(dirname "$SCRIPT_DIR")}"
+# Error if no BSP found
+if [ ${#BSP_DIRS[@]} -eq 0 ]; then
+    echo "ERROR: No BSP directories found in $BASE_DIR"
+    echo "Run 02-download-source.sh first."
+    exit 1
+fi
 
-# Detect BSP type from WORK_DIR
-if [[ "$WORK_DIR" == *"radxa9"* ]]; then
+# Select BSP
+if [ ${#BSP_DIRS[@]} -eq 1 ]; then
+    WORK_DIR="${BSP_DIRS[0]}"
+    BSP_NAME="${BSP_NAMES[0]}"
+else
+    echo "============================================"
+    echo " Select BSP for Preinstall Apps"
+    echo "============================================"
+    for i in "${!BSP_DIRS[@]}"; do
+        echo "  $((i+1)). ${BSP_NAMES[$i]}"
+        echo "     Path: ${BSP_DIRS[$i]}"
+        echo ""
+    done
+    read -rp "Enter choice (1-${#BSP_DIRS[@]}): " CHOICE
+    if [[ ! "$CHOICE" =~ ^[0-9]+$ ]] || [ "$CHOICE" -lt 1 ] || [ "$CHOICE" -gt ${#BSP_DIRS[@]} ]; then
+        echo "ERROR: Invalid choice"
+        exit 1
+    fi
+    WORK_DIR="${BSP_DIRS[$((CHOICE-1))]}"
+    BSP_NAME="${BSP_NAMES[$((CHOICE-1))]}"
+fi
+
+# Determine BSP type
+if [[ "$BSP_NAME" == *radxa9* ]]; then
     BSP_TYPE="radxa9"
-elif [[ "$WORK_DIR" == *"vicharak12"* ]]; then
+elif [[ "$BSP_NAME" == *vicharak12* ]]; then
     BSP_TYPE="vicharak12"
-elif [[ "$WORK_DIR" == *"aosp12"* ]]; then
+elif [[ "$BSP_NAME" == *aosp12* ]]; then
     BSP_TYPE="aosp12"
 else
     BSP_TYPE="unknown"
@@ -34,7 +81,6 @@ mkdir -p "$APPS_DIR"
 SAVED_CHOICES_FILE="$APPS_DIR/.saved_choices"
 
 # App definitions: name|url|file|pkg|desc
-# Android 9 (API 28) has limitations - some apps excluded
 declare -A APPS
 
 # Essential apps (recommended)
@@ -60,7 +106,6 @@ APPS["AptoideTV"]="https://github.com/randomnumber123/AptoideTV/releases/latest/
 filter_apps() {
     local app_name="$1"
     if [[ "$BSP_TYPE" == "radxa9" ]]; then
-        # Android 9 - exclude apps that may not be compatible
         case "$app_name" in
             AuroraStore|SideloadLauncher|AptoideTV) return 1 ;;
         esac
@@ -74,10 +119,9 @@ show_menu() {
     echo "========================================"
     echo " Preinstall Apps for Android TV"
     echo "========================================"
-    echo " BSP Type: $BSP_TYPE"
-    echo " Target:   $APPS_DIR"
+    echo " BSP: $BSP_NAME"
+    echo " Target: $APPS_DIR"
     echo "========================================"
-    echo " Select apps to download (e.g., 1,3,5 or A for all):"
     echo ""
     echo " [ESSENTIAL - Recommended]"
     local i=1
@@ -98,7 +142,7 @@ show_menu() {
     echo ""
     echo "   A) Select ALL apps"
     echo "   E) Select ESSENTIAL only"
-    echo "   Q) Quit without changes"
+    echo "   Q) Quit"
     echo ""
 }
 
@@ -109,49 +153,39 @@ download_app() {
     local url="${app_data%%|*}"
     local file="${app_data##*|}"
     file="${file%%|*}"
-    local pkg="${app_data##*|}"
-    pkg="${pkg%%|*}"
     
     echo "  Downloading $app_name..."
     if curl -L -o "$APPS_DIR/$file" --progress-bar "$url" 2>/dev/null; then
-        echo "  [OK] $app_name downloaded"
-        return 0
+        echo "  [OK] $app_name"
     else
-        echo "  [FAIL] $app_name failed"
-        return 1
+        echo "  [FAIL] $app_name"
     fi
 }
 
-# Main logic
+# Main
 show_menu
 
-# Check for saved choices
 if [[ -f "$SAVED_CHOICES_FILE" ]]; then
-    read -r -p "Use saved choices? (y/n): " use_saved
-    if [[ "$use_saved" == "y" || "$use_saved" == "Y" ]]; then
+    read -rp "Use saved choices? (y/n): " use_saved
+    if [[ "$use_saved" != "y" && "$use_saved" != "Y" ]]; then
+        read -rp "Enter choice: " APPS_CHOICES
+    else
         APPS_CHOICES=$(cat "$SAVED_CHOICES_FILE")
     fi
+else
+    read -rp "Enter choice: " APPS_CHOICES
 fi
 
-if [[ -z "$APPS_CHOICES" ]]; then
-    read -r -p "Enter choice: " APPS_CHOICES
-fi
+[[ -z "$APPS_CHOICES" ]] && read -rp "Enter choice: " APPS_CHOICES
 
-# Parse choices
 if [[ "$APPS_CHOICES" == "Q" || "$APPS_CHOICES" == "q" ]]; then
-    echo "Exiting..."
     exit 0
 fi
 
-# Save choices
 echo "$APPS_CHOICES" > "$SAVED_CHOICES_FILE"
 
 echo ""
-echo "========================================"
-echo " Downloading selected apps..."
-echo "========================================"
-
-# Process selections
+echo "Downloading..."
 case "$APPS_CHOICES" in
     A|a)
         for app in "${!APPS[@]}"; do
@@ -164,13 +198,10 @@ case "$APPS_CHOICES" in
         done
         ;;
     *)
-        # Parse numeric selection
         i=1
         for app in SmartTube Kodi Projectivy TVBro LocalSend ButtonMapper Fdroid AdAway AuroraStore VLC TiviMate Xplore SideloadLauncher BackgroundApps AptoideTV; do
             if filter_apps "$app"; then
-                if [[ "$APPS_CHOICES" == *"$i"* ]]; then
-                    download_app "$app"
-                fi
+                [[ "$APPS_CHOICES" == *"$i"* ]] && download_app "$app"
                 ((i++))
             fi
         done
@@ -178,7 +209,4 @@ case "$APPS_CHOICES" in
 esac
 
 echo ""
-echo "========================================"
-echo " Download complete! Apps saved to:"
-echo " $APPS_DIR"
-echo "========================================"
+echo "Done! Apps in: $APPS_DIR"
