@@ -164,7 +164,7 @@ case $BSP_CHOICE in
         # This MUST be done before lunch, as lunch will trigger auto_generator.py
         if [ -d "device/rockchip" ]; then
             echo "Fixing device/rockchip/**/*.py files..."
-            python3 "$SCRIPT_DIR/fix_auto_generator_v2.py"
+            python3 "$SCRIPT_DIR/fix_option1_radxa9_auto_generator.py"
         fi
         
         # Call lunch with target name and suppress interactive mode
@@ -333,7 +333,7 @@ EOF
 
         echo "[4/6] Fixing Python indentation / build scripts..."
         if [ -d "device/rockchip" ]; then
-            python3 "$SCRIPT_DIR/fix_radxa_auto_generator.py" || true
+            python3 "$SCRIPT_DIR/fix_option4_aosp12_auto_generator.py" || true
         fi
 
         echo "[5/6] Detecting AOSP Rockchip lunch target..."
