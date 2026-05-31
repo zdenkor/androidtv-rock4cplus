@@ -438,14 +438,26 @@ if [[ -f "$dest" && -s "$dest" ]]; then
         fi
 
         echo "  Downloading $apk_id..."
-        # Download using apkeep (APKPure) unless first column is "SKIP"
-        use_apkeep=true
+        # Check if SKIP mode
         if [[ "$apk_id" == "SKIP" ]]; then
             use_apkeep=false
-            apk_id=""
+        else
+            use_apkeep=true
         fi
         
-        if $use_apkeep && [[ -n "$apk_id" ]] && command -v apkeep &>/dev/null; then
+        if ! $use_apkeep; then
+            # SKIP mode - use direct URL only
+            if [[ -n "$fallback_url" && "$fallback_url" == http* ]]; then
+                echo "  Using direct URL: $fallback_url"
+                if curl -L -o "$dest" "$fallback_url" 2>/dev/null && [[ -f "$dest" && -s "$dest" ]]; then
+                    echo "  [OK] $dest_name (direct)"
+                else
+                    echo "  [FAIL] $dest_name"
+                fi
+            else
+                echo "  [FAIL] $dest_name (no URL)"
+            fi
+        elif command -v apkeep &>/dev/null; then
             rm -f "$APPS_DIR/$apk_id.apk" 2>/dev/null
             if apkeep -a "$apk_id" -d apk-pure "$APPS_DIR" 2>/dev/null; then
                 if [[ -f "$APPS_DIR/$apk_id.apk" ]]; then
