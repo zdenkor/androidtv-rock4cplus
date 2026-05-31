@@ -324,14 +324,9 @@ EOF
             LUNCH_TARGET="rk3399_all-userdebug"
         fi
 
-        # Fix BUILD_NUMBER readonly issue - modify the makefile directly
-        if [ -f "device/rockchip/rk3399/rk3399_all.mk" ]; then
-            sed -i 's/^BUILD_NUMBER :=.*/BUILD_NUMBER := 1/' "device/rockchip/rk3399/rk3399_all.mk" 2>/dev/null || true
-            sed -i 's/^BUILD_NUMBER:=.*/BUILD_NUMBER := 1/' "device/rockchip/rk3399/rk3399_all.mk" 2>/dev/null || true
-        fi
-
+        # Fix BUILD_NUMBER readonly issue - must set env var BEFORE lunch
         echo "Using lunch target: $LUNCH_TARGET"
-        lunch "$LUNCH_TARGET" < /dev/null || {
+        BUILD_NUMBER=1 lunch "$LUNCH_TARGET" < /dev/null || {
             echo "ERROR: lunch target '$LUNCH_TARGET' failed"
             echo "Please inspect device/rockchip/rk3399/AndroidProducts.mk and available lunch targets."
             exit 1
