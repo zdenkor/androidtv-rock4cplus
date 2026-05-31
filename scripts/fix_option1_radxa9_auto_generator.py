@@ -19,22 +19,25 @@ def fix_auto_generator():
         lines = content.split('\n')
         result = []
         
-        skip = {46, 50, 119, 145}
-        replace = {
+        skip = {46, 50, 119, 145, 146, 147, 148}
+        
+        fix = {
             45: '            pass',
             47: '        os.remove(include_path)',
             49: '            pass',
             51: '        os.remove(android_path)',
-            118: ' ' * 36 + 'continue',
-            144: '    pass'
+            118: '                                continue',
+            144: '    pass',
+            149: '    main(sys.argv)'
         }
         
         for i, line in enumerate(lines):
             line_num = i + 1
+            
             if line_num in skip:
                 continue
-            if line_num in replace:
-                result.append(replace[line_num])
+            if line_num in fix:
+                result.append(fix[line_num])
             else:
                 result.append(line)
         
