@@ -223,16 +223,6 @@ if ! command -v apkeep &>/dev/null; then
 else
     echo "  apkeep already installed: $(apkeep --version 2>/dev/null || echo 'version unknown')"
 fi
-    
-    if $APKEEP_INSTALLED; then
-        echo "  apkeep installed to ~/bin/apkeep"
-    else
-        echo "  WARNING: Could not install apkeep."
-        echo "  Apps requiring Google Play download will use alternative sources."
-    fi
-else
-    echo "  apkeep already installed: $(apkeep --version 2>/dev/null || echo 'version unknown')"
-fi
 
 # ---------------------------------------------------------------------------
 # 6. Install Repo tool (Google's git repository manager)
