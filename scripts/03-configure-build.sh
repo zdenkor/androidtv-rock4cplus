@@ -17,15 +17,19 @@ if [ ! -d "$BASE_DIR" ]; then
     exit 1
 fi
 
-# Detect all downloaded BSP directories
+# Detect all downloaded BSP directories and sort them in logical order
 declare -a BSP_DIRS=()
 declare -a BSP_NAMES=()
 
-for dir in "$BASE_DIR"/androidtv-rock4cplus-*; do
-    if [ -d "$dir" ]; then
-        BSP_DIRS+=("$dir")
-        BSP_NAMES+=("$(basename "$dir")")
-    fi
+# Find all BSP directories and sort them in the desired order:
+# 1. Radxa Android 9, 2. Vicharak Android 12, 3. Advantech Android 12, 4. AOSP Android 12
+for pattern in "radxa9" "vicharak12" "advantech12" "aosp12"; do
+    for dir in "$BASE_DIR"/androidtv-rock4cplus-"$pattern"*; do
+        if [ -d "$dir" ]; then
+            BSP_DIRS+=("$dir")
+            BSP_NAMES+=("$(basename "$dir")")
+        fi
+    done
 done
 
 # If no BSPs found, check for .build-config
@@ -106,11 +110,29 @@ fi
 
 cd "$WORK_DIR"
 
+# Check for Android source tree
 if [ ! -f "build/envsetup.sh" ]; then
     echo "ERROR: Android source tree not found in: $WORK_DIR"
     echo "Expected file missing: $WORK_DIR/build/envsetup.sh"
-    echo "Please run ./scripts/02-download-source.sh first and download a BSP into /mnt/aosp-build."
-    exit 1
+    
+    # Check if this is a directory that needs to be extracted/unpacked
+    echo "Checking for compressed archives or subdirectories..."
+    for item in "$WORK_DIR"/*; do
+        if [ -d "$item" ] && [ -f "$item/build/envsetup.sh" ]; then
+            echo "Found Android source in subdirectory: $item"
+            WORK_DIR="$item"
+            break
+        elif [[ "$item" == *.tar* ]] || [[ "$item" == *.zip* ]]; then
+            echo "Found archive: $item"
+            echo "Please extract the archive first, then run this script again."
+            exit 1
+        fi
+    done
+    
+    if [ ! -f "build/envsetup.sh" ]; then
+        echo "Please run ./scripts/02-download-source.sh first and download a BSP into /mnt/aosp-build."
+        exit 1
+    fi
 fi
 
 # ---------------------------------------------------------------------------
