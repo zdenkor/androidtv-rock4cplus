@@ -411,6 +411,33 @@ echo "$APPS_CHOICES" > "$SAVED_CHOICES_FILE"
 
 echo ""
 echo "Downloading..."
+
+# Check for CSV file in apps directory
+CSV_FILE="$APPS_DIR/apks.csv"
+if [[ -f "$CSV_FILE" ]]; then
+    echo "Found apks.csv - using bulk download with apkeep"
+    if command -v apkeep &>/dev/null; then
+        # Read CSV: app_id,filename
+        while IFS=, read -r apk_id dest_name rest; do
+            [[ -z "$apk_id" || "$apk_id" =~ ^# ]] && continue
+            dest="$APPS_DIR/$dest_name"
+            echo "  Downloading $apk_id..."
+            if apkeep -a "$apk_id" -d apkpure "$APPS_DIR" 2>/dev/null; then
+                # Find downloaded file and rename
+                for downloaded in "$APPS_DIR"/*.apk; do
+                    if [[ -f "$downloaded" && "$downloaded" != "$dest" ]]; then
+                        mv "$downloaded" "$dest" 2>/dev/null && echo "  [OK] $dest_name" && break
+                    fi
+                done
+            else
+                echo "  [FAIL] $apk_id"
+            fi
+        done < "$CSV_FILE"
+    else
+        echo "apkeep not installed - skipping CSV"
+    fi
+fi
+
 case "$APPS_CHOICES" in
     A|a)
         for app in "${!APPS[@]}"; do
