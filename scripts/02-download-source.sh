@@ -195,8 +195,14 @@ case $BUILD_CHOICE in
         git clone https://github.com/ADVANTECH-Rockchip/repo.git "$WORK_DIR/../adv-repo" || true
 
         if [ -d "$WORK_DIR/../adv-repo" ]; then
-            REPO_CMD="$WORK_DIR/../adv-repo/repo"
+            # Fix Python 3 compatibility issues in adv-repo
+            echo "Fixing adv-repo Python 3 compatibility..."
+            find "$WORK_DIR/../adv-repo" -name "*.py" -type f -exec sed -i 's/from formatter import/from io import/g' {} \;
+            find "$WORK_DIR/../adv-repo" -name "*.py" -type f -exec sed -i 's/import formatter/import io/g' {} \;
+            
+            REPO_CMD="python3 $WORK_DIR/../adv-repo/repo"
         else
+            echo "WARNING: Could not clone adv-repo, using default repo tool"
             REPO_CMD="repo"
         fi
 
@@ -208,7 +214,15 @@ case $BUILD_CHOICE in
         echo "[3/4] Syncing repositories (this will take a while)..."
         echo "Estimated download: ~80GB"
         echo ""
-        $REPO_CMD sync -c -f --no-clone-bundle -j$(nproc)
+        $REPO_CMD sync -c -f --no-clone-bundle -j$(nproc) || {
+            echo ""
+            echo "WARNING: adv-repo sync failed. Trying with standard repo tool..."
+            repo init -u \
+                https://kag-sw.visualstudio.com/RK3399-Android/_git/android-s12-manifest \
+                -b rk3399-androidS12 \
+                -m default.xml
+            repo sync -c -f --no-clone-bundle -j$(nproc)
+        }
 
         echo ""
         echo "============================================"
