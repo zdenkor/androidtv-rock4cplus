@@ -241,9 +241,11 @@ download_app() {
     
     local dest="$APPS_DIR/$file"
     local success=false
+    local debug_curl_output=""
     
     echo "  Downloading $app_name..."
     echo "    DEBUG: USE_GOOGLE_PLAY='$USE_GOOGLE_PLAY'" >&2
+    echo "    DEBUG: success='$success'" >&2
     
     # Download based on source selection
     if $USE_GOOGLE_PLAY && command -v apkeep &>/dev/null; then
