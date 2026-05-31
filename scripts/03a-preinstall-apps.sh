@@ -415,15 +415,24 @@ echo "Downloading..."
 # Auto-generate CSV from APPS array
 CSV_FILE="$APPS_DIR/apks.csv"
 {
-    echo "app_id,filename"
+    echo "app_id,filename,fallback_url"
     for app in SmartTube Kodi Projectivy TVBro LocalSend ButtonMapper Fdroid AdAway AuroraStore VLC TiviMate Xplore SideloadLauncher AptoideTV; do
         if filter_apps "$app"; then
             app_data="${APPS[$app]}"
+            # Parse: pkg|apkpure|github|apkmonk|direct|filename|desc
             pkg="${app_data%%|*}"
-            rest="${app_data#*|}"
-            for i in {1..5}; do rest="${rest#*|}"; done
+            rest="${app_data#*|}"  # apkpure|github|apkmonk|direct|filename|desc
+            apkpure="${rest%%|*}"
+            rest="${rest#*|}"  # github|apkmonk|direct|filename|desc
+            github="${rest%%|*}"
+            rest="${rest#*|}"  # apkmonk|direct|filename|desc
+            apkmonk="${rest%%|*}"
+            rest="${rest#*|}"  # direct|filename|desc
+            direct="${rest%%|*}"
+            rest="${rest#*|}"  # filename|desc
             file="${rest%%|*}"
-            echo "$pkg,$file"
+            fallback_url="${direct}"
+            echo "$pkg,$file,$fallback_url"
         fi
     done
 } > "$CSV_FILE"
@@ -435,7 +444,7 @@ cat "$CSV_FILE"
 echo ""
 echo "Downloading via apkeep..."
 if command -v apkeep &>/dev/null; then
-    while IFS=, read -r apk_id dest_name rest; do
+    while IFS=, read -r apk_id dest_name fallback_url rest; do
         [[ -z "$apk_id" || "$apk_id" == "app_id" || "$apk_id" =~ ^# ]] && continue
         dest="$APPS_DIR/$dest_name"
         echo "  Downloading $apk_id..."
@@ -446,13 +455,17 @@ if command -v apkeep &>/dev/null; then
                 fi
             done
         else
-            # Fallback: use download_app which tries multiple sources
-            echo "  apkeep failed, trying fallback..."
-            # Find app name from CSV by matching pkg
-            for app in "${!APPS[@]}"; do
-                app_pkg="${APPS[$app]%%|*}"
-                [[ "$app_pkg" == "$apk_id" ]] && download_app "$app" && break
-            done
+            # Fallback: use curl with direct URL if available
+            if [[ -n "$fallback_url" && "$fallback_url" == http* ]]; then
+                echo "  Trying direct URL: $fallback_url"
+                if curl -L -o "$dest" "$fallback_url" 2>/dev/null && [[ -f "$dest" && -s "$dest" ]]; then
+                    echo "  [OK] $dest_name (direct)"
+                else
+                    echo "  [FAIL] $apk_id"
+                fi
+            else
+                echo "  [FAIL] $apk_id"
+            fi
         fi
     done < "$CSV_FILE"
 else
