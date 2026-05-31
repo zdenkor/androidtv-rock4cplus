@@ -304,8 +304,10 @@ EOF
         fi
 
         echo "[4/6] Fixing Python indentation / build scripts..."
-        if [ -d "device/rockchip" ]; then
+        if [ -f "device/rockchip/common/auto_generator.py" ]; then
             python3 "$SCRIPT_DIR/fix_option3_aosp12_auto_generator.py" || true
+        else
+            echo "  Skipping: auto_generator.py not found (may not be needed for this BSP)"
         fi
 
         echo "[5/6] Detecting AOSP Rockchip lunch target..."
@@ -321,6 +323,9 @@ EOF
             echo "Attempting fallback target: rk3399_all-userdebug"
             LUNCH_TARGET="rk3399_all-userdebug"
         fi
+
+        # Fix BUILD_NUMBER readonly issue
+        export BUILD_NUMBER="1"
 
         echo "Using lunch target: $LUNCH_TARGET"
         lunch "$LUNCH_TARGET" < /dev/null || {
