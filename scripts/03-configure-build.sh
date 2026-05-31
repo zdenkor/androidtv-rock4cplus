@@ -324,9 +324,10 @@ EOF
             LUNCH_TARGET="rk3399_all-userdebug"
         fi
 
-        # Fix BUILD_NUMBER readonly issue - must set env var BEFORE lunch
+        # Fix BUILD_NUMBER readonly issue - use := instead of = for override
         echo "Using lunch target: $LUNCH_TARGET"
-        BUILD_NUMBER=1 lunch "$LUNCH_TARGET" < /dev/null || {
+        # Override BUILD_NUMBER at lunch call - Android allows command-line override
+        lunch "$LUNCH_TARGET" BUILD_NUMBER="1" < /dev/null || {
             echo "ERROR: lunch target '$LUNCH_TARGET' failed"
             echo "Please inspect device/rockchip/rk3399/AndroidProducts.mk and available lunch targets."
             exit 1
