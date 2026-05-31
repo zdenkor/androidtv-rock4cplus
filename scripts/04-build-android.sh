@@ -213,19 +213,36 @@ case $BSP_CHOICE in
         # AOSP ANDROID 12 — uses m (mm)
         # ====================================================================
         echo "[3/4] Configuring AOSP Android 12..."
-        echo "WARNING: AOSP build requires complete manual BSP integration!"
-        read -rp "Continue? [y/N]: " CONFIRM
-        if [ "$CONFIRM" != "y" ]; then
-            exit 0
+
+        LUNCH_TARGET=""
+        if [ -d "device/rockchip/rk3399" ]; then
+            if [ -f "device/rockchip/rk3399/rk3399_all.mk" ]; then
+                LUNCH_TARGET="rk3399_all-userdebug"
+            elif [ -f "device/rockchip/rk3399/rk3399.mk" ]; then
+                LUNCH_TARGET="rk3399-userdebug"
+            fi
         fi
-        
-        lunch sdk_gphone_arm64-userdebug 2>/dev/null || lunch 2>/dev/null | head -20
-        
+
+        if [ -n "$LUNCH_TARGET" ]; then
+            echo "Auto-detected Rockchip AOSP target: $LUNCH_TARGET"
+            lunch "$LUNCH_TARGET" < /dev/null || {
+                echo "ERROR: lunch target '$LUNCH_TARGET' failed"
+                exit 1
+            }
+            PRODUCT_NAME="${LUNCH_TARGET%%-*}"
+            BUILD_OUTPUT="out/target/product/${PRODUCT_NAME}/system.img"
+        else
+            echo "WARNING: No Rockchip AOSP lunch target found."
+            echo "Falling back to generic sdk_gphone_arm64-userdebug"
+            lunch sdk_gphone_arm64-userdebug 2>/dev/null || lunch 2>/dev/null | head -20
+            BUILD_OUTPUT="out/target/product/generic_arm64/system.img"
+        fi
+
         echo "[4/4] Building AOSP Android 12..."
         echo ""
         echo "Build command: m -j\$(nproc)"
         echo ""
-        
+
         m -j$(nproc) 2>&1 | tee build.log || {
             echo ""
             echo "========================================"
@@ -234,8 +251,6 @@ case $BSP_CHOICE in
             tail -50 build.log
             exit 1
         }
-        
-        BUILD_OUTPUT="out/target/product/generic_arm64/system.img"
         ;;
     
     *)
