@@ -412,31 +412,24 @@ echo "$APPS_CHOICES" > "$SAVED_CHOICES_FILE"
 echo ""
 echo "Downloading..."
 
-# Check for CSV file in apps directory
+# Auto-generate CSV from APPS array
 CSV_FILE="$APPS_DIR/apks.csv"
-if [[ -f "$CSV_FILE" ]]; then
-    echo "Found apks.csv - using bulk download with apkeep"
-    if command -v apkeep &>/dev/null; then
-        # Read CSV: app_id,filename
-        while IFS=, read -r apk_id dest_name rest; do
-            [[ -z "$apk_id" || "$apk_id" =~ ^# ]] && continue
-            dest="$APPS_DIR/$dest_name"
-            echo "  Downloading $apk_id..."
-            if apkeep -a "$apk_id" -d apkpure "$APPS_DIR" 2>/dev/null; then
-                # Find downloaded file and rename
-                for downloaded in "$APPS_DIR"/*.apk; do
-                    if [[ -f "$downloaded" && "$downloaded" != "$dest" ]]; then
-                        mv "$downloaded" "$dest" 2>/dev/null && echo "  [OK] $dest_name" && break
-                    fi
-                done
-            else
-                echo "  [FAIL] $apk_id"
-            fi
-        done < "$CSV_FILE"
-    else
-        echo "apkeep not installed - skipping CSV"
-    fi
-fi
+{
+    echo "app_id,filename"
+    for app in SmartTube Kodi Projectivy TVBro LocalSend ButtonMapper Fdroid AdAway AuroraStore VLC TiviMate Xplore SideloadLauncher AptoideTV; do
+        if filter_apps "$app"; then
+            local app_data="${APPS[$app]}"
+            local pkg="${app_data%%|*}"
+            local rest="${app_data#*|}"
+            for i in {1..5}; do rest="${rest#*|}"; done
+            local file="${rest%%|*}"
+            echo "$pkg,$file"
+        fi
+    done
+} > "$CSV_FILE"
+
+echo "Generated $CSV_FILE"
+cat "$CSV_FILE"
 
 case "$APPS_CHOICES" in
     A|a)
