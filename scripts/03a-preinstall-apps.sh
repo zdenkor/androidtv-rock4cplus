@@ -431,27 +431,48 @@ CSV_FILE="$APPS_DIR/apks.csv"
 echo "Generated $CSV_FILE"
 cat "$CSV_FILE"
 
-case "$APPS_CHOICES" in
-    A|a)
-        for app in "${!APPS[@]}"; do
-            filter_apps "$app" && download_app "$app"
-        done
-        ;;
-    E|e)
-        for app in SmartTube Kodi Projectivy TVBro LocalSend ButtonMapper Fdroid AdAway; do
-            filter_apps "$app" && download_app "$app"
-        done
-        ;;
-    *)
-        i=1
-        for app in SmartTube Kodi Projectivy TVBro LocalSend ButtonMapper Fdroid AdAway AuroraStore VLC TiviMate Xplore SideloadLauncher AptoideTV; do
-            if filter_apps "$app"; then
-                [[ "$APPS_CHOICES" == *"$i"* ]] && download_app "$app"
-                ((i++))
-            fi
-        done
-        ;;
-esac
+# Download all apps from CSV using apkeep (default source: APKPure)
+echo ""
+echo "Downloading via apkeep..."
+if command -v apkeep &>/dev/null; then
+    while IFS=, read -r apk_id dest_name rest; do
+        [[ -z "$apk_id" || "$apk_id" =~ ^# ]] && continue
+        dest="$APPS_DIR/$dest_name"
+        echo "  Downloading $apk_id..."
+        if apkeep -a "$apk_id" -d apkpure "$APPS_DIR" 2>/dev/null; then
+            for downloaded in "$APPS_DIR"/*.apk; do
+                if [[ -f "$downloaded" && "$downloaded" != "$dest" ]]; then
+                    mv "$downloaded" "$dest" 2>/dev/null && echo "  [OK] $dest_name" && break
+                fi
+            done
+        else
+            echo "  [FAIL] $apk_id"
+        fi
+    done < "$CSV_FILE"
+else
+    echo "apkeep not installed - using fallback method"
+    case "$APPS_CHOICES" in
+        A|a)
+            for app in "${!APPS[@]}"; do
+                filter_apps "$app" && download_app "$app"
+            done
+            ;;
+        E|e)
+            for app in SmartTube Kodi Projectivy TVBro LocalSend ButtonMapper Fdroid AdAway; do
+                filter_apps "$app" && download_app "$app"
+            done
+            ;;
+        *)
+            i=1
+            for app in SmartTube Kodi Projectivy TVBro LocalSend ButtonMapper Fdroid AdAway AuroraStore VLC TiviMate Xplore SideloadLauncher AptoideTV; do
+                if filter_apps "$app"; then
+                    [[ "$APPS_CHOICES" == *"$i"* ]] && download_app "$app"
+                    ((i++))
+                fi
+            done
+            ;;
+    esac
+fi
 
 echo ""
 echo "Done! Apps in: $APPS_DIR"
