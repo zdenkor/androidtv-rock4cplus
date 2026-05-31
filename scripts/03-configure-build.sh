@@ -279,18 +279,56 @@ EOF
         # ====================================================================
         echo "[2/6] Configuring AOSP Android 12..."
         echo ""
-        echo "WARNING: Pure AOSP requires manual Rockchip BSP integration!"
-        echo "You need to add:"
-        echo "  - kernel/"
-        echo "  - hardware/rockchip/ (vendor HALs)"
-        echo "  - device/rockchip/rk3399 (device tree)"
-        echo ""
-        read -rp "Continue? [y/N]: " CONFIRM
-        if [ "$CONFIRM" != "y" ]; then
-            exit 0
+
+        if [ ! -d "device/rockchip/rk3399" ] || [ ! -d "kernel" ] || [ ! -d "hardware/rockchip" ]; then
+            echo "ERROR: AOSP Rockchip overlay not fully installed."
+            echo "Please run 02-download-source.sh and select Option 4 again."
+            echo "Required directories:"
+            echo "  device/rockchip/rk3399"
+            echo "  hardware/rockchip"
+            echo "  kernel"
+            echo ""
+            exit 1
         fi
-        
-        echo "[3/6] [4/6] [5/6] [6/6] AOSP configuration — manual integration required"
+
+        echo "[3/6] Applying ROCK 4C+ integration..."
+        if [ -f "$SCRIPT_DIR/../configs/BoardConfig.mk" ]; then
+            echo "Copying ROCK 4C+ BoardConfig.mk..."
+            cp -f "$SCRIPT_DIR/../configs/BoardConfig.mk" "device/rockchip/rk3399/BoardConfig.mk"
+        fi
+
+        if [ -f "$SCRIPT_DIR/../patches/rk3399-rock-4c-plus.dts" ] && [ -d "kernel/arch/arm64/boot/dts/rockchip" ]; then
+            echo "Copying ROCK 4C+ device tree..."
+            cp -f "$SCRIPT_DIR/../patches/rk3399-rock-4c-plus.dts" "kernel/arch/arm64/boot/dts/rockchip/"
+        fi
+
+        echo "[4/6] Fixing Python indentation / build scripts..."
+        if [ -d "device/rockchip" ]; then
+            python3 "$SCRIPT_DIR/fix_radxa_auto_generator.py" || true
+        fi
+
+        echo "[5/6] Detecting AOSP Rockchip lunch target..."
+        LUNCH_TARGET=""
+        if [ -f "device/rockchip/rk3399/rk3399_all.mk" ]; then
+            LUNCH_TARGET="rk3399_all-userdebug"
+        elif [ -f "device/rockchip/rk3399/rk3399.mk" ]; then
+            LUNCH_TARGET="rk3399-userdebug"
+        fi
+
+        if [ -z "$LUNCH_TARGET" ]; then
+            echo "WARNING: No Rockchip lunch target found."
+            echo "Attempting fallback target: rk3399_all-userdebug"
+            LUNCH_TARGET="rk3399_all-userdebug"
+        fi
+
+        echo "Using lunch target: $LUNCH_TARGET"
+        lunch "$LUNCH_TARGET" < /dev/null || {
+            echo "ERROR: lunch target '$LUNCH_TARGET' failed"
+            echo "Please inspect device/rockchip/rk3399/AndroidProducts.mk and available lunch targets."
+            exit 1
+        }
+
+        echo "[6/6] AOSP Rockchip integration complete."
         ;;
     
     *)
