@@ -446,7 +446,13 @@ if command -v apkeep &>/dev/null; then
                 fi
             done
         else
-            echo "  [FAIL] $apk_id"
+            # Fallback: use download_app which tries multiple sources
+            echo "  apkeep failed, trying fallback..."
+            # Find app name from CSV by matching pkg
+            for app in "${!APPS[@]}"; do
+                app_pkg="${APPS[$app]%%|*}"
+                [[ "$app_pkg" == "$apk_id" ]] && download_app "$app" && break
+            done
         fi
     done < "$CSV_FILE"
 else
