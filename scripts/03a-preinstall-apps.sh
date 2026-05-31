@@ -8,7 +8,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BASE_DIR="/mnt/aosp-build"
+BASE_DIR="$HOME/projects/androidtv-rock4cplus"
 
 # Detect all downloaded BSP directories
 declare -a BSP_DIRS=()
