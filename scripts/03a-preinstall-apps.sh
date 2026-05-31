@@ -42,6 +42,59 @@ if [ ${#BSP_DIRS[@]} -eq 0 ]; then
     exit 1
 fi
 
+# Gmail credentials for apkeep (Google Play downloads)
+# To create an App Password:
+#   1. Enable 2-Factor Authentication on your Google account
+#   2. Go to https://myaccount.google.com/security
+#   3. Select "App passwords" (under 2-Step Verification)
+#   4. Create a new app password for "Mail" or "Other (Custom name)"
+#   5. Use the 16-character password (no spaces)
+APKEEP_EMAIL_FILE="$APPS_DIR/.apkkeep_email"
+APKEEP_PASS_FILE="$APPS_DIR/.apkkeep_pass"
+
+setup_apkeep_credentials() {
+    echo ""
+    echo "============================================"
+    echo " Gmail Setup for Google Play Downloads"
+    echo "============================================"
+    echo ""
+    echo "To download from Google Play, apkeep needs Gmail credentials."
+    echo "IMPORTANT: Use an App Password, NOT your regular password!"
+    echo ""
+    echo "How to create an App Password:"
+    echo "  1. Enable 2-Factor Authentication on your Google account"
+    echo "  2. Go to: https://myaccount.google.com/security"
+    echo "  3. Click 'App passwords' (under '2-Step Verification')"
+    echo "  4. Select 'Other (Custom name)' and enter 'apkeep'"
+    echo "  5. Copy the 16-character password shown"
+    echo ""
+    
+    # Check for saved credentials
+    if [ -f "$APKEEP_EMAIL_FILE" ] && [ -f "$APKEEP_PASS_FILE" ]; then
+        APKEEP_EMAIL=$(cat "$APKEEP_EMAIL_FILE" 2>/dev/null)
+        read -rp "Use saved Gmail? ($APKEEP_EMAIL): " use_saved
+        if [[ "$use_saved" != "y" && "$use_saved" != "Y" ]]; then
+            setup_new_credentials
+        fi
+    else
+        setup_new_credentials
+    fi
+}
+
+setup_new_credentials() {
+    echo ""
+    read -rp "Enter Gmail email: " APKEEP_EMAIL
+    read -rsp "Enter App Password (16 chars): " APKEEP_PASS
+    echo ""
+    
+    if [ -n "$APKEEP_EMAIL" ] && [ -n "$APKEEP_PASS" ]; then
+        echo "$APKEEP_EMAIL" > "$APKEEP_EMAIL_FILE"
+        echo "$APKEEP_PASS" > "$APKEEP_PASS_FILE"
+        chmod 600 "$APKEEP_EMAIL_FILE" "$APKEEP_PASS_FILE" 2>/dev/null
+        echo "Credentials saved."
+    fi
+}
+
 # Select BSP
 if [ ${#BSP_DIRS[@]} -eq 1 ]; then
     WORK_DIR="${BSP_DIRS[0]}"
@@ -139,9 +192,17 @@ download_app() {
     
     # 1) Try apkeep (Google Play as primary, then other sources)
     if command -v apkeep &>/dev/null; then
+        # Load credentials if available
+        local email_opt=""
+        local pass_opt=""
+        if [ -f "$APKEEP_EMAIL_FILE" ] && [ -f "$APKEEP_PASS_FILE" ]; then
+            email_opt="-e $(cat "$APKEEP_EMAIL_FILE")"
+            pass_opt="-p $(cat "$APKEEP_PASS_FILE")"
+        fi
+        
         # Try Google Play first
         if [[ -n "$pkg" && "$pkg" != "$app_name" ]]; then
-            if apkeep -a "$pkg" -d "$APPS_DIR" 2>/dev/null; then
+            if eval apkeep -a \"$pkg\" $email_opt $pass_opt -d \"$APPS_DIR\" 2>/dev/null; then
                 for downloaded in "$APPS_DIR"/*.apk; do
                     if [[ -f "$downloaded" && "$downloaded" != "$dest" ]]; then
                         mv "$downloaded" "$dest" 2>/dev/null && success=true && break
@@ -253,23 +314,8 @@ show_menu() {
     echo ""
 }
 
-# Download an app
-download_app() {
-    local app_name="$1"
-    local app_data="${APPS[$app_name]}"
-    local url="${app_data%%|*}"
-    local file="${app_data##*|}"
-    file="${file%%|*}"
-    
-    echo "  Downloading $app_name..."
-    if curl -L -o "$APPS_DIR/$file" --progress-bar "$url" 2>/dev/null; then
-        echo "  [OK] $app_name"
-    else
-        echo "  [FAIL] $app_name"
-    fi
-}
-
 # Main
+setup_apkeep_credentials
 show_menu
 
 if [[ -f "$SAVED_CHOICES_FILE" ]]; then
