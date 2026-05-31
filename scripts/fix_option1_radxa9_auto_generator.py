@@ -23,10 +23,7 @@ def fix_auto_generator():
         with open(filepath, 'rb') as f:
             content = f.read().decode('utf-8', errors='ignore')
         
-        content = content.replace('
-', '
-').replace('', '
-')
+        content = content.replace('\r\n', '\n').replace('\r', '\n')
         
         errors = find_syntax_errors(content)
         if not errors:
@@ -36,8 +33,7 @@ def fix_auto_generator():
         print(f'Found {len(errors)} syntax error(s)')
         
         # Remove duplicate pass at same indent
-        fixed = re.sub(r'^(\s*)pass\s*
-\s*pass\s*$', r'pass', content, flags=re.MULTILINE)
+        fixed = re.sub(r'^(\s*)pass\s*\n\s*pass\s*$', r'\1pass', content, flags=re.MULTILINE)
         
         # Check if fixed
         errors = find_syntax_errors(fixed)
@@ -48,11 +44,9 @@ def fix_auto_generator():
             return True
         
         # Last resort: remove all pass
-        lines = fixed.split('
-')
+        lines = fixed.split('\n')
         result = [l for l in lines if l.strip() != 'pass']
-        no_pass = '
-'.join(result)
+        no_pass = '\n'.join(result)
         
         try:
             compile(no_pass, filepath, 'exec')
