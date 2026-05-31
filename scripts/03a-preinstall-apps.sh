@@ -240,7 +240,7 @@ download_app() {
         
         # Try Google Play first
         if [[ -n "$pkg" && "$pkg" != "$app_name" ]]; then
-            if eval apkeep -a \"$pkg\" -d google-play $email_opt $token_opt --accept-tos -d \"$APPS_DIR\" 2>/dev/null; then
+            if eval apkeep -a \"$pkg\" -d google-play $email_opt $token_opt --accept-tos \"$APPS_DIR\" 2>/dev/null; then
                 for downloaded in "$APPS_DIR"/*.apk; do
                     if [[ -f "$downloaded" && "$downloaded" != "$dest" ]]; then
                         mv "$downloaded" "$dest" 2>/dev/null && success=true && break
@@ -255,7 +255,7 @@ download_app() {
         
         # Try APKPure
         if [[ -n "$apkpure" && "$apkpure" != "$app_name" ]]; then
-            if apkeep -a "$apkpure" -s apkpure -d "$APPS_DIR" 2>/dev/null; then
+            if apkeep -a "$apkpure" -d apkpure "$APPS_DIR" 2>/dev/null; then
                 for downloaded in "$APPS_DIR"/*.apk; do
                     if [[ -f "$downloaded" && "$downloaded" != "$dest" ]]; then
                         mv "$downloaded" "$dest" 2>/dev/null && success=true && break
@@ -270,7 +270,7 @@ download_app() {
         
         # Try GitHub
         if [[ -n "$github" && "$github" != "$app_name" ]]; then
-            if apkeep -a "$github" -s github -d "$APPS_DIR" 2>/dev/null; then
+            if apkeep -a "$github" -d github "$APPS_DIR" 2>/dev/null; then
                 for downloaded in "$APPS_DIR"/*.apk; do
                     if [[ -f "$downloaded" && "$downloaded" != "$dest" ]]; then
                         mv "$downloaded" "$dest" 2>/dev/null && success=true && break
@@ -285,7 +285,7 @@ download_app() {
         
         # Try APKMonk
         if [[ -n "$apkmonk" && "$apkmonk" != "$app_name" ]]; then
-            if apkeep -a "$apkmonk" -s apkmonk -d "$APPS_DIR" 2>/dev/null; then
+            if apkeep -a "$apkmonk" -d apkmonk "$APPS_DIR" 2>/dev/null; then
                 for downloaded in "$APPS_DIR"/*.apk; do
                     if [[ -f "$downloaded" && "$downloaded" != "$dest" ]]; then
                         mv "$downloaded" "$dest" 2>/dev/null && success=true && break
