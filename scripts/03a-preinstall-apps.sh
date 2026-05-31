@@ -464,7 +464,35 @@ if [[ -f "$dest" && -s "$dest" ]]; then
                 mv "$APPS_DIR/$apk_id.apk" "$dest" && echo "  [OK] $dest_name"
             elif [[ -n "$fallback_url" && "$fallback_url" == http* ]]; then
                 echo "  Trying direct URL: $fallback_url"
-                curl -L -o "$dest" "$fallback_url" && echo "  [OK] $dest_name (direct)" || echo "  [FAIL] $apk_id"
+                curl -L -o "$dest" "$fallback_url"
+                if [[ -f "$dest" && -s "$dest" && $(stat -c%s "$dest" 2>/dev/null || stat -f%z "$dest" 2>/dev/null) -gt 10000 ]]; then
+                    echo "  [OK] $dest_name (direct)"
+                elif [[ "$fallback_url" == *github.com* ]]; then
+                    # GitHub URL failed - try API to find arm64 APK
+                    owner=$(echo "$fallback_url" | sed -n 's|https://github.com/\([^/]*\)/.*|\1|p')
+                    repo=$(echo "$fallback_url" | sed -n 's|https://github.com/[^/]*/\([^/]*\)/.*|\1|p')
+                    if [[ -n "$owner" && -n "$repo" ]]; then
+                        echo "  Searching GitHub API for arm64 APK..."
+                        api_url="https://api.github.com/repos/$owner/$repo/releases/latest"
+                        arm64_url=$(curl -s "$api_url" 2>/dev/null | grep -o '"browser_download_url": "[^"]*arm64[^"]*\.apk"' | head -1 | sed 's/.*": "//;s/"$//')
+                        if [[ -z "$arm64_url" ]]; then
+                            # Try asset name pattern
+                            arm64_url=$(curl -s "$api_url" 2>/dev/null | grep '"name":.*arm64.*\.apk"' | sed 's/.*"name": "//;s/".*//' | while read name; do
+                                curl -s "$api_url" 2>/dev/null | grep -o "\"browser_download_url\":.*$name" | sed 's/.*"browser_download_url": "//;s/.$//'
+                            done | head -1)
+                        fi
+                        if [[ -n "$arm64_url" ]]; then
+                            echo "  Found: $(echo "$arm64_url" | sed 's/.*\///')"
+                            curl -L -o "$dest" "$arm64_url" && echo "  [OK] $dest_name (arm64)" || echo "  [FAIL] $dest_name"
+                        else
+                            echo "  [FAIL] $dest_name"
+                        fi
+                    else
+                        echo "  [FAIL] $dest_name"
+                    fi
+                else
+                    echo "  [FAIL] $dest_name"
+                fi
             else
                 echo "  [FAIL] $apk_id"
             fi
