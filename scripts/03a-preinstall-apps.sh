@@ -453,62 +453,27 @@ if [[ -f "$dest" && -s "$dest" ]]; then
                 if [[ -f "$APPS_DIR/$apk_id.apk" ]]; then
                     mv "$APPS_DIR/$apk_id.apk" "$dest" && echo "  [OK] $dest_name"
                 fi
-            else
+            elif [[ -n "$fallback_url" && "$fallback_url" == http* ]]; then
                 # apkeep failed - try fallback URL
-                if [[ -n "$fallback_url" && "$fallback_url" == http* ]]; then
-                    echo "  Trying direct URL: $fallback_url"
-                    if curl -L -o "$dest" "$fallback_url" 2>/dev/null && [[ -f "$dest" && -s "$dest" ]]; then
-                        echo "  [OK] $dest_name (direct)"
-                    else
-                        # Both failed - try GitHub API for latest arm64
-                        github_api=$(echo "$fallback_url" | sed -n 's|https://github.com/\([^/]*\)/\([^/]*\)/.*|https://api.github.com/repos/\1/\2/releases/latest|p')
-                        if [[ "$fallback_url" == *github.com* && -n "$github_api" ]]; then
-                            echo "  Searching GitHub for latest arm64..."
-                            arm64_url=$(curl -s "$github_api" 2>/dev/null | python3 -c "
-import sys, json
-data = json.load(sys.stdin)
-for a in data.get('assets', []):
-    n = a.get('name','')
-    if 'arm64' in n.lower() and n.endswith('.apk'):
-        print(a.get('browser_download_url',''))
-        break
-" 2>/dev/null)
-                            if [[ -n "$arm64_url" ]]; then
-                                echo "  Found: $(basename "$arm64_url")"
-                                read -rp "    Use this version? (y/n): " use_latest
-                                if [[ "$use_latest" == "y" || "$use_latest" == "Y" ]]; then
-                                    if curl -L -o "$dest" "$arm64_url" 2>/dev/null && [[ -f "$dest" && -s "$dest" ]]; then
-                                        echo "  [OK] $dest_name (latest arm64)"
-                                    else
-                                        echo "  [FAIL] $dest_name"
-                                    fi
-                                else
-                                    echo "  [SKIP] $dest_name"
-                                fi
-                            else
-                                echo "  [FAIL] $dest_name"
-                            fi
-                        else
-                            echo "  [FAIL] $dest_name"
-                        fi
-                    fi
-                else
-                    echo "  [FAIL] $dest_name"
-                fi
-            fi
-        else
-            # SKIP mode or no apkeep - use direct URL only
-            if [[ -n "$fallback_url" && "$fallback_url" == http* ]]; then
-                actual_url="${fallback_url#|}"
-                echo "  Downloading from: $actual_url"
-                if curl -L -o "$dest" "$actual_url" 2>/dev/null && [[ -f "$dest" && -s "$dest" ]]; then
+                echo "  Trying direct URL: $fallback_url"
+                if curl -L -o "$dest" "$fallback_url" 2>/dev/null && [[ -f "$dest" && -s "$dest" ]]; then
                     echo "  [OK] $dest_name (direct)"
                 else
-                    echo "  [FAIL] $dest_name"
+                    echo "  [FAIL] $apk_id"
                 fi
             else
-                echo "  [FAIL] $dest_name (no URL)"
+                echo "  [FAIL] $apk_id"
             fi
+        elif [[ "$apk_id" == "SKIP" ]] && [[ -n "$fallback_url" && "$fallback_url" == http* ]]; then
+            # SKIP mode - use direct URL only
+            echo "  Downloading from: $fallback_url"
+            if curl -L -o "$dest" "$fallback_url" 2>/dev/null && [[ -f "$dest" && -s "$dest" ]]; then
+                echo "  [OK] $dest_name (direct)"
+            else
+                echo "  [FAIL] $dest_name"
+            fi
+        else
+            echo "  [FAIL] $dest_name (no method)"
         fi
     done < "$CSV_FILE"
 else
