@@ -292,6 +292,15 @@ EOF
             exit 1
         fi
 
+        # Auto-fix: clone missing device/rockchip/common if not present
+        if [ ! -d "device/rockchip/common" ]; then
+            echo "Cloning missing device/rockchip/common..."
+            git clone --depth=1 https://github.com/khadas/android_device_rockchip_common.git device/rockchip/common || {
+                echo "ERROR: Failed to clone device/rockchip/common"
+                exit 1
+            }
+        fi
+
         echo "[3/6] Applying ROCK 4C+ integration..."
         if [ -f "$SCRIPT_DIR/../configs/BoardConfig.mk" ]; then
             echo "Copying ROCK 4C+ BoardConfig.mk..."
