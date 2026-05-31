@@ -300,7 +300,9 @@ download_app() {
     echo "    DEBUG: apkpure='$apkpure' apkpure!=app_name=$([[ "$apkpure" != "$app_name" ]] && echo true || echo false) success=$success" >&2
     if [[ -n "$apkpure" && "$apkpure" != "$app_name" && -z "$success" ]]; then
         echo "    DEBUG: APKPure condition TRUE - trying apkeep" >&2
-        if command -v apkeep &>/dev/null && apkeep -a "$apkpure" -d apkpure "$APPS_DIR" 2>/dev/null; then
+        if command -v apkeep &>/dev/null; then
+            echo "    DEBUG: apkeep found, running: apkeep -a $apkpure -d apkpure $APPS_DIR" >&2
+            if apkeep -a "$apkpure" -d apkpure "$APPS_DIR" 2>&1 | head -5; then
             for downloaded in "$APPS_DIR"/*.apk; do
                 if [[ -f "$downloaded" && "$downloaded" != "$dest" ]]; then
                     mv "$downloaded" "$dest" 2>/dev/null && success=true && break
