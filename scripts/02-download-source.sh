@@ -179,32 +179,66 @@ case $BUILD_CHOICE in
         echo "Vicharak BSP ready. Device config at: device/rockchip/rk3399"
         ;;
 
-    3)
         # ====================================================================
         # OPTION 3: Android 12 (Advantech BSP for RK3399)
         # ====================================================================
-        echo "[2/4] Initializing repo with Advantech Android 12 manifest..."
+        echo "============================================"
+        echo " WARNING: Advantech BSP NOT SUPPORTED"
+        echo "============================================"
+        echo ""
+        echo "The Advantech manifest downloads Python 2-only repo tool"
+        echo "which is incompatible with Python 3."
+        echo ""
+        echo "RECOMMENDATION: Use Option 2 (Vicharak) instead!"
+        echo ""
+        echo "  Vicharak Android 12 (kernel 5.10):"
+        echo "    - Fully working with Python 3"
+        echo "    - All prebuilts included (no separate downloads)"
+        echo "    - Recommended for ROCK 4C+"
+        echo ""
+        read -rp "Continue anyway? [y/N]: " CONTINUE_ADV
+        if [ "$CONTINUE_ADV" != "y" ]; then
+            echo ""
+            echo "Skipping Advantech BSP."
+            echo "Please run 02-download-source.sh again and select Option 2 (Vicharak)."
+            exit 0
+        fi
+        
+        echo ""
+        echo "[2/4] Attempting Advantech Android 12 manifest..."
         echo ""
         echo "Manifest: https://kag-sw.visualstudio.com/RK3399-Android/_git/android-s12-manifest"
         echo "Branch:   rk3399-androidS12"
         echo "XML:      default.xml"
         echo ""
-
-        # Advantech uses a custom repo tool, but it has Python 2/3 compatibility issues
-        # We'll use the standard repo tool instead
-        echo "Using standard repo tool (Advantech adv-repo has Python 2 compatibility issues)"
+        echo "NOTE: This may fail due to Python 2 compatibility issues."
         echo ""
-        echo "Initializing with standard repo..."
-        
+
         repo init -u \
             https://kag-sw.visualstudio.com/RK3399-Android/_git/android-s12-manifest \
             -b rk3399-androidS12 \
             -m default.xml
 
-        echo "[3/4] Syncing repositories (this will take a while)..."
+        echo "[3/4] Syncing repositories..."
         echo "Estimated download: ~80GB"
         echo ""
-        repo sync -c -f --no-clone-bundle -j$(nproc)
+        
+        # Attempt sync, but provide Python 2 workaround if available
+        if command -v python2 &> /dev/null; then
+            echo "Python 2 detected, using it for repo..."
+            python2 .repo/repo/main.py sync -c -f --no-clone-bundle -j4 || {
+                echo "Python 2 sync failed, trying standard repo..."
+                repo sync -c -f --no-clone-bundle -j$(nproc)
+            }
+        else
+            echo "Python 2 not found, using standard repo (may fail)..."
+            repo sync -c -f --no-clone-bundle -j$(nproc) || {
+                echo ""
+                echo "ERROR: Advantech sync failed (expected due to Python 2 requirement)"
+                echo "Please use Option 2 (Vicharak) instead."
+                exit 1
+            }
+        fi
 
         echo ""
         echo "============================================"

@@ -250,64 +250,27 @@ EOF
     
     3)
         # ====================================================================
-        # ADVANTECH ANDROID 12 (kernel 4.19)
+        # ADVANTECH ANDROID 12 (NOT SUPPORTED - Python 2 only repo tool)
         # ====================================================================
-        echo "[2/6] Configuring Advantech Android 12 (kernel 4.19)..."
-        
-        echo "WARNING: Advantech BSP requires manual prebuilts/external extraction!"
-        echo "Please extract:"
-        echo "  - prebuilts-rk3399-AndroidS12-20230518.tar.gz"
-        echo "  - external-rk3399-AndroidS12-20230522.tar.gz"
+        echo "============================================"
+        echo " ERROR: Advantech BSP NOT SUPPORTED"
+        echo "============================================"
         echo ""
-        read -rp "Continue? [y/N]: " CONFIRM
-        if [ "$CONFIRM" != "y" ]; then
-            echo "Skipping Advantech configuration."
-            exit 0
-        fi
-        
-        # Find correct lunch target for Advantech
-        echo "[2b/6] Detecting available lunch targets..."
-        LUNCH_TARGET=""
-        
-        # List all available product configs first
-        echo "Searching for product configurations..."
-        if [ -d "device/rockchip/rk3399" ]; then
-            ls -la device/rockchip/rk3399/ | head -20
-            
-            # Look for directories (products)
-            for dir in device/rockchip/rk3399/*/; do
-                PRODUCT_NAME=$(basename "$dir")
-                echo "Found product directory: $PRODUCT_NAME"
-                if [ -z "$LUNCH_TARGET" ]; then
-                    LUNCH_TARGET="$PRODUCT_NAME-userdebug"
-                fi
-            done
-        fi
-        
-        # If still no target found, try common names
-        if [ -z "$LUNCH_TARGET" ]; then
-            for COMMON_PRODUCT in vaaman eminence; do
-                if [ -d "device/rockchip/rk3399/$COMMON_PRODUCT" ]; then
-                    LUNCH_TARGET="$COMMON_PRODUCT-userdebug"
-                    echo "Using common product: $LUNCH_TARGET"
-                    break
-                fi
-            done
-        fi
-        
-        # Final fallback
-        if [ -z "$LUNCH_TARGET" ]; then
-            LUNCH_TARGET="rk3399-userdebug"
-            echo "WARNING: Using fallback target, may fail: $LUNCH_TARGET"
-        fi
-        
-        echo "Using lunch target: $LUNCH_TARGET"
-        lunch "$LUNCH_TARGET" < /dev/null || {
-            echo "ERROR: lunch target '$LUNCH_TARGET' failed"
-            exit 1
-        }
-        
-        echo "[3/6] [4/6] [5/6] [6/6] Configuration complete (Advantech BSP uses default settings)"
+        echo "The Advantech manifest requires Python 2 repo tool"
+        echo "which is incompatible with modern Python 3 environments."
+        echo ""
+        echo "RECOMMENDATION: Use Option 2 (Vicharak) instead!"
+        echo ""
+        echo "Vicharak Android 12 features:"
+        echo "  ✓ Fully compatible with Python 3"
+        echo "  ✓ All prebuilts included (no manual downloads)"
+        echo "  ✓ Works out of the box on modern systems"
+        echo "  ✓ Recommended for ROCK 4C+"
+        echo ""
+        echo "Please run 02-download-source.sh again and select:"
+        echo "  Option 2: Android 12 (Vicharak BSP, kernel 5.10)"
+        echo ""
+        exit 1
         ;;
     
     4)
