@@ -49,7 +49,29 @@ fi
 setup_apkeep_credentials() {
     echo ""
     echo "============================================"
-    echo " Gmail Setup for Google Play Downloads"
+    echo " APK Download Source Selection"
+    echo "============================================"
+    echo ""
+    echo "Choose download source:"
+    echo "  1) Google Play (official) - requires credentials"
+    echo "  2) Alternative stores (APKPure, GitHub, etc.)"
+    echo ""
+    read -rp "Select (1/2): " SOURCE_CHOICE
+    
+    case "$SOURCE_CHOICE" in
+        1) USE_GOOGLE_PLAY=true; setup_google_credentials ;;
+        2) USE_GOOGLE_PLAY=false; echo "Will use alternative sources only." ;;
+        *) echo "Invalid selection"; exit 1 ;;
+    esac
+}
+
+setup_google_credentials() {
+    local ini_file="$HOME/.config/apkeep/apkeep.ini"
+    mkdir -p "$(dirname "$ini_file")"
+    
+    echo ""
+    echo "============================================"
+    echo " Gmail Setup for Google Play"
     echo "============================================"
     echo ""
     echo "Choose authentication method:"
@@ -57,9 +79,6 @@ setup_apkeep_credentials() {
     echo "  2) AUTH token (from Aurora Store dispenser)"
     echo ""
     read -rp "Select (1/2): " auth_method
-    
-    local ini_file="$HOME/.config/apkeep/apkeep.ini"
-    mkdir -p "$(dirname "$ini_file")"
     
     case "$auth_method" in
         1) setup_oauth_credentials "$ini_file" ;;
