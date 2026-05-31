@@ -211,11 +211,9 @@ case $BSP_CHOICE in
             done
         fi
         
-        # If still no target found, try to get it from lunch interactively
+        # If still no target found, try common Vicharak product names
         if [ -z "$LUNCH_TARGET" ]; then
-            echo "No product directories found, trying to list lunch targets..."
-            # Create a temporary EOF trick to capture lunch menu without selection
-            lunch 2>&1 | grep -E "^\s*[0-9]+\." | head -10 || true
+            echo "No product directories found, trying common names..."
             
             # Try common Vicharak product names
             for COMMON_PRODUCT in vaaman eminence; do
