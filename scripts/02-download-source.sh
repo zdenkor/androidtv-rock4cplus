@@ -179,6 +179,7 @@ case $BUILD_CHOICE in
         echo "Vicharak BSP ready. Device config at: device/rockchip/rk3399"
         ;;
 
+    3)
         # ====================================================================
         # OPTION 3: Android 12 (Advantech BSP for RK3399)
         # ====================================================================
