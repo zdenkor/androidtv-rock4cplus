@@ -86,21 +86,21 @@ declare -A APPS
 # Essential apps (recommended)
 APPS["SmartTube"]="com.smarttube.next|||https://github.com/yuliskov/SmartTube/releases/latest/download/SmartTube_stable.apk|SmartTube.apk|SponsorBlock YouTube"
 APPS["Kodi"]="org.xbmc.kodi|||https://mirrors.kodi.tv/releases/android/arm64-v8a/kodi-21.1-armeabi-v7a-android-arm64-v8a.apk|Kodi.apk|Media center"
-APPS["Projectivy"]="com.riviprojectivy.launcher|||https://github.com/randomnumber123/Projectivy/releases/latest/download/Projectivy.apk|Projectivy.apk|Clean launcher"
-APPS["TVBro"]="com.example.tvbro|||https://github.com/randomnumber123/TVBro/releases/latest/download/TVBro.apk|TVBro.apk|Web browser for TV"
-APPS["LocalSend"]="com.example.localsend|||https://github.com/randomnumber123/LocalSend/releases/latest/download/LocalSend.apk|LocalSend.apk|AirDrop alternative"
-APPS["ButtonMapper"]="com.example.buttonmapper|||https://github.com/randomnumber123/ButtonMapper/releases/latest/download/ButtonMapper.apk|ButtonMapper.apk|Remap remote buttons"
-APPS["Fdroid"]="org.fdroid.fdroid|||https://github.com/randomnumber123/Fdroid/releases/latest/download/Fdroid.apk|Fdroid.apk|Open source app store"
-APPS["AdAway"]="org.adaway|||https://github.com/randomnumber123/AdAway/releases/latest/download/AdAway.apk|AdAway.apk|System-wide ad blocker"
+APPS["Projectivy"]="com.riviprojectivy.launcher||||Projectivy.apk|Clean launcher"
+APPS["TVBro"]="com.example.tvbro||||TVBro.apk|Web browser for TV"
+APPS["LocalSend"]="com.example.localsend||||LocalSend.apk|AirDrop alternative"
+APPS["ButtonMapper"]="com.example.buttonmapper||||ButtonMapper.apk|Remap remote buttons"
+APPS["Fdroid"]="org.fdroid.fdroid|||https://f-droid.org/repo/org.fdroid.fdroid_160900.apk|Fdroid.apk|Open source app store"
+APPS["AdAway"]="org.adaway|||https://f-droid.org/repo/org.adaway_20191010.apk|AdAway.apk|System-wide ad blocker"
 
 # Additional apps
-APPS["AuroraStore"]="com.aurora.store|||https://github.com/randomnumber123/AuroraStore/releases/latest/download/AuroraStore.apk|AuroraStore.apk|Anonymous Google Play"
-APPS["VLC"]="org.videolan.vlc|||https://mirrors.videolan.org/vlc-android/latest/vlc-android-3.5.5-arm64-v8a.apk|VLC.apk|Media player"
-APPS["TiviMate"]="com.example.tivimate|||https://github.com/randomnumber123/TiviMate/releases/latest/download/TiviMate.apk|TiviMate.apk|IPTV player"
-APPS["Xplore"]="com.example.xplore|||https://github.com/randomnumber123/Xplore/releases/latest/download/Xplore.apk|Xplore.apk|File manager"
-APPS["SideloadLauncher"]="com.example.sideloadlauncher|||https://github.com/randomnumber123/SideloadLauncher/releases/latest/download/SideloadLauncher.apk|SideloadLauncher.apk|Show sideloaded apps"
-APPS["BackgroundApps"]="com.example.backgroundapps|||https://github.com/randomnumber123/BackgroundApps/releases/latest/download/BackgroundApps.apk|BackgroundApps.apk|Task killer"
-APPS["AptoideTV"]="com.aptoide.tvstore|||https://github.com/randomnumber123/AptoideTV/releases/latest/download/AptoideTV.apk|AptoideTV.apk|Alternative app store"
+APPS["AuroraStore"]="com.aurora.store||||AuroraStore.apk|Anonymous Google Play"
+APPS["VLC"]="org.videolan.vlc|||https://mirrors.videolan.org/vlc/android/3.5.5/vlc-android-3.5.5-arm64-v8a.apk|VLC.apk|Media player"
+APPS["TiviMate"]="com.example.tivimate||||TiviMate.apk|IPTV player"
+APPS["Xplore"]="com.example.xplore||||Xplore.apk|File manager"
+APPS["SideloadLauncher"]="com.example.sideloadlauncher||||SideloadLauncher.apk|Show sideloaded apps"
+APPS["BackgroundApps"]="com.example.backgroundapps||||BackgroundApps.apk|Task killer"
+APPS["AptoideTV"]="com.aptoide.tvstore||||AptoideTV.apk|Alternative app store"
 
 # Filter apps based on BSP type (Android 9 API 28 compatibility)
 filter_apps() {
