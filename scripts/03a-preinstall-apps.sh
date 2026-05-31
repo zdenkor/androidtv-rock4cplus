@@ -431,10 +431,14 @@ if command -v apkeep &>/dev/null; then
         dest="$APPS_DIR/$dest_name"
 
         # Skip if file exists and is valid (> 1MB to avoid corrupted/partial files)
-if [[ -f "$dest" && -s "$dest" ]]; then
+        if [[ -f "$dest" && -s "$dest" ]]; then
             size=$(stat -c%s "$dest" 2>/dev/null || stat -f%z "$dest" 2>/dev/null)
-            echo "  [SKIP] $dest_name (exists, $size bytes)"
-            continue
+            if [[ $size -gt 1000000 ]]; then
+                echo "  [SKIP] $dest_name (exists, $size bytes)"
+                continue
+            else
+                echo "  [RE-DOWNLOAD] $dest_name (corrupt, $size bytes)"
+            fi
         fi
 
         echo "  Downloading $apk_id..."
