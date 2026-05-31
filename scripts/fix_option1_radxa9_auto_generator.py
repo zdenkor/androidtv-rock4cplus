@@ -1,43 +1,73 @@
 #!/usr/bin/env python3
 import os
+import ast
+import re
+
+def find_syntax_errors(content):
+    errors = []
+    try:
+        ast.parse(content)
+        return errors
+    except SyntaxError as e:
+        errors.append({'lineno': e.lineno, 'msg': e.msg, 'text': e.text})
+    return errors
 
 def fix_auto_generator():
-    filepath = "device/rockchip/common/auto_generator.py"
+    filepath = 'device/rockchip/common/auto_generator.py'
+    
     if not os.path.exists(filepath):
-        print(f"File not found: {filepath}")
+        print(f'File not found: {filepath}')
         return False
+    
     try:
         with open(filepath, 'rb') as f:
             content = f.read().decode('utf-8', errors='ignore')
-        content = content.replace('\r\n', '\n').replace('\r', '\n')
-        lines = content.split('\n')
-        result = []
-        skip = {46, 50, 119, 145, 146, 147, 148}
-        fix = {
-            45: '            pass',
-            47: '        os.remove(include_path)',
-            49: '            pass',
-            51: '        os.remove(android_path)',
-            118: '                                continue',
-            144: '    pass',
-            149: '    main(sys.argv)'
-        }
-        for i, line in enumerate(lines):
-            line_num = i + 1
-            if line_num in skip:
-                continue
-            if line_num in fix:
-                result.append(fix[line_num])
-            else:
-                result.append(line)
-        fixed = '\n'.join(result)
-        compile(fixed, filepath, 'exec')
-        print(f"Fixed: {filepath}")
-        with open(filepath, 'w', encoding='utf-8') as f:
-            f.write(fixed)
-        return True
+        
+        content = content.replace('
+', '
+').replace('', '
+')
+        
+        errors = find_syntax_errors(content)
+        if not errors:
+            print(f'File compiles OK: {filepath}')
+            return True
+        
+        print(f'Found {len(errors)} syntax error(s)')
+        
+        # Remove duplicate pass at same indent
+        fixed = re.sub(r'^(\s*)pass\s*
+\s*pass\s*$', r'pass', content, flags=re.MULTILINE)
+        
+        # Check if fixed
+        errors = find_syntax_errors(fixed)
+        if not errors:
+            print(f'Fixed: removed duplicate pass')
+            with open(filepath, 'w', encoding='utf-8') as f:
+                f.write(fixed)
+            return True
+        
+        # Last resort: remove all pass
+        lines = fixed.split('
+')
+        result = [l for l in lines if l.strip() != 'pass']
+        no_pass = '
+'.join(result)
+        
+        try:
+            compile(no_pass, filepath, 'exec')
+            print(f'Fixed: removed all pass')
+            with open(filepath, 'w', encoding='utf-8') as f:
+                f.write(no_pass)
+            return True
+        except:
+            pass
+        
+        print('Could not auto-fix')
+        return False
+        
     except Exception as e:
-        print(f"Error: {e}")
+        print(f'Error: {e}')
         return False
 
 if __name__ == '__main__':
