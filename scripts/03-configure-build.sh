@@ -164,8 +164,43 @@ case $BSP_CHOICE in
             echo "Fixed kernel version: 4.19 -> 5.10"
         fi
         
-        # Lunch target
-        lunch rk3399-userdebug < /dev/null
+        # Find correct lunch target for Vicharak
+        echo "[2b/6] Detecting available lunch targets..."
+        LUNCH_TARGET=""
+        
+        # Look for product config files in device/rockchip/rk3399
+        if [ -d "device/rockchip/rk3399" ]; then
+            # Try to find product Makefiles
+            for mk in device/rockchip/rk3399/*/AndroidProducts.mk; do
+                if [ -f "$mk" ]; then
+                    # Extract product name from path
+                    PRODUCT_DIR=$(dirname "$mk")
+                    PRODUCT_NAME=$(basename "$PRODUCT_DIR")
+                    echo "Found product: $PRODUCT_NAME"
+                    if [ -z "$LUNCH_TARGET" ]; then
+                        LUNCH_TARGET="$PRODUCT_NAME-userdebug"
+                    fi
+                fi
+            done
+        fi
+        
+        # Fallback to vaaman if found
+        if [ -z "$LUNCH_TARGET" ] && [ -f "device/rockchip/rk3399/vaaman/AndroidProducts.mk" ]; then
+            LUNCH_TARGET="vaaman-userdebug"
+        fi
+        
+        # Final fallback
+        if [ -z "$LUNCH_TARGET" ]; then
+            LUNCH_TARGET="rk3399-userdebug"
+        fi
+        
+        echo "Using lunch target: $LUNCH_TARGET"
+        lunch "$LUNCH_TARGET" < /dev/null || {
+            echo "ERROR: lunch target '$LUNCH_TARGET' failed"
+            echo "Available targets:"
+            find device/rockchip -name "AndroidProducts.mk" -type f | head -20
+            exit 1
+        }
         
         echo "[3/6] Configuring for Android TV 12..."
         # Configure Android TV (Leanback, system properties)
@@ -216,8 +251,33 @@ EOF
             exit 0
         fi
         
-        # Lunch target
-        lunch rk3399-userdebug < /dev/null
+        # Find correct lunch target for Advantech
+        echo "[2b/6] Detecting available lunch targets..."
+        LUNCH_TARGET=""
+        
+        # Look for product config files in device/rockchip/rk3399
+        if [ -d "device/rockchip/rk3399" ]; then
+            for mk in device/rockchip/rk3399/*/AndroidProducts.mk; do
+                if [ -f "$mk" ]; then
+                    PRODUCT_DIR=$(dirname "$mk")
+                    PRODUCT_NAME=$(basename "$PRODUCT_DIR")
+                    echo "Found product: $PRODUCT_NAME"
+                    if [ -z "$LUNCH_TARGET" ]; then
+                        LUNCH_TARGET="$PRODUCT_NAME-userdebug"
+                    fi
+                fi
+            done
+        fi
+        
+        if [ -z "$LUNCH_TARGET" ]; then
+            LUNCH_TARGET="rk3399-userdebug"
+        fi
+        
+        echo "Using lunch target: $LUNCH_TARGET"
+        lunch "$LUNCH_TARGET" < /dev/null || {
+            echo "ERROR: lunch target '$LUNCH_TARGET' failed"
+            exit 1
+        }
         
         echo "[3/6] [4/6] [5/6] [6/6] Configuration complete (Advantech BSP uses default settings)"
         ;;
