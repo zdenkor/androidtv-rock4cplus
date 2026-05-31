@@ -168,15 +168,16 @@ case $BSP_CHOICE in
         echo "[2b/6] Detecting available lunch targets..."
         LUNCH_TARGET=""
         
-        # Look for product config files in device/rockchip/rk3399
+        # List all available product configs first
+        echo "Searching for product configurations..."
         if [ -d "device/rockchip/rk3399" ]; then
-            # Try to find product Makefiles
-            for mk in device/rockchip/rk3399/*/AndroidProducts.mk; do
-                if [ -f "$mk" ]; then
-                    # Extract product name from path
-                    PRODUCT_DIR=$(dirname "$mk")
-                    PRODUCT_NAME=$(basename "$PRODUCT_DIR")
-                    echo "Found product: $PRODUCT_NAME"
+            ls -la device/rockchip/rk3399/ | head -20
+            
+            # Look for AndroidProducts.mk files
+            for dir in device/rockchip/rk3399/*/; do
+                if [ -f "${dir}AndroidProducts.mk" ]; then
+                    PRODUCT_NAME=$(basename "$dir")
+                    echo "Found product directory: $PRODUCT_NAME"
                     if [ -z "$LUNCH_TARGET" ]; then
                         LUNCH_TARGET="$PRODUCT_NAME-userdebug"
                     fi
@@ -184,20 +185,33 @@ case $BSP_CHOICE in
             done
         fi
         
-        # Fallback to vaaman if found
-        if [ -z "$LUNCH_TARGET" ] && [ -f "device/rockchip/rk3399/vaaman/AndroidProducts.mk" ]; then
-            LUNCH_TARGET="vaaman-userdebug"
+        # If still no target found, try to get it from lunch interactively
+        if [ -z "$LUNCH_TARGET" ]; then
+            echo "No product directories found, trying to list lunch targets..."
+            # Create a temporary EOF trick to capture lunch menu without selection
+            lunch 2>&1 | grep -E "^\s*[0-9]+\." | head -10 || true
+            
+            # Try common Vicharak product names
+            for COMMON_PRODUCT in vaaman eminence; do
+                if [ -d "device/rockchip/rk3399/$COMMON_PRODUCT" ]; then
+                    LUNCH_TARGET="$COMMON_PRODUCT-userdebug"
+                    echo "Using common product: $LUNCH_TARGET"
+                    break
+                fi
+            done
         fi
         
         # Final fallback
         if [ -z "$LUNCH_TARGET" ]; then
             LUNCH_TARGET="rk3399-userdebug"
+            echo "WARNING: Using fallback target, may fail: $LUNCH_TARGET"
         fi
         
         echo "Using lunch target: $LUNCH_TARGET"
+        echo "Calling: lunch $LUNCH_TARGET"
         lunch "$LUNCH_TARGET" < /dev/null || {
             echo "ERROR: lunch target '$LUNCH_TARGET' failed"
-            echo "Available targets:"
+            echo "Attempting to find available targets by listing device configs..."
             find device/rockchip -name "AndroidProducts.mk" -type f | head -20
             exit 1
         }
@@ -255,22 +269,36 @@ EOF
         echo "[2b/6] Detecting available lunch targets..."
         LUNCH_TARGET=""
         
-        # Look for product config files in device/rockchip/rk3399
+        # List all available product configs first
+        echo "Searching for product configurations..."
         if [ -d "device/rockchip/rk3399" ]; then
-            for mk in device/rockchip/rk3399/*/AndroidProducts.mk; do
-                if [ -f "$mk" ]; then
-                    PRODUCT_DIR=$(dirname "$mk")
-                    PRODUCT_NAME=$(basename "$PRODUCT_DIR")
-                    echo "Found product: $PRODUCT_NAME"
-                    if [ -z "$LUNCH_TARGET" ]; then
-                        LUNCH_TARGET="$PRODUCT_NAME-userdebug"
-                    fi
+            ls -la device/rockchip/rk3399/ | head -20
+            
+            # Look for directories (products)
+            for dir in device/rockchip/rk3399/*/; do
+                PRODUCT_NAME=$(basename "$dir")
+                echo "Found product directory: $PRODUCT_NAME"
+                if [ -z "$LUNCH_TARGET" ]; then
+                    LUNCH_TARGET="$PRODUCT_NAME-userdebug"
                 fi
             done
         fi
         
+        # If still no target found, try common names
+        if [ -z "$LUNCH_TARGET" ]; then
+            for COMMON_PRODUCT in vaaman eminence; do
+                if [ -d "device/rockchip/rk3399/$COMMON_PRODUCT" ]; then
+                    LUNCH_TARGET="$COMMON_PRODUCT-userdebug"
+                    echo "Using common product: $LUNCH_TARGET"
+                    break
+                fi
+            done
+        fi
+        
+        # Final fallback
         if [ -z "$LUNCH_TARGET" ]; then
             LUNCH_TARGET="rk3399-userdebug"
+            echo "WARNING: Using fallback target, may fail: $LUNCH_TARGET"
         fi
         
         echo "Using lunch target: $LUNCH_TARGET"
