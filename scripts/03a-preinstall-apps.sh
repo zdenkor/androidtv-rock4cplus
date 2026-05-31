@@ -85,56 +85,6 @@ setup_new_credentials() {
 }
 
 # Select BSP
-#   5. Use the 16-character password (no spaces)
-
-setup_apkeep_credentials() {
-    APKEEP_EMAIL_FILE="$APPS_DIR/.apkkeep_email"
-    APKEEP_PASS_FILE="$APPS_DIR/.apkkeep_pass"
-    echo ""
-    echo "============================================"
-    echo " Gmail Setup for Google Play Downloads"
-    echo "============================================"
-    echo ""
-    echo "To download from Google Play, apkeep needs Gmail credentials."
-    echo "IMPORTANT: Use an App Password, NOT your regular password!"
-    echo ""
-    echo "How to create an App Password:"
-    echo "  1. Enable 2-Factor Authentication on your Google account"
-    echo "  2. Go to: https://myaccount.google.com/security"
-    echo "  3. Click 'App passwords' (under '2-Step Verification')"
-    echo "  4. Select 'Other (Custom name)' and enter 'apkeep'"
-    echo "  5. Copy the 16-character password shown"
-    echo ""
-    
-    # Check for saved credentials
-    if [ -f "$APKEEP_EMAIL_FILE" ] && [ -f "$APKEEP_PASS_FILE" ]; then
-        APKEEP_EMAIL=$(cat "$APKEEP_EMAIL_FILE" 2>/dev/null)
-        read -rp "Use saved Gmail? ($APKEEP_EMAIL): " use_saved
-        if [[ "$use_saved" != "y" && "$use_saved" != "Y" ]]; then
-            setup_new_credentials
-        fi
-    else
-        setup_new_credentials
-    fi
-}
-
-setup_new_credentials() {
-    local APKEEP_EMAIL_FILE="$APPS_DIR/.apkkeep_email"
-    local APKEEP_PASS_FILE="$APPS_DIR/.apkkeep_pass"
-    echo ""
-    read -rp "Enter Gmail email: " APKEEP_EMAIL
-    read -rsp "Enter App Password (16 chars): " APKEEP_PASS
-    echo ""
-    
-    if [ -n "$APKEEP_EMAIL" ] && [ -n "$APKEEP_PASS" ]; then
-        echo "$APKEEP_EMAIL" > "$APKEEP_EMAIL_FILE"
-        echo "$APKEEP_PASS" > "$APKEEP_PASS_FILE"
-        chmod 600 "$APKEEP_EMAIL_FILE" "$APKEEP_PASS_FILE" 2>/dev/null
-        echo "Credentials saved."
-    fi
-}
-
-# Select BSP
 if [ ${#BSP_DIRS[@]} -eq 1 ]; then
     WORK_DIR="${BSP_DIRS[0]}"
     BSP_NAME="${BSP_NAMES[0]}"
