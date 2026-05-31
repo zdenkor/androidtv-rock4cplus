@@ -187,13 +187,14 @@ SAVED_CHOICES_FILE="$APPS_DIR/.saved_choices"
 declare -A APPS
 
 # Essential apps (recommended)
+# Format: pkg|apkpure|github|apkmonk|direct|filename|desc
 APPS["SmartTube"]="com.smarttube.next|||https://github.com/yuliskov/SmartTube/releases/latest/download/SmartTube_stable.apk|SmartTube.apk|SponsorBlock YouTube"
 APPS["Kodi"]="org.xbmc.kodi|||https://mirrors.kodi.tv/releases/android/arm64-v8a/kodi-21.1-armeabi-v7a-android-arm64-v8a.apk|Kodi.apk|Media center"
-APPS["Projectivy"]="com.riviprojectivy.launcher||||Projectivy.apk|Clean launcher"
-APPS["TVBro"]="com.example.tvbro||||TVBro.apk|Web browser for TV"
-APPS["LocalSend"]="com.example.localsend||||LocalSend.apk|AirDrop alternative"
-APPS["ButtonMapper"]="com.example.buttonmapper||||ButtonMapper.apk|Remap remote buttons"
-APPS["Fdroid"]="org.fdroid.fdroid||||https://f-droid.org/F-Droid.apk|Fdroid.apk|Open source app store"
+APPS["Projectivy"]="com.riviprojectivy.launcher||||https://github.com/rivi-project/projectivy-releases/releases/latest/download/Projectivy.apk|Projectivy.apk|Clean launcher"
+APPS["TVBro"]="com.example.tvbro||||https://github.com/truefedex/tv-bro/releases/latest/download/TVBro.apk|TVBro.apk|Web browser for TV"
+APPS["LocalSend"]="com.example.localsend||||https://github.com/localsendl/localsend/releases/latest/download/LocalSend.apk|LocalSend.apk|AirDrop alternative"
+APPS["ButtonMapper"]="com.example.buttonmapper||||https://github.com/marcowch/LazyBeeper/releases/latest/download/ButtonMapper.apk|ButtonMapper.apk|Remap remote buttons"
+APPS["Fdroid"]="org.fdroid.fdroid|||https://f-droid.org/repo/org.fdroid.fdroid_47.apk|Fdroid.apk|Open source app store"
 APPS["AdAway"]="org.adaway|||https://f-droid.org/repo/org.adaway_20191010.apk|AdAway.apk|System-wide ad blocker"
 
 # Additional apps
