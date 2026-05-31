@@ -385,17 +385,7 @@ show_menu() {
 setup_apkeep_credentials
 show_menu
 
-if [[ -f "$SAVED_CHOICES_FILE" ]]; then
-    read -rp "Use saved choices? (y/n): " use_saved
-    if [[ "$use_saved" != "y" && "$use_saved" != "Y" ]]; then
-        read -rp "Enter choice: " APPS_CHOICES
-    else
-        APPS_CHOICES=$(cat "$SAVED_CHOICES_FILE")
-    fi
-else
-    read -rp "Enter choice: " APPS_CHOICES
-fi
-
+read -rp "Enter choice: " APPS_CHOICES
 [[ -z "$APPS_CHOICES" ]] && read -rp "Enter choice: " APPS_CHOICES
 
 if [[ "$APPS_CHOICES" == "Q" || "$APPS_CHOICES" == "q" ]]; then
