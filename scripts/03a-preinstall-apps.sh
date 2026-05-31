@@ -446,15 +446,12 @@ if [[ -f "$dest" && -s "$dest" ]]; then
         fi
         
         if $use_apkeep && [[ -n "$apk_id" ]] && command -v apkeep &>/dev/null; then
-            # Clean up any leftover with package name before downloading
             rm -f "$APPS_DIR/$apk_id.apk" 2>/dev/null
-            if apkeep -a "$apk_id" -d apk-pure "$APPS_DIR"; then
-                # Move the downloaded file (apkeep names it with package id)
+            if apkeep -a "$apk_id" -d apk-pure "$APPS_DIR" 2>/dev/null; then
                 if [[ -f "$APPS_DIR/$apk_id.apk" ]]; then
                     mv "$APPS_DIR/$apk_id.apk" "$dest" && echo "  [OK] $dest_name"
                 fi
             elif [[ -n "$fallback_url" && "$fallback_url" == http* ]]; then
-                # apkeep failed - try fallback URL
                 echo "  Trying direct URL: $fallback_url"
                 if curl -L -o "$dest" "$fallback_url" 2>/dev/null && [[ -f "$dest" && -s "$dest" ]]; then
                     echo "  [OK] $dest_name (direct)"
