@@ -80,27 +80,27 @@ APPS_DIR="$WORK_DIR/apps"
 mkdir -p "$APPS_DIR"
 SAVED_CHOICES_FILE="$APPS_DIR/.saved_choices"
 
-# App definitions: name|url|file|pkg|desc
+# App definitions: pkg|apkpure|github|apkmonk|direct|filename|desc
 declare -A APPS
 
 # Essential apps (recommended)
-APPS["SmartTube"]="https://github.com/yuliskov/SmartTube/releases/latest/download/SmartTube_stable.apk|SmartTube.apk|com.smarttube.next|SponsorBlock YouTube"
-APPS["Kodi"]="https://mirrors.kodi.tv/releases/android/arm64-v8a/kodi-21.1-armeabi-v7a-android-arm64-v8a.apk|Kodi.apk|org.xbmc.kodi|Media center"
-APPS["Projectivy"]="https://github.com/randomnumber123/Projectivy/releases/latest/download/Projectivy.apk|Projectivy.apk|com.riviprojectivy.launcher|Clean launcher"
-APPS["TVBro"]="https://github.com/randomnumber123/TVBro/releases/latest/download/TVBro.apk|TVBro.apk|com.example.tvbro|Web browser for TV"
-APPS["LocalSend"]="https://github.com/randomnumber123/LocalSend/releases/latest/download/LocalSend.apk|LocalSend.apk|com.example.localsend|AirDrop alternative"
-APPS["ButtonMapper"]="https://github.com/randomnumber123/ButtonMapper/releases/latest/download/ButtonMapper.apk|ButtonMapper.apk|com.example.buttonmapper|Remap remote buttons"
-APPS["Fdroid"]="https://github.com/randomnumber123/Fdroid/releases/latest/download/Fdroid.apk|Fdroid.apk|org.fdroid.fdroid|Open source app store"
-APPS["AdAway"]="https://github.com/randomnumber123/AdAway/releases/latest/download/AdAway.apk|AdAway.apk|org.adaway|System-wide ad blocker"
+APPS["SmartTube"]="com.smarttube.next|||https://github.com/yuliskov/SmartTube/releases/latest/download/SmartTube_stable.apk|SmartTube.apk|SponsorBlock YouTube"
+APPS["Kodi"]="org.xbmc.kodi|||https://mirrors.kodi.tv/releases/android/arm64-v8a/kodi-21.1-armeabi-v7a-android-arm64-v8a.apk|Kodi.apk|Media center"
+APPS["Projectivy"]="com.riviprojectivy.launcher|||https://github.com/randomnumber123/Projectivy/releases/latest/download/Projectivy.apk|Projectivy.apk|Clean launcher"
+APPS["TVBro"]="com.example.tvbro|||https://github.com/randomnumber123/TVBro/releases/latest/download/TVBro.apk|TVBro.apk|Web browser for TV"
+APPS["LocalSend"]="com.example.localsend|||https://github.com/randomnumber123/LocalSend/releases/latest/download/LocalSend.apk|LocalSend.apk|AirDrop alternative"
+APPS["ButtonMapper"]="com.example.buttonmapper|||https://github.com/randomnumber123/ButtonMapper/releases/latest/download/ButtonMapper.apk|ButtonMapper.apk|Remap remote buttons"
+APPS["Fdroid"]="org.fdroid.fdroid|||https://github.com/randomnumber123/Fdroid/releases/latest/download/Fdroid.apk|Fdroid.apk|Open source app store"
+APPS["AdAway"]="org.adaway|||https://github.com/randomnumber123/AdAway/releases/latest/download/AdAway.apk|AdAway.apk|System-wide ad blocker"
 
 # Additional apps
-APPS["AuroraStore"]="https://github.com/randomnumber123/AuroraStore/releases/latest/download/AuroraStore.apk|AuroraStore.apk|com.aurora.store|Anonymous Google Play"
-APPS["VLC"]="https://mirrors.videolan.org/vlc-android/latest/vlc-android-3.5.5-arm64-v8a.apk|VLC.apk|org.videolan.vlc|Media player"
-APPS["TiviMate"]="https://github.com/randomnumber123/TiviMate/releases/latest/download/TiviMate.apk|TiviMate.apk|com.example.tivimate|IPTV player"
-APPS["Xplore"]="https://github.com/randomnumber123/Xplore/releases/latest/download/Xplore.apk|Xplore.apk|com.example.xplore|File manager"
-APPS["SideloadLauncher"]="https://github.com/randomnumber123/SideloadLauncher/releases/latest/download/SideloadLauncher.apk|SideloadLauncher.apk|com.example.sideloadlauncher|Show sideloaded apps"
-APPS["BackgroundApps"]="https://github.com/randomnumber123/BackgroundApps/releases/latest/download/BackgroundApps.apk|BackgroundApps.apk|com.example.backgroundapps|Task killer"
-APPS["AptoideTV"]="https://github.com/randomnumber123/AptoideTV/releases/latest/download/AptoideTV.apk|AptoideTV.apk|com.aptoide.tvstore|Alternative app store"
+APPS["AuroraStore"]="com.aurora.store|||https://github.com/randomnumber123/AuroraStore/releases/latest/download/AuroraStore.apk|AuroraStore.apk|Anonymous Google Play"
+APPS["VLC"]="org.videolan.vlc|||https://mirrors.videolan.org/vlc-android/latest/vlc-android-3.5.5-arm64-v8a.apk|VLC.apk|Media player"
+APPS["TiviMate"]="com.example.tivimate|||https://github.com/randomnumber123/TiviMate/releases/latest/download/TiviMate.apk|TiviMate.apk|IPTV player"
+APPS["Xplore"]="com.example.xplore|||https://github.com/randomnumber123/Xplore/releases/latest/download/Xplore.apk|Xplore.apk|File manager"
+APPS["SideloadLauncher"]="com.example.sideloadlauncher|||https://github.com/randomnumber123/SideloadLauncher/releases/latest/download/SideloadLauncher.apk|SideloadLauncher.apk|Show sideloaded apps"
+APPS["BackgroundApps"]="com.example.backgroundapps|||https://github.com/randomnumber123/BackgroundApps/releases/latest/download/BackgroundApps.apk|BackgroundApps.apk|Task killer"
+APPS["AptoideTV"]="com.aptoide.tvstore|||https://github.com/randomnumber123/AptoideTV/releases/latest/download/AptoideTV.apk|AptoideTV.apk|Alternative app store"
 
 # Filter apps based on BSP type (Android 9 API 28 compatibility)
 filter_apps() {
@@ -111,6 +111,113 @@ filter_apps() {
         esac
     fi
     return 0
+}
+
+# Download an app - tries multiple sources in order
+download_app() {
+    local app_name="$1"
+    local app_data="${APPS[$app_name]}"
+    
+    # Parse: pkg|apkpure|github|apkmonk|direct|filename|desc
+    local pkg="${app_data%%|*}"
+    app_data="${app_data#*|}"
+    local apkpure="${app_data%%|*}"
+    app_data="${app_data#*|}"
+    local github="${app_data%%|*}"
+    app_data="${app_data#*|}"
+    local apkmonk="${app_data%%|*}"
+    app_data="${app_data#*|}"
+    local direct="${app_data%%|*}"
+    app_data="${app_data#*|}"
+    local file="${app_data%%|*}"
+    local desc="${app_data##*|}"
+    
+    local dest="$APPS_DIR/$file"
+    local success=false
+    
+    echo "  Downloading $app_name..."
+    
+    # 1) Try apkeep (Google Play as primary, then other sources)
+    if command -v apkeep &>/dev/null; then
+        # Try Google Play first
+        if [[ -n "$pkg" && "$pkg" != "$app_name" ]]; then
+            if apkeep -a "$pkg" -d "$APPS_DIR" 2>/dev/null; then
+                for downloaded in "$APPS_DIR"/*.apk; do
+                    if [[ -f "$downloaded" && "$downloaded" != "$dest" ]]; then
+                        mv "$downloaded" "$dest" 2>/dev/null && success=true && break
+                    fi
+                done
+                if $success; then
+                    echo "  [OK] $app_name (apkeep/GP)"
+                    return 0
+                fi
+            fi
+        fi
+        
+        # Try APKPure
+        if [[ -n "$apkpure" && "$apkpure" != "$app_name" ]]; then
+            if apkeep -a "$apkpure" -s apkpure -d "$APPS_DIR" 2>/dev/null; then
+                for downloaded in "$APPS_DIR"/*.apk; do
+                    if [[ -f "$downloaded" && "$downloaded" != "$dest" ]]; then
+                        mv "$downloaded" "$dest" 2>/dev/null && success=true && break
+                    fi
+                done
+                if $success; then
+                    echo "  [OK] $app_name (apkeep/APKPure)"
+                    return 0
+                fi
+            fi
+        fi
+        
+        # Try GitHub
+        if [[ -n "$github" && "$github" != "$app_name" ]]; then
+            if apkeep -a "$github" -s github -d "$APPS_DIR" 2>/dev/null; then
+                for downloaded in "$APPS_DIR"/*.apk; do
+                    if [[ -f "$downloaded" && "$downloaded" != "$dest" ]]; then
+                        mv "$downloaded" "$dest" 2>/dev/null && success=true && break
+                    fi
+                done
+                if $success; then
+                    echo "  [OK] $app_name (apkeep/GitHub)"
+                    return 0
+                fi
+            fi
+        fi
+        
+        # Try APKMonk
+        if [[ -n "$apkmonk" && "$apkmonk" != "$app_name" ]]; then
+            if apkeep -a "$apkmonk" -s apkmonk -d "$APPS_DIR" 2>/dev/null; then
+                for downloaded in "$APPS_DIR"/*.apk; do
+                    if [[ -f "$downloaded" && "$downloaded" != "$dest" ]]; then
+                        mv "$downloaded" "$dest" 2>/dev/null && success=true && break
+                    fi
+                done
+                if $success; then
+                    echo "  [OK] $app_name (apkeep/APKMonk)"
+                    return 0
+                fi
+            fi
+        fi
+    fi
+    
+    # 2) Fallback: direct URL via curl
+    if [[ -n "$direct" && "$direct" == http* ]]; then
+        if curl -L -o "$dest" --progress-bar "$direct" 2>/dev/null; then
+            echo "  [OK] $app_name (curl/direct)"
+            return 0
+        fi
+    fi
+    
+    # 3) Fallback: GitHub URL via curl
+    if [[ -n "$github" && "$github" == http* ]]; then
+        if curl -L -o "$dest" --progress-bar "$github" 2>/dev/null; then
+            echo "  [OK] $app_name (curl/GitHub)"
+            return 0
+        fi
+    fi
+    
+    echo "  [FAIL] $app_name"
+    return 1
 }
 
 # Display app menu
