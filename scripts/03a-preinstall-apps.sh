@@ -189,9 +189,8 @@ APPS["AdAway"]="org.adaway|||https://f-droid.org/repo/org.adaway_20191010.apk|Ad
 APPS["AuroraStore"]="com.aurora.store||||AuroraStore.apk|Anonymous Google Play"
 APPS["VLC"]="org.videolan.vlc|||https://mirrors.videolan.org/vlc/android/3.5.5/vlc-android-3.5.5-arm64-v8a.apk|VLC.apk|Media player"
 APPS["TiviMate"]="com.example.tivimate||||TiviMate.apk|IPTV player"
-APPS["Xplore"]="com.example.xplore||||Xplore.apk|File manager"
+APPS["Xplore"]="com.lonelycatgame.xplore||||Xplore.apk|File manager"
 APPS["SideloadLauncher"]="com.example.sideloadlauncher||||SideloadLauncher.apk|Show sideloaded apps"
-APPS["BackgroundApps"]="com.example.backgroundapps||||BackgroundApps.apk|Task killer"
 APPS["AptoideTV"]="com.aptoide.tvstore||||AptoideTV.apk|Alternative app store"
 
 # Filter apps based on BSP type (Android 9 API 28 compatibility)
@@ -340,7 +339,7 @@ show_menu() {
     done
     echo ""
     echo " [ADDITIONAL]"
-    for app in AuroraStore VLC TiviMate Xplore SideloadLauncher BackgroundApps AptoideTV; do
+    for app in AuroraStore VLC TiviMate Xplore SideloadLauncher AptoideTV; do
         if filter_apps "$app"; then
             echo "   $i) $app - ${APPS[$app]##*|}"
             ((i++))
@@ -391,7 +390,7 @@ case "$APPS_CHOICES" in
         ;;
     *)
         i=1
-        for app in SmartTube Kodi Projectivy TVBro LocalSend ButtonMapper Fdroid AdAway AuroraStore VLC TiviMate Xplore SideloadLauncher BackgroundApps AptoideTV; do
+        for app in SmartTube Kodi Projectivy TVBro LocalSend ButtonMapper Fdroid AdAway AuroraStore VLC TiviMate Xplore SideloadLauncher AptoideTV; do
             if filter_apps "$app"; then
                 [[ "$APPS_CHOICES" == *"$i"* ]] && download_app "$app"
                 ((i++))
