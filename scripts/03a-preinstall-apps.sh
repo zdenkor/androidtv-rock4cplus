@@ -439,7 +439,7 @@ if command -v apkeep &>/dev/null; then
         [[ -z "$apk_id" || "$apk_id" =~ ^# ]] && continue
         dest="$APPS_DIR/$dest_name"
         echo "  Downloading $apk_id..."
-        apkeep -a "$apk_id" -d apkpure "$APPS_DIR"
+        if apkeep -a "$apk_id" -d apkpure "$APPS_DIR"; then
             for downloaded in "$APPS_DIR"/*.apk; do
                 if [[ -f "$downloaded" && "$downloaded" != "$dest" ]]; then
                     mv "$downloaded" "$dest" 2>/dev/null && echo "  [OK] $dest_name" && break
