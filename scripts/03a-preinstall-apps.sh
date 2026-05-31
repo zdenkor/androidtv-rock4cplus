@@ -436,7 +436,7 @@ echo ""
 echo "Downloading via apkeep..."
 if command -v apkeep &>/dev/null; then
     while IFS=, read -r apk_id dest_name rest; do
-        [[ -z "$apk_id" || "$apk_id" =~ ^# ]] && continue
+        [[ -z "$apk_id" || "$apk_id" == "app_id" || "$apk_id" =~ ^# ]] && continue
         dest="$APPS_DIR/$dest_name"
         echo "  Downloading $apk_id..."
         if apkeep -a "$apk_id" -d apk-pure "$APPS_DIR"; then
