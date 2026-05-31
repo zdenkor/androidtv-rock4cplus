@@ -190,23 +190,13 @@ case $BUILD_CHOICE in
         echo "XML:      default.xml"
         echo ""
 
-        # Advantech uses a custom repo tool
-        echo "Cloning Advantech repo tool..."
-        git clone https://github.com/ADVANTECH-Rockchip/repo.git "$WORK_DIR/../adv-repo" || true
-
-        if [ -d "$WORK_DIR/../adv-repo" ]; then
-            # Fix Python 3 compatibility issues in adv-repo
-            echo "Fixing adv-repo Python 3 compatibility..."
-            find "$WORK_DIR/../adv-repo" -name "*.py" -type f -exec sed -i 's/from formatter import/from io import/g' {} \;
-            find "$WORK_DIR/../adv-repo" -name "*.py" -type f -exec sed -i 's/import formatter/import io/g' {} \;
-            
-            REPO_CMD="python3 $WORK_DIR/../adv-repo/repo"
-        else
-            echo "WARNING: Could not clone adv-repo, using default repo tool"
-            REPO_CMD="repo"
-        fi
-
-        $REPO_CMD init -u \
+        # Advantech uses a custom repo tool, but it has Python 2/3 compatibility issues
+        # We'll use the standard repo tool instead
+        echo "Using standard repo tool (Advantech adv-repo has Python 2 compatibility issues)"
+        echo ""
+        echo "Initializing with standard repo..."
+        
+        repo init -u \
             https://kag-sw.visualstudio.com/RK3399-Android/_git/android-s12-manifest \
             -b rk3399-androidS12 \
             -m default.xml
@@ -214,15 +204,7 @@ case $BUILD_CHOICE in
         echo "[3/4] Syncing repositories (this will take a while)..."
         echo "Estimated download: ~80GB"
         echo ""
-        $REPO_CMD sync -c -f --no-clone-bundle -j$(nproc) || {
-            echo ""
-            echo "WARNING: adv-repo sync failed. Trying with standard repo tool..."
-            repo init -u \
-                https://kag-sw.visualstudio.com/RK3399-Android/_git/android-s12-manifest \
-                -b rk3399-androidS12 \
-                -m default.xml
-            repo sync -c -f --no-clone-bundle -j$(nproc)
-        }
+        repo sync -c -f --no-clone-bundle -j$(nproc)
 
         echo ""
         echo "============================================"
