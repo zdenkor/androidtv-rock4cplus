@@ -197,7 +197,7 @@ APPS["Fdroid"]="org.fdroid.fdroid||||https://f-droid.org/F-Droid.apk|Fdroid.apk|
 APPS["AdAway"]="org.adaway|||https://f-droid.org/repo/org.adaway_20191010.apk|AdAway.apk|System-wide ad blocker"
 
 # Additional apps
-APPS["AuroraStore"]="com.aurora.store|com.aurora.store|||||AuroraStore.apk|Anonymous Google Play"
+APPS["AuroraStore"]="com.aurora.store|com.aurora.store|||AuroraStore.apk|Anonymous Google Play"
 APPS["VLC"]="org.videolan.vlc|||https://mirrors.videolan.org/vlc/android/3.5.5/vlc-android-3.5.5-arm64-v8a.apk|VLC.apk|Media player"
 APPS["TiviMate"]="com.example.tivimate|||||TiviMate.apk|IPTV player"
 APPS["Xplore"]="com.lonelycatgame.xplore|||||Xplore.apk|File manager"
