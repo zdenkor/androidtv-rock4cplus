@@ -418,11 +418,11 @@ CSV_FILE="$APPS_DIR/apks.csv"
     echo "app_id,filename"
     for app in SmartTube Kodi Projectivy TVBro LocalSend ButtonMapper Fdroid AdAway AuroraStore VLC TiviMate Xplore SideloadLauncher AptoideTV; do
         if filter_apps "$app"; then
-            local app_data="${APPS[$app]}"
-            local pkg="${app_data%%|*}"
-            local rest="${app_data#*|}"
+            app_data="${APPS[$app]}"
+            pkg="${app_data%%|*}"
+            rest="${app_data#*|}"
             for i in {1..5}; do rest="${rest#*|}"; done
-            local file="${rest%%|*}"
+            file="${rest%%|*}"
             echo "$pkg,$file"
         fi
     done
