@@ -49,10 +49,10 @@ fi
 #   3. Select "App passwords" (under 2-Step Verification)
 #   4. Create a new app password for "Mail" or "Other (Custom name)"
 #   5. Use the 16-character password (no spaces)
-APKEEP_EMAIL_FILE="$APPS_DIR/.apkkeep_email"
-APKEEP_PASS_FILE="$APPS_DIR/.apkkeep_pass"
 
 setup_apkeep_credentials() {
+    APKEEP_EMAIL_FILE="$APPS_DIR/.apkkeep_email"
+    APKEEP_PASS_FILE="$APPS_DIR/.apkkeep_pass"
     echo ""
     echo "============================================"
     echo " Gmail Setup for Google Play Downloads"
@@ -82,6 +82,8 @@ setup_apkeep_credentials() {
 }
 
 setup_new_credentials() {
+    local APKEEP_EMAIL_FILE="$APPS_DIR/.apkkeep_email"
+    local APKEEP_PASS_FILE="$APPS_DIR/.apkkeep_pass"
     echo ""
     read -rp "Enter Gmail email: " APKEEP_EMAIL
     read -rsp "Enter App Password (16 chars): " APKEEP_PASS
