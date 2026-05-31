@@ -393,6 +393,7 @@ show_menu() {
     echo "   E) Select ESSENTIAL only"
     echo "   Q) Quit"
     echo ""
+    echo "    DEBUG: BSP_TYPE=$BSP_TYPE" >&2
 }
 
 # Main
