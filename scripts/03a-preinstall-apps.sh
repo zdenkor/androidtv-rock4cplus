@@ -205,13 +205,8 @@ APPS["SideloadLauncher"]="com.example.sideloadlauncher||||SideloadLauncher.apk|S
 APPS["AptoideTV"]="com.aptoide.tvstore||||AptoideTV.apk|Alternative app store"
 
 # Filter apps based on BSP type (Android 9 API 28 compatibility)
+# Currently showing all apps - filter disabled for testing
 filter_apps() {
-    local app_name="$1"
-    if [[ "$BSP_TYPE" == "radxa9" ]]; then
-        case "$app_name" in
-            AuroraStore|SideloadLauncher|AptoideTV) return 1 ;;
-        esac
-    fi
     return 0
 }
 
