@@ -329,10 +329,13 @@ download_app() {
     fi
     
     # Try direct URL via curl
+    echo "    DEBUG: Trying direct URL: $direct" >&2
     if [[ -n "$direct" && "$direct" == http* && -z "$success" ]]; then
         if curl -L -o "$dest" --progress-bar "$direct" 2>/dev/null; then
             echo "  [OK] $app_name (direct)"
             return 0
+        else
+            echo "    DEBUG: direct curl failed with exit code $?" >&2
         fi
     fi
     
