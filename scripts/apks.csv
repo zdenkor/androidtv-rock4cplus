@@ -1,0 +1,15 @@
+app_id,filename,fallback_url
+com.smarttube.next,SmartTube.apk,https://github.com/yuliskov/SmartTube/releases/latest/download/SmartTube_stable.apk
+org.xbmc.kodi,Kodi.apk,https://mirrors.kodi.tv/releases/android/arm64-v8a/kodi-21.1-armeabi-v7a-android-arm64-v8a.apk
+com.riviprojectivy.launcher,Projectivy.apk,https://github.com/rivi-project/projectivy-releases/releases/latest/download/Projectivy.apk
+com.example.tvbro,TVBro.apk,https://github.com/truefedex/tv-bro/releases/latest/download/TVBro.apk
+com.example.localsend,LocalSend.apk,https://github.com/localsendl/localsend/releases/latest/download/LocalSend.apk
+com.example.buttonmapper,ButtonMapper.apk,https://github.com/marcowch/LazyBeeper/releases/latest/download/ButtonMapper.apk
+org.fdroid.fdroid,Fdroid.apk,https://f-droid.org/repo/org.fdroid.fdroid_47.apk
+org.adaway,AdAway.apk,https://f-droid.org/repo/org.adaway_20191010.apk
+com.aurora.store,AuroraStore.apk,
+org.videolan.vlc,VLC.apk,https://mirrors.videolan.org/vlc/android/3.5.5/vlc-android-3.5.5-arm64-v8a.apk
+com.example.tivimate,TiviMate.apk,
+com.lonelycatgame.xplore,Xplore.apk,https://apkpure.com/xplore/com.lonelycatgame.xplore
+com.example.sideloadlauncher,SideloadLauncher.apk,
+com.aptoide.tvstore,AptoideTV.apk,
