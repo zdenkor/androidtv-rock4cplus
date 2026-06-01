@@ -439,38 +439,124 @@ if command -v apkeep &>/dev/null; then
         fi
 
         echo "  Downloading $apk_id..."
+        downloaded=false
+
         # Check if SKIP mode
         if [[ "$apk_id" == "SKIP" ]]; then
-            use_apkeep=false
-        else
-            use_apkeep=true
-        fi
-        
-        if ! $use_apkeep; then
             # SKIP mode - use direct URL only
             if [[ -n "$fallback_url" && "$fallback_url" == http* ]]; then
                 echo "  Using direct URL: $fallback_url"
-                curl -L -o "$temp_dest" "$fallback_url" 2>/dev/null
+                curl -L -o "$temp_dest" "$fallback_url" 2>/dev/null && downloaded=true
             else
                 echo "  [FAIL] $dest_name (no URL)"
             fi
-        elif command -v apkeep &>/dev/null; then
-            rm -f "$APPS_DIR/$apk_id.apk" 2>/dev/null
-            apkeep -a "$apk_id" -d apk-pure "$APPS_DIR"
-            if [[ -f "$APPS_DIR/$apk_id.apk" ]]; then
-                mv "$APPS_DIR/$apk_id.apk" "$temp_dest"
-            elif [[ -n "$fallback_url" && "$fallback_url" == http* ]]; then
-                echo "  Trying direct URL: $fallback_url"
-                curl -L -o "$temp_dest" "$fallback_url"
-            else
-                echo "  [FAIL] $apk_id"
+        elif $USE_GOOGLE_PLAY && command -v apkeep &>/dev/null; then
+            # Google Play mode - try Google Play only
+            echo "  Trying Google Play..."
+            local ini_file="$HOME/.config/apkeep/apkeep.ini"
+            local email_opt=""
+            local token_opt=""
+            if [ -f "$ini_file" ]; then
+                email=$(grep "^email" "$ini_file" 2>/dev/null | cut -d'=' -f2 | tr -d ' ')
+                if [ -n "$email" ]; then
+                    email_opt="-e $email"
+                fi
+                if grep -q "aas_token" "$ini_file" 2>/dev/null; then
+                    token_opt="-t $(grep "^aas_token" "$ini_file" | cut -d'=' -f2 | tr -d ' ')"
+                elif grep -q "auth_token" "$ini_file" 2>/dev/null; then
+                    token_opt="--auth-token $(grep "^auth_token" "$ini_file" | cut -d'=' -f2 | tr -d ' ')"
+                fi
             fi
-        elif [[ "$apk_id" == "SKIP" ]] && [[ -n "$fallback_url" && "$fallback_url" == http* ]]; then
-            # SKIP mode - use direct URL only
-            echo "  Downloading from: $fallback_url"
-            curl -L -o "$temp_dest" "$fallback_url" 2>/dev/null
+            rm -f "$APPS_DIR/$apk_id.apk" 2>/dev/null
+            if apkeep -a "$apk_id" -d google-play $email_opt $token_opt --accept-tos "$APPS_DIR" 2>/dev/null; then
+                if [[ -f "$APPS_DIR/$apk_id.apk" ]]; then
+                    mv "$APPS_DIR/$apk_id.apk" "$temp_dest" && downloaded=true
+                fi
+            fi
+            if ! $downloaded; then
+                echo "  [FAIL] $dest_name (Google Play)"
+                read -rp "    Try alternative sources? (y/n): " try_alt
+                if [[ "$try_alt" == "y" || "$try_alt" == "Y" ]]; then
+                    # Try APKPure
+                    rm -f "$APPS_DIR/$apk_id.apk" 2>/dev/null
+                    if apkeep -a "$apk_id" -d apk-pure "$APPS_DIR" 2>/dev/null; then
+                        if [[ -f "$APPS_DIR/$apk_id.apk" ]]; then
+                            mv "$APPS_DIR/$apk_id.apk" "$temp_dest" && downloaded=true
+                        fi
+                    fi
+                    # Try other apkeep sources if still not downloaded
+                    if ! $downloaded; then
+                        for source in github fdroid; do
+                            rm -f "$APPS_DIR/$apk_id.apk" 2>/dev/null
+                            if apkeep -a "$apk_id" -d "$source" "$APPS_DIR" 2>/dev/null; then
+                                if [[ -f "$APPS_DIR/$apk_id.apk" ]]; then
+                                    mv "$APPS_DIR/$apk_id.apk" "$temp_dest" && downloaded=true && break
+                                fi
+                            fi
+                        done
+                    fi
+                    # Fallback to CSV URL
+                    if ! $downloaded && [[ -n "$fallback_url" && "$fallback_url" == http* ]]; then
+                        echo "  Trying direct URL: $fallback_url"
+                        curl -L -o "$temp_dest" "$fallback_url" 2>/dev/null && downloaded=true
+                    fi
+                fi
+            fi
+        elif command -v apkeep &>/dev/null; then
+            # Alternative stores mode - try APKPure first
+            rm -f "$APPS_DIR/$apk_id.apk" 2>/dev/null
+            if apkeep -a "$apk_id" -d apk-pure "$APPS_DIR" 2>/dev/null; then
+                if [[ -f "$APPS_DIR/$apk_id.apk" ]]; then
+                    mv "$APPS_DIR/$apk_id.apk" "$temp_dest" && downloaded=true
+                fi
+            fi
+            # Try other apkeep sources if still not downloaded
+            if ! $downloaded; then
+                for source in github fdroid; do
+                    rm -f "$APPS_DIR/$apk_id.apk" 2>/dev/null
+                    if apkeep -a "$apk_id" -d "$source" "$APPS_DIR" 2>/dev/null; then
+                        if [[ -f "$APPS_DIR/$apk_id.apk" ]]; then
+                            mv "$APPS_DIR/$apk_id.apk" "$temp_dest" && downloaded=true && break
+                        fi
+                    fi
+                done
+            fi
+            # Fallback to CSV URL
+            if ! $downloaded && [[ -n "$fallback_url" && "$fallback_url" == http* ]]; then
+                echo "  Trying direct URL: $fallback_url"
+                curl -L -o "$temp_dest" "$fallback_url" 2>/dev/null && downloaded=true
+            fi
         else
-            echo "  [FAIL] $dest_name (no method)"
+            # No apkeep - use fallback URL only
+            if [[ -n "$fallback_url" && "$fallback_url" == http* ]]; then
+                echo "  Downloading from: $fallback_url"
+                curl -L -o "$temp_dest" "$fallback_url" 2>/dev/null && downloaded=true
+            else
+                echo "  [FAIL] $dest_name (no method)"
+            fi
+        fi
+
+        # If still not downloaded and GitHub URL, try API for latest arm64
+        if ! $downloaded && [[ "$fallback_url" == *github.com* ]]; then
+            owner=$(echo "$fallback_url" | sed -n 's|https://github.com/\([^/]*\)/.*|\1|p')
+            repo=$(echo "$fallback_url" | sed -n 's|https://github.com/[^/]*/\([^/]*\)/.*|\1|p')
+            if [[ -n "$owner" && -n "$repo" ]]; then
+                echo "  Searching GitHub API for latest arm64 APK..."
+                api_url="https://api.github.com/repos/$owner/$repo/releases/latest"
+                arm64_url=$(curl -s "$api_url" 2>/dev/null | grep -o '"browser_download_url": "[^"]*arm64[^"]*\.apk"' | head -1 | sed 's/.*": "//;s/"$//')
+                if [[ -z "$arm64_url" ]]; then
+                    arm64_url=$(curl -s "$api_url" 2>/dev/null | grep '"name":.*arm64.*\.apk"' | sed 's/.*"name": "//;s/".*//' | while read name; do
+                        curl -s "$api_url" 2>/dev/null | grep -o "\"browser_download_url\":.*$name" | sed 's/.*"browser_download_url": "//;s/.$//'
+                    done | head -1)
+                fi
+                if [[ -n "$arm64_url" ]]; then
+                    echo "  Found: $(echo "$arm64_url" | sed 's/.*\///')"
+                    read -rp "    Download this version? (y/n): " use_latest
+                    if [[ "$use_latest" == "y" || "$use_latest" == "Y" ]]; then
+                        curl -L -o "$temp_dest" "$arm64_url" 2>/dev/null && downloaded=true
+                    fi
+                fi
+            fi
         fi
 
         # Compare temp file with existing
