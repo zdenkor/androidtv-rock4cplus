@@ -559,10 +559,15 @@ if command -v apkeep &>/dev/null; then
                         read -rp "    Download this version? (y/n): " use_latest
                         if [[ "$use_latest" == "y" || "$use_latest" == "Y" ]]; then
                             echo "  Downloading from GitHub..."
-                            curl -L --max-redirs 10 -o "$temp_dest" "$arm64_url" && downloaded=true
+                            # Try wget first (handles GitHub redirects better)
+                            if command -v wget &>/dev/null; then
+                                wget --no-check-certificate --content-disposition -O "$temp_dest" "$arm64_url" && downloaded=true
+                            fi
                             if ! $downloaded; then
-                                echo "  [DEBUG] curl failed, trying wget..."
-                                wget -O "$temp_dest" "$arm64_url" && downloaded=true
+                                curl -L --max-redirs 10 --max-time 300 -o "$temp_dest" "$arm64_url" && downloaded=true
+                            fi
+                            if ! $downloaded; then
+                                echo "  [FAIL] GitHub download failed"
                             fi
                         fi
                     else
@@ -603,10 +608,15 @@ if command -v apkeep &>/dev/null; then
                             read -rp "    Download this version? (y/n): " use_latest
                             if [[ "$use_latest" == "y" || "$use_latest" == "Y" ]]; then
                                 echo "  Downloading from GitHub..."
-                                curl -L --max-redirs 10 -o "$temp_dest" "$arm64_url" && downloaded=true
+                                # Try wget first (handles GitHub redirects better)
+                                if command -v wget &>/dev/null; then
+                                    wget --no-check-certificate --content-disposition -O "$temp_dest" "$arm64_url" && downloaded=true
+                                fi
                                 if ! $downloaded; then
-                                    echo "  [DEBUG] curl failed, trying wget..."
-                                    wget -O "$temp_dest" "$arm64_url" && downloaded=true
+                                    curl -L --max-redirs 10 --max-time 300 -o "$temp_dest" "$arm64_url" && downloaded=true
+                                fi
+                                if ! $downloaded; then
+                                    echo "  [FAIL] GitHub download failed"
                                 fi
                             fi
                         else
