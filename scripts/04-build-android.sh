@@ -118,10 +118,10 @@ fi
 
 # Fix TARGET_DEVICE_DIR manual assignment (Android 12+ forbids this)
 DEVICE_MK="device/rockchip/common/device.mk"
-if [ -f "$DEVICE_MK" ] && grep -q '^\s*TARGET_DEVICE_DIR=' "$DEVICE_MK"; then
+if [ -f "$DEVICE_MK" ] && grep -q 'TARGET_DEVICE_DIR=' "$DEVICE_MK"; then
     echo "[INFO] Patching $DEVICE_MK to comment out manual TARGET_DEVICE_DIR"
-    sed -i 's/^\(\s*TARGET_DEVICE_DIR=\)/#\1/' "$DEVICE_MK"
-    sed -i 's/^\(\s*TARGET_DEVICE_DIR :=\)/#\1/' "$DEVICE_MK"
+    sed -i 's/^[[:space:]]*TARGET_DEVICE_DIR=/#&/' "$DEVICE_MK"
+    sed -i 's/^[[:space:]]*TARGET_DEVICE_DIR :=/#&/' "$DEVICE_MK"
 fi
 
 START_TIME=$(date +%s)
