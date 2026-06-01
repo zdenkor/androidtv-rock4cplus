@@ -191,7 +191,9 @@ case $BSP_CHOICE in
         # Build kernel first (required for Android 9)
         if [ -d "kernel" ] && [ -f "kernel/arch/arm64/configs/rockchip_defconfig" ]; then
             echo "[4a/4] Building kernel..."
-            make -C kernel ARCH=arm64 rockchip_defconfig && make -C kernel ARCH=arm64 -j$(nproc) Image dtbs || {
+            # Fix for GCC 10+ multiple definition of 'yylloc' in dtc
+            export KCFLAGS=-fcommon
+            make -C kernel ARCH=arm64 rockchip_defconfig && make -C kernel ARCH=arm64 -j$(nproc) KCFLAGS=-fcommon Image dtbs || {
                 echo ""
                 echo "========================================"
                 echo "KERNEL BUILD FAILED"
