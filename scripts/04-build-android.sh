@@ -193,17 +193,19 @@ case $BSP_CHOICE in
         # Build kernel first (required for Android 9)
         if [ -d "kernel" ] && [ -f "kernel/arch/arm64/configs/rockchip_defconfig" ]; then
             echo "[4a/4] Building kernel..."
-            # Fix for GCC 10+ multiple definition of 'yylloc' in dtc
-            # Patch both source .l and generated .lex.c to declare yylloc as extern
+            # Fix for GCC 10+ "duplicate 'extern'" error on yylloc in dtc
+            # dtc-parser.tab.h already declares 'extern YYLTYPE yylloc;'
+            # so the declaration in dtc-lexer.l causes a duplicate extern error.
+            # Remove the line entirely from both source and generated files.
             DTC_LEXER="kernel/scripts/dtc/dtc-lexer.l"
             DTC_LEXER_GEN="kernel/scripts/dtc/dtc-lexer.lex.c"
             if [ -f "$DTC_LEXER" ] && grep -q "YYLTYPE yylloc" "$DTC_LEXER"; then
-                sed -i 's/YYLTYPE yylloc;/extern YYLTYPE yylloc;/' "$DTC_LEXER"
-                echo "Patched dtc-lexer.l"
+                sed -i '/YYLTYPE yylloc/d' "$DTC_LEXER"
+                echo "Patched dtc-lexer.l (removed yylloc declaration)"
             fi
             if [ -f "$DTC_LEXER_GEN" ] && grep -q "YYLTYPE yylloc" "$DTC_LEXER_GEN"; then
-                sed -i 's/YYLTYPE yylloc;/extern YYLTYPE yylloc;/' "$DTC_LEXER_GEN"
-                echo "Patched dtc-lexer.lex.c"
+                sed -i '/YYLTYPE yylloc/d' "$DTC_LEXER_GEN"
+                echo "Patched dtc-lexer.lex.c (removed yylloc declaration)"
             fi
             # Clean stale build artifacts so patches take effect
             echo "Cleaning kernel build artifacts..."

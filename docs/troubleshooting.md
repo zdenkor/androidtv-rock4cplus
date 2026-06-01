@@ -232,7 +232,31 @@ rm -rf out/
 
 ### 6. Device Tree Compilation Errors
 
-**Symptoms**: DTC errors during kernel build.
+#### dtc-lexer.l: duplicate 'extern' error (GCC 10+)
+
+**Symptoms**:
+```
+dtc-lexer.l:41:1: error: duplicate 'extern'
+dtc-lexer.l:41:1: error: duplicate 'extern'
+make[2]: *** [scripts/Makefile.host:108: scripts/dtc/dtc-lexer.lex.o] Error 1
+```
+
+**Cause**: GCC 10+ treats duplicate `extern` declarations as errors. The `dtc-lexer.l` file declares `YYLTYPE yylloc;` but `dtc-parser.tab.h` already has `extern YYLTYPE yylloc;`, causing a conflict.
+
+**Solution**: The build script (`04-build-android.sh`) now automatically removes the redundant `YYLTYPE yylloc` declaration from both `dtc-lexer.l` and `dtc-lexer.lex.c`. If you're building manually:
+
+```bash
+cd kernel/scripts/dtc
+# Remove the yylloc declaration (already declared in dtc-parser.tab.h)
+sed -i '/YYLTYPE yylloc/d' dtc-lexer.l
+sed -i '/YYLTYPE yylloc/d' dtc-lexer.lex.c
+# Clean and rebuild
+make -C /path/to/kernel ARCH=arm64 clean
+```
+
+#### General DTC Errors
+
+**Symptoms**: Other DTC errors during kernel build.
 
 **Solutions**:
 ```bash
