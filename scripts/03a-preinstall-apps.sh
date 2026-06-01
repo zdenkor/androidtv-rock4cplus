@@ -559,6 +559,33 @@ if command -v apkeep &>/dev/null; then
             fi
         fi
 
+        # If downloaded file is too small (< 1MB), try GitHub API for correct version
+        if [[ -f "$temp_dest" && -s "$temp_dest" ]]; then
+            new_size=$(stat -c%s "$temp_dest" 2>/dev/null || stat -f%z "$temp_dest" 2>/dev/null)
+            if [[ $new_size -lt 1000000 && "$fallback_url" == *github.com* ]]; then
+                echo "  [WARN] Downloaded file too small ($new_size bytes), searching GitHub API..."
+                owner=$(echo "$fallback_url" | sed -n 's|https://github.com/\([^/]*\)/.*|\1|p')
+                repo=$(echo "$fallback_url" | sed -n 's|https://github.com/[^/]*/\([^/]*\)/.*|\1|p')
+                if [[ -n "$owner" && -n "$repo" ]]; then
+                    api_url="https://api.github.com/repos/$owner/$repo/releases/latest"
+                    # Try to find any APK (not just arm64)
+                    any_apk_url=$(curl -s "$api_url" 2>/dev/null | grep -o '"browser_download_url": "[^"]*\.apk"' | head -1 | sed 's/.*": "//;s/"$//')
+                    if [[ -z "$any_apk_url" ]]; then
+                        any_apk_url=$(curl -s "$api_url" 2>/dev/null | grep '"name":.*\.apk"' | sed 's/.*"name": "//;s/".*//' | while read name; do
+                            curl -s "$api_url" 2>/dev/null | grep -o "\"browser_download_url\":.*$name" | sed 's/.*"browser_download_url": "//;s/.$//'
+                        done | head -1)
+                    fi
+                    if [[ -n "$any_apk_url" ]]; then
+                        echo "  Found: $(echo "$any_apk_url" | sed 's/.*\///')"
+                        read -rp "    Download this version? (y/n): " use_latest
+                        if [[ "$use_latest" == "y" || "$use_latest" == "Y" ]]; then
+                            curl -L -o "$temp_dest" "$any_apk_url" 2>/dev/null && downloaded=true
+                        fi
+                    fi
+                fi
+            fi
+        fi
+
         # Compare temp file with existing
         if [[ -f "$temp_dest" && -s "$temp_dest" ]]; then
             new_size=$(stat -c%s "$temp_dest" 2>/dev/null || stat -f%z "$temp_dest" 2>/dev/null)
