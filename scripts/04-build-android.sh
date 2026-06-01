@@ -192,8 +192,13 @@ case $BSP_CHOICE in
         if [ -d "kernel" ] && [ -f "kernel/arch/arm64/configs/rockchip_defconfig" ]; then
             echo "[4a/4] Building kernel..."
             # Fix for GCC 10+ multiple definition of 'yylloc' in dtc
-            export KCFLAGS=-fcommon
-            make -C kernel ARCH=arm64 rockchip_defconfig && make -C kernel ARCH=arm64 -j$(nproc) KCFLAGS=-fcommon Image dtbs || {
+            # Patch dtc-lexer.l to declare yylloc as extern (defined in dtc-parser.y)
+            DTC_LEXER="kernel/scripts/dtc/dtc-lexer.l"
+            if [ -f "$DTC_LEXER" ] && grep -q "YYLTYPE yylloc" "$DTC_LEXER"; then
+                sed -i 's/YYLTYPE yylloc;/extern YYLTYPE yylloc;/' "$DTC_LEXER"
+                echo "Patched dtc-lexer.l for GCC 10+ compatibility"
+            fi
+            make -C kernel ARCH=arm64 rockchip_defconfig && make -C kernel ARCH=arm64 -j$(nproc) Image dtbs || {
                 echo ""
                 echo "========================================"
                 echo "KERNEL BUILD FAILED"
