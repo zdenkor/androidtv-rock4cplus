@@ -191,24 +191,19 @@ case $BSP_CHOICE in
         echo ""
         
         # Fix Python 2 syntax for Python 3 (Android 9 uses Python 2 scripts)
-        # All sed regexes are idempotent — already-fixed code won't be re-wrapped
-        echo "[INFO] Patching Python 2 syntax for Python 3 compatibility..."
-        # 0. Cleanup: fix print(>> file, text) broken by previous bad runs
-        find build libcore external/annotation-tools development frameworks system \
-            -name "*.py" -exec sed -i -r 's/print\(>> ([^,]+), (.*)\)/print(\2, file=\1)/' {} + 2>/dev/null || true
-        # 0b. Cleanup: fix print(("text", file=...) double-paren from print>> fix
-        find build libcore external/annotation-tools development frameworks system \
-            -name "*.py" -exec sed -i -r 's/print\(\(([^,]+), (file=[^)]+)\)/print(\1, \2)/' {} + 2>/dev/null || true
-        # 1. print >> file, "text" -> print("text", file=file)
-        find build libcore external/annotation-tools development frameworks system \
-            -name "*.py" -exec sed -i -r 's/^([[:space:]]*)print >> ([^,]+), (.*)/\1print(\3, file=\2)/' {} + 2>/dev/null || true
-        # 2. print "text" -> print("text")  (skip >> lines and already-parenthesized)
-        find build libcore external/annotation-tools development frameworks system \
-            -name "*.py" -exec sed -i '/>>/! s/^\([[:space:]]*\)print \([^(].*\)/\1print(\2)/' {} + 2>/dev/null || true
-        # 3. except Type, var: -> except Type as var:
-        find build libcore external/annotation-tools development frameworks system \
-            -name "*.py" -exec sed -i -r 's/except ([A-Za-z0-9_.]+)[[:space:]]*,[[:space:]]*([a-z_][a-z0-9_]*):/except \1 as \2:/' {} + 2>/dev/null || true
-        echo "Patched Python 2 syntax (print, print>>, except)"
+        # Use Python's official 2to3 tool — handles all edge cases properly
+        echo "[INFO] Converting Python 2 scripts to Python 3 using 2to3..."
+        if command -v 2to3 &>/dev/null; then
+            find build libcore external/annotation-tools development frameworks system \
+                -name "*.py" -exec 2to3 -w -n {} + 2>/dev/null || true
+            echo "Python 2to3 conversion complete"
+        else
+            echo "[WARN] 2to3 not found, installing python3-lib2to3..."
+            sudo apt-get install -y python3-lib2to3 2>/dev/null || true
+            find build libcore external/annotation-tools development frameworks system \
+                -name "*.py" -exec 2to3 -w -n {} + 2>/dev/null || true
+            echo "Python 2to3 conversion complete"
+        fi
 
         # Build kernel first (required for Android 9)
         if [ -d "kernel" ] && [ -f "kernel/arch/arm64/configs/rockchip_defconfig" ]; then
