@@ -536,24 +536,41 @@ if command -v apkeep &>/dev/null; then
             fi
         fi
 
-        # If still not downloaded and GitHub URL, try API for latest arm64
+        # If still not downloaded and GitHub URL, try API for latest release
         if ! $downloaded && [[ "$fallback_url" == *github.com* ]]; then
             owner=$(echo "$fallback_url" | sed -n 's|https://github.com/\([^/]*\)/.*|\1|p')
             repo=$(echo "$fallback_url" | sed -n 's|https://github.com/[^/]*/\([^/]*\)/.*|\1|p')
             if [[ -n "$owner" && -n "$repo" ]]; then
-                echo "  Searching GitHub API for latest arm64 APK..."
+                echo "  Searching GitHub API for latest release..."
                 api_url="https://api.github.com/repos/$owner/$repo/releases/latest"
-                arm64_url=$(curl -s "$api_url" 2>/dev/null | grep -o '"browser_download_url": "[^"]*arm64[^"]*\.apk"' | head -1 | sed 's/.*": "//;s/"$//')
-                if [[ -z "$arm64_url" ]]; then
-                    arm64_url=$(curl -s "$api_url" 2>/dev/null | grep '"name":.*arm64.*\.apk"' | sed 's/.*"name": "//;s/".*//' | while read name; do
-                        curl -s "$api_url" 2>/dev/null | grep -o "\"browser_download_url\":.*$name" | sed 's/.*"browser_download_url": "//;s/.$//'
-                    done | head -1)
-                fi
-                if [[ -n "$arm64_url" ]]; then
-                    echo "  Found: $(echo "$arm64_url" | sed 's/.*\///')"
-                    read -rp "    Download this version? (y/n): " use_latest
-                    if [[ "$use_latest" == "y" || "$use_latest" == "Y" ]]; then
-                        curl -L -o "$temp_dest" "$arm64_url" 2>/dev/null && downloaded=true
+                release_data=$(curl -s "$api_url" 2>/dev/null)
+                
+                # Get all APK download URLs from latest release
+                apk_urls=$(echo "$release_data" | grep -o '"browser_download_url": "[^"]*\.apk"' | sed 's/.*": "//;s/"$//')
+                
+                if [[ -n "$apk_urls" ]]; then
+                    # Prefer arm64-v8a, then any arm64, then first APK
+                    arm64_url=$(echo "$apk_urls" | grep 'arm64-v8a' | head -1)
+                    if [[ -z "$arm64_url" ]]; then
+                        arm64_url=$(echo "$apk_urls" | grep 'arm64' | head -1)
+                    fi
+                    if [[ -n "$arm64_url" ]]; then
+                        echo "  Found arm64: $(echo "$arm64_url" | sed 's/.*\///')"
+                        read -rp "    Download this version? (y/n): " use_latest
+                        if [[ "$use_latest" == "y" || "$use_latest" == "Y" ]]; then
+                            curl -L -o "$temp_dest" "$arm64_url" 2>/dev/null && downloaded=true
+                        fi
+                    else
+                        # Show all available APKs
+                        echo "  Available APKs:"
+                        echo "$apk_urls" | sed 's|.*/||' | nl
+                        read -rp "    Enter number to download (or n to skip): " apk_choice
+                        if [[ "$apk_choice" =~ ^[0-9]+$ ]]; then
+                            chosen_url=$(echo "$apk_urls" | sed -n "${apk_choice}p")
+                            if [[ -n "$chosen_url" ]]; then
+                                curl -L -o "$temp_dest" "$chosen_url" 2>/dev/null && downloaded=true
+                            fi
+                        fi
                     fi
                 fi
             fi
@@ -568,18 +585,30 @@ if command -v apkeep &>/dev/null; then
                 repo=$(echo "$fallback_url" | sed -n 's|https://github.com/[^/]*/\([^/]*\)/.*|\1|p')
                 if [[ -n "$owner" && -n "$repo" ]]; then
                     api_url="https://api.github.com/repos/$owner/$repo/releases/latest"
-                    # Try to find any APK (not just arm64)
-                    any_apk_url=$(curl -s "$api_url" 2>/dev/null | grep -o '"browser_download_url": "[^"]*\.apk"' | head -1 | sed 's/.*": "//;s/"$//')
-                    if [[ -z "$any_apk_url" ]]; then
-                        any_apk_url=$(curl -s "$api_url" 2>/dev/null | grep '"name":.*\.apk"' | sed 's/.*"name": "//;s/".*//' | while read name; do
-                            curl -s "$api_url" 2>/dev/null | grep -o "\"browser_download_url\":.*$name" | sed 's/.*"browser_download_url": "//;s/.$//'
-                        done | head -1)
-                    fi
-                    if [[ -n "$any_apk_url" ]]; then
-                        echo "  Found: $(echo "$any_apk_url" | sed 's/.*\///')"
-                        read -rp "    Download this version? (y/n): " use_latest
-                        if [[ "$use_latest" == "y" || "$use_latest" == "Y" ]]; then
-                            curl -L -o "$temp_dest" "$any_apk_url" 2>/dev/null && downloaded=true
+                    release_data=$(curl -s "$api_url" 2>/dev/null)
+                    apk_urls=$(echo "$release_data" | grep -o '"browser_download_url": "[^"]*\.apk"' | sed 's/.*": "//;s/"$//')
+                    
+                    if [[ -n "$apk_urls" ]]; then
+                        arm64_url=$(echo "$apk_urls" | grep 'arm64-v8a' | head -1)
+                        if [[ -z "$arm64_url" ]]; then
+                            arm64_url=$(echo "$apk_urls" | grep 'arm64' | head -1)
+                        fi
+                        if [[ -n "$arm64_url" ]]; then
+                            echo "  Found: $(echo "$arm64_url" | sed 's/.*\///')"
+                            read -rp "    Download this version? (y/n): " use_latest
+                            if [[ "$use_latest" == "y" || "$use_latest" == "Y" ]]; then
+                                curl -L -o "$temp_dest" "$arm64_url" 2>/dev/null && downloaded=true
+                            fi
+                        else
+                            echo "  Available APKs:"
+                            echo "$apk_urls" | sed 's|.*/||' | nl
+                            read -rp "    Enter number to download (or n to skip): " apk_choice
+                            if [[ "$apk_choice" =~ ^[0-9]+$ ]]; then
+                                chosen_url=$(echo "$apk_urls" | sed -n "${apk_choice}p")
+                                if [[ -n "$chosen_url" ]]; then
+                                    curl -L -o "$temp_dest" "$chosen_url" 2>/dev/null && downloaded=true
+                                fi
+                            fi
                         fi
                     fi
                 fi
