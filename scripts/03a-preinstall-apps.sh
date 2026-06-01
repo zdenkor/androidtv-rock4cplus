@@ -446,7 +446,7 @@ if command -v apkeep &>/dev/null; then
             # SKIP mode - use direct URL only
             if [[ -n "$fallback_url" && "$fallback_url" == http* ]]; then
                 echo "  Using direct URL: $fallback_url"
-                curl -L -o "$temp_dest" "$fallback_url" 2>/dev/null && downloaded=true
+                curl -L -H "Accept: application/octet-stream" -A "Mozilla/5.0" -o "$temp_dest" "$fallback_url" 2>/dev/null && downloaded=true
             else
                 echo "  [FAIL] $dest_name (no URL)"
             fi
@@ -498,7 +498,7 @@ if command -v apkeep &>/dev/null; then
                     # Fallback to CSV URL
                     if ! $downloaded && [[ -n "$fallback_url" && "$fallback_url" == http* ]]; then
                         echo "  Trying direct URL: $fallback_url"
-                        curl -L -o "$temp_dest" "$fallback_url" 2>/dev/null && downloaded=true
+                        curl -L -H "Accept: application/octet-stream" -A "Mozilla/5.0" -o "$temp_dest" "$fallback_url" 2>/dev/null && downloaded=true
                     fi
                 fi
             fi
@@ -524,13 +524,13 @@ if command -v apkeep &>/dev/null; then
             # Fallback to CSV URL
             if ! $downloaded && [[ -n "$fallback_url" && "$fallback_url" == http* ]]; then
                 echo "  Trying direct URL: $fallback_url"
-                curl -L -o "$temp_dest" "$fallback_url" 2>/dev/null && downloaded=true
+                curl -L -H "Accept: application/octet-stream" -A "Mozilla/5.0" -o "$temp_dest" "$fallback_url" 2>/dev/null && downloaded=true
             fi
         else
             # No apkeep - use fallback URL only
             if [[ -n "$fallback_url" && "$fallback_url" == http* ]]; then
                 echo "  Downloading from: $fallback_url"
-                curl -L -o "$temp_dest" "$fallback_url" 2>/dev/null && downloaded=true
+                curl -L -H "Accept: application/octet-stream" -A "Mozilla/5.0" -o "$temp_dest" "$fallback_url" 2>/dev/null && downloaded=true
             else
                 echo "  [FAIL] $dest_name (no method)"
             fi
