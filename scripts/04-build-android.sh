@@ -17,15 +17,17 @@ if [ ! -d "$BASE_DIR" ]; then
     exit 1
 fi
 
-# Detect all downloaded BSP directories
+# Detect all downloaded BSP directories in fixed order: 1=radxa9, 2=vicharak12, 3=aosp12
 declare -a BSP_DIRS=()
 declare -a BSP_NAMES=()
 
-for dir in "$BASE_DIR"/androidtv-rock4cplus-*; do
-    if [ -d "$dir" ]; then
-        BSP_DIRS+=("$dir")
-        BSP_NAMES+=("$(basename "$dir")")
-    fi
+for pattern in "radxa9" "vicharak12" "aosp12"; do
+    for dir in "$BASE_DIR"/androidtv-rock4cplus-"$pattern"*; do
+        if [ -d "$dir" ]; then
+            BSP_DIRS+=("$dir")
+            BSP_NAMES+=("$(basename "$dir")")
+        fi
+    done
 done
 
 # If no BSPs found, check for .build-config
