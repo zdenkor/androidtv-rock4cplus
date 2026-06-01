@@ -77,7 +77,7 @@ else
     echo "Select which BSP to build:"
     echo ""
     for i in "${!BSP_DIRS[@]}"; do
-        local bsp_type=$(get_bsp_type "${BSP_NAMES[$i]}")
+        bsp_type=$(get_bsp_type "${BSP_NAMES[$i]}")
         echo "  $((i+1)). $bsp_type"
         echo "     Dir: ${BSP_NAMES[$i]}"
         echo "     Path: ${BSP_DIRS[$i]}"
