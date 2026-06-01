@@ -430,13 +430,12 @@ if command -v apkeep &>/dev/null; then
         [[ -z "$apk_id" || "$apk_id" == "app_id" || "$apk_id" =~ ^# ]] && continue
         dest="$APPS_DIR/$dest_name"
 
-        # Skip if file exists and size is reasonable (> 1MB)
+        # Skip logic: download to temp first, compare sizes, overwrite only if different and > 1MB
+        temp_dest="$APPS_DIR/.tmp.$dest_name"
         if [[ -f "$dest" && -s "$dest" ]]; then
-            size=$(stat -c%s "$dest" 2>/dev/null || stat -f%z "$dest" 2>/dev/null)
-            if [[ $size -gt 1000000 ]]; then
-                echo "  [SKIP] $dest_name (exists, $size bytes)"
-                continue
-            fi
+            old_size=$(stat -c%s "$dest" 2>/dev/null || stat -f%z "$dest" 2>/dev/null)
+        else
+            old_size=0
         fi
 
         echo "  Downloading $apk_id..."
@@ -451,11 +450,7 @@ if command -v apkeep &>/dev/null; then
             # SKIP mode - use direct URL only
             if [[ -n "$fallback_url" && "$fallback_url" == http* ]]; then
                 echo "  Using direct URL: $fallback_url"
-                if curl -L -o "$dest" "$fallback_url" 2>/dev/null && [[ -f "$dest" && -s "$dest" ]]; then
-                    echo "  [OK] $dest_name (direct)"
-                else
-                    echo "  [FAIL] $dest_name"
-                fi
+                curl -L -o "$temp_dest" "$fallback_url" 2>/dev/null
             else
                 echo "  [FAIL] $dest_name (no URL)"
             fi
@@ -463,51 +458,38 @@ if command -v apkeep &>/dev/null; then
             rm -f "$APPS_DIR/$apk_id.apk" 2>/dev/null
             apkeep -a "$apk_id" -d apk-pure "$APPS_DIR"
             if [[ -f "$APPS_DIR/$apk_id.apk" ]]; then
-                mv "$APPS_DIR/$apk_id.apk" "$dest" && echo "  [OK] $dest_name"
+                mv "$APPS_DIR/$apk_id.apk" "$temp_dest"
             elif [[ -n "$fallback_url" && "$fallback_url" == http* ]]; then
                 echo "  Trying direct URL: $fallback_url"
-                curl -L -o "$dest" "$fallback_url"
-                if [[ -f "$dest" && -s "$dest" && $(stat -c%s "$dest" 2>/dev/null || stat -f%z "$dest" 2>/dev/null) -gt 10000 ]]; then
-                    echo "  [OK] $dest_name (direct)"
-                elif [[ "$fallback_url" == *github.com* ]]; then
-                    # GitHub URL failed - try API to find arm64 APK
-                    owner=$(echo "$fallback_url" | sed -n 's|https://github.com/\([^/]*\)/.*|\1|p')
-                    repo=$(echo "$fallback_url" | sed -n 's|https://github.com/[^/]*/\([^/]*\)/.*|\1|p')
-                    if [[ -n "$owner" && -n "$repo" ]]; then
-                        echo "  Searching GitHub API for arm64 APK..."
-                        api_url="https://api.github.com/repos/$owner/$repo/releases/latest"
-                        arm64_url=$(curl -s "$api_url" 2>/dev/null | grep -o '"browser_download_url": "[^"]*arm64[^"]*\.apk"' | head -1 | sed 's/.*": "//;s/"$//')
-                        if [[ -z "$arm64_url" ]]; then
-                            # Try asset name pattern
-                            arm64_url=$(curl -s "$api_url" 2>/dev/null | grep '"name":.*arm64.*\.apk"' | sed 's/.*"name": "//;s/".*//' | while read name; do
-                                curl -s "$api_url" 2>/dev/null | grep -o "\"browser_download_url\":.*$name" | sed 's/.*"browser_download_url": "//;s/.$//'
-                            done | head -1)
-                        fi
-                        if [[ -n "$arm64_url" ]]; then
-                            echo "  Found: $(echo "$arm64_url" | sed 's/.*\///')"
-                            curl -L -o "$dest" "$arm64_url" && echo "  [OK] $dest_name (arm64)" || echo "  [FAIL] $dest_name"
-                        else
-                            echo "  [FAIL] $dest_name"
-                        fi
-                    else
-                        echo "  [FAIL] $dest_name"
-                    fi
-                else
-                    echo "  [FAIL] $dest_name"
-                fi
+                curl -L -o "$temp_dest" "$fallback_url"
             else
                 echo "  [FAIL] $apk_id"
             fi
         elif [[ "$apk_id" == "SKIP" ]] && [[ -n "$fallback_url" && "$fallback_url" == http* ]]; then
             # SKIP mode - use direct URL only
             echo "  Downloading from: $fallback_url"
-            if curl -L -o "$dest" "$fallback_url" 2>/dev/null && [[ -f "$dest" && -s "$dest" ]]; then
-                echo "  [OK] $dest_name (direct)"
-            else
-                echo "  [FAIL] $dest_name"
-            fi
+            curl -L -o "$temp_dest" "$fallback_url" 2>/dev/null
         else
             echo "  [FAIL] $dest_name (no method)"
+        fi
+
+        # Compare temp file with existing
+        if [[ -f "$temp_dest" && -s "$temp_dest" ]]; then
+            new_size=$(stat -c%s "$temp_dest" 2>/dev/null || stat -f%z "$temp_dest" 2>/dev/null)
+            if [[ $new_size -eq $old_size && $old_size -gt 0 ]]; then
+                echo "  [SKIP] $dest_name (same size, $old_size bytes)"
+                rm -f "$temp_dest"
+            elif [[ $new_size -gt 1000000 ]]; then
+                mv "$temp_dest" "$dest"
+                echo "  [OK] $dest_name ($new_size bytes)"
+            else
+                echo "  [FAIL] $dest_name (too small, $new_size bytes)"
+                rm -f "$temp_dest"
+            fi
+        elif [[ $old_size -gt 0 ]]; then
+            echo "  [KEEP] $dest_name (download failed, keeping $old_size bytes)"
+        else
+            echo "  [FAIL] $dest_name"
         fi
     done < "$CSV_FILE"
 else
