@@ -360,8 +360,9 @@ download_app() {
     return 1
 }
 
-# Display app menu
+# Display app menu from CSV
 show_menu() {
+    local csv_file="$1"
     echo ""
     echo "========================================"
     echo " Preinstall Apps for Android TV"
@@ -370,55 +371,119 @@ show_menu() {
     echo " Target: $APPS_DIR"
     echo "========================================"
     echo ""
-    echo " [ESSENTIAL - Recommended]"
+
     local i=1
-    for app in SmartTube Kodi Projectivy TVBro LocalSend ButtonMapper Fdroid AdAway; do
-        if filter_apps "$app"; then
-            echo "   $i) $app - ${APPS[$app]##*|}"
+    local has_essential=false
+    local has_additional=false
+
+    # Essential apps
+    while IFS=, read -r app_id app_name app_desc app_priority filename fallback_url rest; do
+        [[ -z "$app_id" || "$app_id" == "app_id" || "$app_id" =~ ^# ]] && continue
+        if [[ "$app_priority" == "essential" ]]; then
+            if ! $has_essential; then
+                echo " [ESSENTIAL - Recommended]"
+                has_essential=true
+            fi
+            printf "   %2d) %-15s - %s\n" "$i" "$app_name" "$app_desc"
             ((i++))
         fi
-    done
-    echo ""
-    echo " [ADDITIONAL]"
-    for app in AuroraStore VLC TiviMate Xplore SideloadLauncher AptoideTV; do
-        if filter_apps "$app"; then
-            echo "   $i) $app - ${APPS[$app]##*|}"
+    done < "$csv_file"
+
+    # Additional apps
+    while IFS=, read -r app_id app_name app_desc app_priority filename fallback_url rest; do
+        [[ -z "$app_id" || "$app_id" == "app_id" || "$app_id" =~ ^# ]] && continue
+        if [[ "$app_priority" == "additional" ]]; then
+            if ! $has_additional; then
+                echo ""
+                echo " [ADDITIONAL]"
+                has_additional=true
+            fi
+            printf "   %2d) %-15s - %s\n" "$i" "$app_name" "$app_desc"
             ((i++))
         fi
-    done
+    done < "$csv_file"
+
     echo ""
-    echo "   A) Select ALL apps"
-    echo "   E) Select ESSENTIAL only"
-    echo "   Q) Quit"
+    echo "    A) Select ALL apps"
+    echo "    E) Select ESSENTIAL only"
+    echo "    Q) Quit"
     echo ""
 }
 
+# Validate user choice against available options
+validate_choice() {
+    local choice="$1"
+    local total_apps="$2"
+
+    # Allow A, E, Q (case insensitive)
+    if [[ "$choice" =~ ^[AaEeQq]$ ]]; then
+        return 0
+    fi
+
+    # Allow numbers within range
+    if [[ "$choice" =~ ^[0-9]+$ ]] && [[ "$choice" -ge 1 ]] && [[ "$choice" -le "$total_apps" ]]; then
+        return 0
+    fi
+
+    return 1
+}
+
+# Get total app count from CSV
+get_app_count() {
+    local csv_file="$1"
+    local count=0
+    while IFS=, read -r app_id rest; do
+        [[ -z "$app_id" || "$app_id" == "app_id" || "$app_id" =~ ^# ]] && continue
+        ((count++))
+    done < "$csv_file"
+    echo "$count"
+}
+
 # Main
-setup_apkeep_credentials
-show_menu
-
-read -rp "Enter choice: " APPS_CHOICES
-[[ -z "$APPS_CHOICES" ]] && read -rp "Enter choice: " APPS_CHOICES
-
-if [[ "$APPS_CHOICES" == "Q" || "$APPS_CHOICES" == "q" ]]; then
-    exit 0
-fi
-
-echo "$APPS_CHOICES" > "$SAVED_CHOICES_FILE"
-
-echo ""
-echo "Downloading..."
-
-# Use apks.csv from scripts directory (manual configuration)
 CSV_FILE="$SCRIPT_DIR/apks.csv"
 
 if [[ ! -f "$CSV_FILE" ]]; then
     echo "ERROR: $CSV_FILE not found!"
     echo "Please create apks.csv in scripts directory with format:"
-    echo "  app_id,filename,fallback_url"
+    echo "  app_id,app_name,app_description,app_priority,filename,fallback_url"
     exit 1
 fi
 
+setup_apkeep_credentials
+
+TOTAL_APPS=$(get_app_count "$CSV_FILE")
+
+# Show menu and validate input
+while true; do
+    show_menu "$CSV_FILE"
+    read -rp "Enter choice: " APPS_CHOICES
+
+    # Trim whitespace
+    APPS_CHOICES=$(echo "$APPS_CHOICES" | tr -d '[:space:]')
+
+    if [[ -z "$APPS_CHOICES" ]]; then
+        echo "  [ERROR] Empty choice. Please try again."
+        continue
+    fi
+
+    if [[ "$APPS_CHOICES" == "Q" || "$APPS_CHOICES" == "q" ]]; then
+        echo "Canceled by user."
+        exit 0
+    fi
+
+    if validate_choice "$APPS_CHOICES" "$TOTAL_APPS"; then
+        break
+    else
+        echo "  [ERROR] Invalid choice: '$APPS_CHOICES'. Valid: 1-$TOTAL_APPS, A, E, Q"
+        echo "  Press Enter to continue..."
+        read -r
+    fi
+done
+
+echo "$APPS_CHOICES" > "$SAVED_CHOICES_FILE"
+
+echo ""
+echo "Downloading..."
 echo "Using $CSV_FILE"
 cat "$CSV_FILE"
 
@@ -426,7 +491,7 @@ cat "$CSV_FILE"
 echo ""
 echo "Downloading via apkeep..."
 if command -v apkeep &>/dev/null; then
-    while IFS=, read -r apk_id dest_name fallback_url rest; do
+    while IFS=, read -r apk_id app_name app_desc app_priority dest_name fallback_url rest; do
         [[ -z "$apk_id" || "$apk_id" == "app_id" || "$apk_id" =~ ^# ]] && continue
         dest="$APPS_DIR/$dest_name"
 
@@ -438,7 +503,7 @@ if command -v apkeep &>/dev/null; then
             old_size=0
         fi
 
-        echo "  Downloading $apk_id..."
+        echo "  Downloading $app_name ($apk_id)..."
         downloaded=false
 
         # Check if SKIP mode
@@ -661,25 +726,87 @@ if command -v apkeep &>/dev/null; then
     done < "$CSV_FILE"
 else
     echo "apkeep not installed - using fallback method"
+    # Read from CSV and download based on choice
     case "$APPS_CHOICES" in
         A|a)
-            for app in "${!APPS[@]}"; do
-                filter_apps "$app" && download_app "$app"
-            done
+            while IFS=, read -r apk_id app_name app_desc app_priority dest_name fallback_url rest; do
+                [[ -z "$apk_id" || "$apk_id" == "app_id" || "$apk_id" =~ ^# ]] && continue
+                dest="$APPS_DIR/$dest_name"
+                temp_dest="$APPS_DIR/.tmp.$dest_name"
+                echo "  Downloading $app_name..."
+                downloaded=false
+                if [[ -n "$fallback_url" && "$fallback_url" == http* ]]; then
+                    curl -L -H "Accept: application/octet-stream" -A "Mozilla/5.0" -o "$temp_dest" "$fallback_url" 2>/dev/null && downloaded=true
+                fi
+                if $downloaded && [[ -f "$temp_dest" && -s "$temp_dest" ]]; then
+                    new_size=$(stat -c%s "$temp_dest" 2>/dev/null || stat -f%z "$temp_dest" 2>/dev/null)
+                    if [[ $new_size -gt 1000 ]]; then
+                        mv "$temp_dest" "$dest"
+                        echo "  [OK] $dest_name ($new_size bytes)"
+                    else
+                        echo "  [FAIL] $dest_name (too small, $new_size bytes)"
+                        rm -f "$temp_dest"
+                    fi
+                else
+                    echo "  [FAIL] $dest_name"
+                fi
+            done < "$CSV_FILE"
             ;;
         E|e)
-            for app in SmartTube Kodi Projectivy TVBro LocalSend ButtonMapper Fdroid AdAway; do
-                filter_apps "$app" && download_app "$app"
-            done
+            while IFS=, read -r apk_id app_name app_desc app_priority dest_name fallback_url rest; do
+                [[ -z "$apk_id" || "$apk_id" == "app_id" || "$apk_id" =~ ^# ]] && continue
+                [[ "$app_priority" != "essential" ]] && continue
+                dest="$APPS_DIR/$dest_name"
+                temp_dest="$APPS_DIR/.tmp.$dest_name"
+                echo "  Downloading $app_name..."
+                downloaded=false
+                if [[ -n "$fallback_url" && "$fallback_url" == http* ]]; then
+                    curl -L -H "Accept: application/octet-stream" -A "Mozilla/5.0" -o "$temp_dest" "$fallback_url" 2>/dev/null && downloaded=true
+                fi
+                if $downloaded && [[ -f "$temp_dest" && -s "$temp_dest" ]]; then
+                    new_size=$(stat -c%s "$temp_dest" 2>/dev/null || stat -f%z "$temp_dest" 2>/dev/null)
+                    if [[ $new_size -gt 1000 ]]; then
+                        mv "$temp_dest" "$dest"
+                        echo "  [OK] $dest_name ($new_size bytes)"
+                    else
+                        echo "  [FAIL] $dest_name (too small, $new_size bytes)"
+                        rm -f "$temp_dest"
+                    fi
+                else
+                    echo "  [FAIL] $dest_name"
+                fi
+            done < "$CSV_FILE"
             ;;
         *)
-            i=1
-            for app in SmartTube Kodi Projectivy TVBro LocalSend ButtonMapper Fdroid AdAway AuroraStore VLC TiviMate Xplore SideloadLauncher AptoideTV; do
-                if filter_apps "$app"; then
-                    [[ "$APPS_CHOICES" == *"$i"* ]] && download_app "$app"
-                    ((i++))
+            # Number selection - find the Nth app in CSV
+            local target_num=$APPS_CHOICES
+            local current_num=0
+            while IFS=, read -r apk_id app_name app_desc app_priority dest_name fallback_url rest; do
+                [[ -z "$apk_id" || "$apk_id" == "app_id" || "$apk_id" =~ ^# ]] && continue
+                ((current_num++))
+                if [[ "$current_num" == "$target_num" ]]; then
+                    dest="$APPS_DIR/$dest_name"
+                    temp_dest="$APPS_DIR/.tmp.$dest_name"
+                    echo "  Downloading $app_name..."
+                    downloaded=false
+                    if [[ -n "$fallback_url" && "$fallback_url" == http* ]]; then
+                        curl -L -H "Accept: application/octet-stream" -A "Mozilla/5.0" -o "$temp_dest" "$fallback_url" 2>/dev/null && downloaded=true
+                    fi
+                    if $downloaded && [[ -f "$temp_dest" && -s "$temp_dest" ]]; then
+                        new_size=$(stat -c%s "$temp_dest" 2>/dev/null || stat -f%z "$temp_dest" 2>/dev/null)
+                        if [[ $new_size -gt 1000 ]]; then
+                            mv "$temp_dest" "$dest"
+                            echo "  [OK] $dest_name ($new_size bytes)"
+                        else
+                            echo "  [FAIL] $dest_name (too small, $new_size bytes)"
+                            rm -f "$temp_dest"
+                        fi
+                    else
+                        echo "  [FAIL] $dest_name"
+                    fi
+                    break
                 fi
-            done
+            done < "$CSV_FILE"
             ;;
     esac
 fi
