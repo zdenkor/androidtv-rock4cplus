@@ -109,6 +109,13 @@ cd "$WORK_DIR"
 # Allow missing dependencies (some prebuilts modules may have unresolvable deps)
 export ALLOW_MISSING_DEPENDENCIES=true
 
+# Fix missing Realtek Bluetooth HAL stub for AOSP builds
+if [ ! -f "hardware/realtek/rtkbt/rtkbt.mk" ]; then
+    echo "[INFO] Creating stub for missing hardware/realtek/rtkbt/rtkbt.mk"
+    mkdir -p hardware/realtek/rtkbt
+    echo "# Stub for missing Realtek Bluetooth HAL" > hardware/realtek/rtkbt/rtkbt.mk
+fi
+
 START_TIME=$(date +%s)
 
 # ---------------------------------------------------------------------------
