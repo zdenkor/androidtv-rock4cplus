@@ -192,13 +192,18 @@ case $BSP_CHOICE in
         if [ -d "kernel" ] && [ -f "kernel/arch/arm64/configs/rockchip_defconfig" ]; then
             echo "[4a/4] Building kernel..."
             # Fix for GCC 10+ multiple definition of 'yylloc' in dtc
-            # Patch dtc-lexer.l to declare yylloc as extern (defined in dtc-parser.y)
+            # Patch both source .l and generated .lex.c to declare yylloc as extern
             DTC_LEXER="kernel/scripts/dtc/dtc-lexer.l"
+            DTC_LEXER_GEN="kernel/scripts/dtc/dtc-lexer.lex.c"
             if [ -f "$DTC_LEXER" ] && grep -q "YYLTYPE yylloc" "$DTC_LEXER"; then
                 sed -i 's/YYLTYPE yylloc;/extern YYLTYPE yylloc;/' "$DTC_LEXER"
-                echo "Patched dtc-lexer.l for GCC 10+ compatibility"
+                echo "Patched dtc-lexer.l"
             fi
-            # Clean stale build artifacts so the patch takes effect
+            if [ -f "$DTC_LEXER_GEN" ] && grep -q "YYLTYPE yylloc" "$DTC_LEXER_GEN"; then
+                sed -i 's/YYLTYPE yylloc;/extern YYLTYPE yylloc;/' "$DTC_LEXER_GEN"
+                echo "Patched dtc-lexer.lex.c"
+            fi
+            # Clean stale build artifacts so patches take effect
             echo "Cleaning kernel build artifacts..."
             make -C kernel ARCH=arm64 clean 2>/dev/null || true
             make -C kernel ARCH=arm64 rockchip_defconfig && make -C kernel ARCH=arm64 -j$(nproc) Image dtbs || {
