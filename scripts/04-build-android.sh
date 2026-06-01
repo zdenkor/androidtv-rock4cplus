@@ -40,6 +40,22 @@ if [ ${#BSP_DIRS[@]} -eq 0 ]; then
     fi
 fi
 
+# Determine BSP type from directory name
+get_bsp_type() {
+    local name="$1"
+    if [[ "$name" == *radxa9* ]]; then
+        echo "Radxa Android 9 Pie"
+    elif [[ "$name" == *vicharak12* ]]; then
+        echo "Vicharak Android 12 (kernel 5.10)"
+    elif [[ "$name" == *advantech12* ]]; then
+        echo "Advantech Android 12 (kernel 4.19)"
+    elif [[ "$name" == *aosp12* ]]; then
+        echo "AOSP Android 12"
+    else
+        echo "Unknown"
+    fi
+}
+
 # Prompt user to select BSP if multiple found or none in .build-config
 if [ ${#BSP_DIRS[@]} -eq 0 ]; then
     echo "ERROR: No BSP directories found in $BASE_DIR"
@@ -48,7 +64,8 @@ if [ ${#BSP_DIRS[@]} -eq 0 ]; then
 elif [ ${#BSP_DIRS[@]} -eq 1 ]; then
     WORK_DIR="${BSP_DIRS[0]}"
     BSP_NAME="${BSP_NAMES[0]}"
-    echo "Found BSP: $BSP_NAME"
+    echo "Found BSP: $(get_bsp_type "$BSP_NAME")"
+    echo "  ($BSP_NAME)"
     echo "Building this BSP..."
 else
     echo "============================================"
@@ -58,7 +75,9 @@ else
     echo "Select which BSP to build:"
     echo ""
     for i in "${!BSP_DIRS[@]}"; do
-        echo "  $((i+1)). ${BSP_NAMES[$i]}"
+        local bsp_type=$(get_bsp_type "${BSP_NAMES[$i]}")
+        echo "  $((i+1)). $bsp_type"
+        echo "     Dir: ${BSP_NAMES[$i]}"
         echo "     Path: ${BSP_DIRS[$i]}"
         echo ""
     done
