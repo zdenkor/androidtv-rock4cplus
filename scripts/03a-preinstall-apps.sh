@@ -558,7 +558,12 @@ if command -v apkeep &>/dev/null; then
                         echo "  Found arm64: $(echo "$arm64_url" | sed 's/.*\///')"
                         read -rp "    Download this version? (y/n): " use_latest
                         if [[ "$use_latest" == "y" || "$use_latest" == "Y" ]]; then
-                            curl -L -H "Accept: application/octet-stream" -A "Mozilla/5.0" -o "$temp_dest" "$arm64_url" && downloaded=true
+                            echo "  Downloading from GitHub..."
+                            curl -L --max-redirs 10 -o "$temp_dest" "$arm64_url" && downloaded=true
+                            if ! $downloaded; then
+                                echo "  [DEBUG] curl failed, trying wget..."
+                                wget -O "$temp_dest" "$arm64_url" && downloaded=true
+                            fi
                         fi
                     else
                         # Show all available APKs
@@ -597,7 +602,12 @@ if command -v apkeep &>/dev/null; then
                             echo "  Found: $(echo "$arm64_url" | sed 's/.*\///')"
                             read -rp "    Download this version? (y/n): " use_latest
                             if [[ "$use_latest" == "y" || "$use_latest" == "Y" ]]; then
-                                curl -L -H "Accept: application/octet-stream" -A "Mozilla/5.0" -o "$temp_dest" "$arm64_url" && downloaded=true
+                                echo "  Downloading from GitHub..."
+                                curl -L --max-redirs 10 -o "$temp_dest" "$arm64_url" && downloaded=true
+                                if ! $downloaded; then
+                                    echo "  [DEBUG] curl failed, trying wget..."
+                                    wget -O "$temp_dest" "$arm64_url" && downloaded=true
+                                fi
                             fi
                         else
                             echo "  Available APKs:"
