@@ -536,6 +536,14 @@ if command -v apkeep &>/dev/null; then
             fi
         fi
 
+        # Validate download: if file exists but is too small, mark as not downloaded
+        if $downloaded && [[ -f "$temp_dest" ]]; then
+            tmp_size=$(stat -c%s "$temp_dest" 2>/dev/null || stat -f%z "$temp_dest" 2>/dev/null)
+            if [[ $tmp_size -lt 1000 ]]; then
+                downloaded=false
+            fi
+        fi
+
         # If still not downloaded and GitHub URL, try API for latest release
         if ! $downloaded && [[ "$fallback_url" == *github.com* ]]; then
             owner=$(echo "$fallback_url" | sed -n 's|https://github.com/\([^/]*\)/.*|\1|p')
@@ -546,7 +554,7 @@ if command -v apkeep &>/dev/null; then
                 release_data=$(curl -s "$api_url" 2>/dev/null)
                 
                 # Get all APK download URLs from latest release
-                apk_urls=$(echo "$release_data" | grep -o '"browser_download_url": "[^"]*\.apk"' | sed 's/.*": "//;s/"$//')
+                apk_urls=$(echo "$release_data" | grep -o '"browser_download_url": "[^"]*\.apk"' | sed 's/.*": "//;s/"$//' | tr -d '\r')
                 
                 if [[ -n "$apk_urls" ]]; then
                     # Prefer arm64-v8a, then any arm64 (case-insensitive), then first APK
@@ -556,20 +564,18 @@ if command -v apkeep &>/dev/null; then
                     fi
                     if [[ -n "$arm64_url" ]]; then
                         echo "  Found arm64: $(echo "$arm64_url" | sed 's/.*\///')"
-                        read -rp "    Download this version? (y/n): " use_latest
-                        if [[ "$use_latest" == "y" || "$use_latest" == "Y" ]]; then
-                            echo "  Downloading from GitHub..."
-                            rm -f "$temp_dest"
-                            # Use wget for GitHub (handles redirects better)
-                            if command -v wget &>/dev/null; then
-                                wget --progress=dot:giga --no-check-certificate -O "$temp_dest" "$arm64_url" && downloaded=true
-                            fi
-                            if ! $downloaded; then
-                                curl -L --location-trusted -o "$temp_dest" "$arm64_url" && downloaded=true
-                            fi
-                            if ! $downloaded; then
-                                echo "  [FAIL] GitHub download failed for $arm64_url"
-                            fi
+                        echo "  URL: $arm64_url"
+                        echo "  Auto-downloading from GitHub..."
+                        rm -f "$temp_dest"
+                        # Use wget for GitHub (handles redirects better)
+                        if command -v wget &>/dev/null; then
+                            wget --progress=dot:giga --no-check-certificate --user-agent="Mozilla/5.0" -O "$temp_dest" "$arm64_url" 2>&1 && downloaded=true
+                        fi
+                        if ! $downloaded; then
+                            curl -L -f -H "Accept: application/octet-stream" -A "Mozilla/5.0" --max-redirs 10 --max-time 300 --retry 3 --retry-delay 2 -o "$temp_dest" "$arm64_url" 2>&1 && downloaded=true
+                        fi
+                        if ! $downloaded; then
+                            echo "  [FAIL] GitHub download failed for $arm64_url"
                         fi
                     else
                         # Show all available APKs
@@ -597,7 +603,7 @@ if command -v apkeep &>/dev/null; then
                 if [[ -n "$owner" && -n "$repo" ]]; then
                     api_url="https://api.github.com/repos/$owner/$repo/releases/latest"
                     release_data=$(curl -s "$api_url" 2>/dev/null)
-                    apk_urls=$(echo "$release_data" | grep -o '"browser_download_url": "[^"]*\.apk"' | sed 's/.*": "//;s/"$//')
+                    apk_urls=$(echo "$release_data" | grep -o '"browser_download_url": "[^"]*\.apk"' | sed 's/.*": "//;s/"$//' | tr -d '\r')
                     
                     if [[ -n "$apk_urls" ]]; then
                         arm64_url=$(echo "$apk_urls" | grep -i 'arm64-v8a' | head -1)
@@ -606,19 +612,17 @@ if command -v apkeep &>/dev/null; then
                         fi
                         if [[ -n "$arm64_url" ]]; then
                             echo "  Found: $(echo "$arm64_url" | sed 's/.*\///')"
-                            read -rp "    Download this version? (y/n): " use_latest
-                            if [[ "$use_latest" == "y" || "$use_latest" == "Y" ]]; then
-                                echo "  Downloading from GitHub..."
-                                # Try wget first (handles GitHub redirects better)
-                                if command -v wget &>/dev/null; then
-                                    wget --no-check-certificate --content-disposition --trust-server-names -O "$temp_dest" "$arm64_url" && downloaded=true
-                                fi
-                                if ! $downloaded; then
-                                    curl -L -J --max-redirs 10 --max-time 300 -o "$temp_dest" "$arm64_url" && downloaded=true
-                                fi
-                                if ! $downloaded; then
-                                    echo "  [FAIL] GitHub download failed"
-                                fi
+                            echo "  Auto-downloading from GitHub..."
+                            rm -f "$temp_dest"
+                            downloaded=false
+                            if command -v wget &>/dev/null; then
+                                wget --progress=dot:giga --no-check-certificate --user-agent="Mozilla/5.0" -O "$temp_dest" "$arm64_url" 2>&1 && downloaded=true
+                            fi
+                            if ! $downloaded; then
+                                curl -L -H "Accept: application/octet-stream" -A "Mozilla/5.0" --max-redirs 10 --max-time 300 -o "$temp_dest" "$arm64_url" 2>&1 && downloaded=true
+                            fi
+                            if ! $downloaded; then
+                                echo "  [FAIL] GitHub download failed"
                             fi
                         else
                             echo "  Available APKs:"
