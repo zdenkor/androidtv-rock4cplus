@@ -130,13 +130,10 @@ if [[ "$BSP_CHOICE" == "2" || "$BSP_CHOICE" == "3" || "$BSP_CHOICE" == "4" ]]; t
 fi
 
 if [[ "$BSP_CHOICE" == "1" ]]; then
-    # Android 9 only: PRODUCT_CHARACTERISTICS is set in product-specific .mk files
-    # Remove the one in common/device.mk to avoid "readonly variable" error
-    DEVICE_MK="device/rockchip/common/device.mk"
-    if [ -f "$DEVICE_MK" ] && grep -q '^PRODUCT_CHARACTERISTICS' "$DEVICE_MK"; then
-        echo "[INFO] Patching $DEVICE_MK: removing PRODUCT_CHARACTERISTICS (set in product .mk)"
-        sed -i '/^PRODUCT_CHARACTERISTICS/d' "$DEVICE_MK"
-    fi
+    # Android 9 only: PRODUCT_CHARACTERISTICS is set with := in multiple product .mk files
+    # Change all := to ?= to avoid "cannot assign to readonly variable" errors
+    echo "[INFO] Patching PRODUCT_CHARACTERISTICS := -> ?= in all device/rockchip .mk files"
+    find device/rockchip -name "*.mk" -exec sed -i 's/^\([[:space:]]*PRODUCT_CHARACTERISTICS\) :=/\1 ?=/' {} +
 fi
 
 START_TIME=$(date +%s)
