@@ -549,10 +549,10 @@ if command -v apkeep &>/dev/null; then
                 apk_urls=$(echo "$release_data" | grep -o '"browser_download_url": "[^"]*\.apk"' | sed 's/.*": "//;s/"$//')
                 
                 if [[ -n "$apk_urls" ]]; then
-                    # Prefer arm64-v8a, then any arm64, then first APK
-                    arm64_url=$(echo "$apk_urls" | grep 'arm64-v8a' | head -1)
+                    # Prefer arm64-v8a, then any arm64 (case-insensitive), then first APK
+                    arm64_url=$(echo "$apk_urls" | grep -i 'arm64-v8a' | head -1)
                     if [[ -z "$arm64_url" ]]; then
-                        arm64_url=$(echo "$apk_urls" | grep 'arm64' | head -1)
+                        arm64_url=$(echo "$apk_urls" | grep -i 'arm64' | head -1)
                     fi
                     if [[ -n "$arm64_url" ]]; then
                         echo "  Found arm64: $(echo "$arm64_url" | sed 's/.*\///')"
@@ -589,9 +589,9 @@ if command -v apkeep &>/dev/null; then
                     apk_urls=$(echo "$release_data" | grep -o '"browser_download_url": "[^"]*\.apk"' | sed 's/.*": "//;s/"$//')
                     
                     if [[ -n "$apk_urls" ]]; then
-                        arm64_url=$(echo "$apk_urls" | grep 'arm64-v8a' | head -1)
+                        arm64_url=$(echo "$apk_urls" | grep -i 'arm64-v8a' | head -1)
                         if [[ -z "$arm64_url" ]]; then
-                            arm64_url=$(echo "$apk_urls" | grep 'arm64' | head -1)
+                            arm64_url=$(echo "$apk_urls" | grep -i 'arm64' | head -1)
                         fi
                         if [[ -n "$arm64_url" ]]; then
                             echo "  Found: $(echo "$arm64_url" | sed 's/.*\///')"
