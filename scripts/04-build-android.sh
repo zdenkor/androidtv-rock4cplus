@@ -84,11 +84,13 @@ else
         echo "     Path: ${BSP_DIRS[$i]}"
         echo ""
     done
-    read -rp "Enter choice (1-${#BSP_DIRS[@]}): " CHOICE
-    if [[ ! "$CHOICE" =~ ^[0-9]+$ ]] || [ "$CHOICE" -lt 1 ] || [ "$CHOICE" -gt ${#BSP_DIRS[@]} ]; then
-        echo "ERROR: Invalid choice"
-        exit 1
-    fi
+    while true; do
+        read -rp "Enter choice (1-${#BSP_DIRS[@]}): " CHOICE
+        if [[ "$CHOICE" =~ ^[0-9]+$ ]] && [ "$CHOICE" -ge 1 ] && [ "$CHOICE" -le ${#BSP_DIRS[@]} ]; then
+            break
+        fi
+        echo "  [ERROR] Invalid choice: '$CHOICE'. Valid: 1-${#BSP_DIRS[@]}"
+    done
     WORK_DIR="${BSP_DIRS[$((CHOICE-1))]}"
     BSP_NAME="${BSP_NAMES[$((CHOICE-1))]}"
     echo ""
