@@ -202,7 +202,28 @@ sudo apt-get install -y \
 
 ### 4. Python Version Issues
 
-**Symptoms**: Python-related errors during build.
+#### Python 2 print syntax error (Android 9)
+
+**Symptoms**:
+```
+File "libcore/annotations/generate_annotated_java_files.py", line 34
+    print '// Do not edit; ...'
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+SyntaxError: Missing parentheses in call to 'print'. Did you mean print(...)?
+```
+
+**Cause**: Android 9 uses Python 2 scripts, but modern distros default to Python 3. The `print` statement syntax changed between Python 2 and 3.
+
+**Solution**: The build script (`04-build-android.sh`) now automatically patches Python 2 print statements. If building manually:
+
+```bash
+# Fix all Python 2 print statements in libcore/annotations
+find libcore/annotations -name "*.py" -exec sed -i 's/^\([[:space:]]*\)print \(.*\)/\1print(\2)/' {} +
+```
+
+#### General Python Version Issues
+
+**Symptoms**: Other Python-related errors during build.
 
 **Solutions**:
 ```bash
