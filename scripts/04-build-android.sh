@@ -196,6 +196,9 @@ case $BSP_CHOICE in
         # 0. Cleanup: fix print(>> file, text) broken by previous bad runs
         find build libcore external/annotation-tools development frameworks system \
             -name "*.py" -exec sed -i -r 's/print\(>> ([^,]+), (.*)\)/print(\2, file=\1)/' {} + 2>/dev/null || true
+        # 0b. Cleanup: fix print(("text", file=...) double-paren from print>> fix
+        find build libcore external/annotation-tools development frameworks system \
+            -name "*.py" -exec sed -i -r 's/print\(\(([^,]+), (file=[^)]+)\)/print(\1, \2)/' {} + 2>/dev/null || true
         # 1. print >> file, "text" -> print("text", file=file)
         find build libcore external/annotation-tools development frameworks system \
             -name "*.py" -exec sed -i -r 's/^([[:space:]]*)print >> ([^,]+), (.*)/\1print(\3, file=\2)/' {} + 2>/dev/null || true
