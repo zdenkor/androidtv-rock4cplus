@@ -198,6 +198,9 @@ case $BSP_CHOICE in
                 sed -i 's/YYLTYPE yylloc;/extern YYLTYPE yylloc;/' "$DTC_LEXER"
                 echo "Patched dtc-lexer.l for GCC 10+ compatibility"
             fi
+            # Clean stale build artifacts so the patch takes effect
+            echo "Cleaning kernel build artifacts..."
+            make -C kernel ARCH=arm64 clean 2>/dev/null || true
             make -C kernel ARCH=arm64 rockchip_defconfig && make -C kernel ARCH=arm64 -j$(nproc) Image dtbs || {
                 echo ""
                 echo "========================================"
