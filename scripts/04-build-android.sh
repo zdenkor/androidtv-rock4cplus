@@ -191,12 +191,11 @@ case $BSP_CHOICE in
         echo ""
         
         # Fix Python 2 print statements for Python 3 (Android 9 uses Python 2 scripts)
+        # The sed regex is idempotent — already-fixed print() calls won't be re-wrapped
         echo "[INFO] Patching Python 2 print statements for Python 3 compatibility..."
-        ANNOTATIONS_DIR="libcore/annotations"
-        if [ -d "$ANNOTATIONS_DIR" ]; then
-            find "$ANNOTATIONS_DIR" -name "*.py" -exec sed -i 's/^\([[:space:]]*\)print \(.*\)/\1print(\2)/' {} +
-            echo "Patched libcore/annotations Python scripts"
-        fi
+        find build libcore external/annotation-tools development frameworks system \
+            -name "*.py" -exec sed -i 's/^\([[:space:]]*\)print \([^(].*\)/\1print(\2)/' {} + 2>/dev/null || true
+        echo "Patched Python 2 print statements"
 
         # Build kernel first (required for Android 9)
         if [ -d "kernel" ] && [ -f "kernel/arch/arm64/configs/rockchip_defconfig" ]; then
