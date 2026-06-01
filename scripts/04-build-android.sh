@@ -130,12 +130,12 @@ if [[ "$BSP_CHOICE" == "2" || "$BSP_CHOICE" == "3" || "$BSP_CHOICE" == "4" ]]; t
 fi
 
 if [[ "$BSP_CHOICE" == "1" ]]; then
-    # Android 9 only: PRODUCT_CHARACTERISTICS is set in both common/device.mk and product .mk files
-    # Change := to ?= in common/device.mk so product-specific values take precedence
+    # Android 9 only: PRODUCT_CHARACTERISTICS is set in product-specific .mk files
+    # Remove the one in common/device.mk to avoid "readonly variable" error
     DEVICE_MK="device/rockchip/common/device.mk"
-    if [ -f "$DEVICE_MK" ] && grep -q '^PRODUCT_CHARACTERISTICS :=' "$DEVICE_MK"; then
-        echo "[INFO] Patching $DEVICE_MK: PRODUCT_CHARACTERISTICS := -> ?="
-        sed -i 's/^PRODUCT_CHARACTERISTICS :=/PRODUCT_CHARACTERISTICS ?=/' "$DEVICE_MK"
+    if [ -f "$DEVICE_MK" ] && grep -q '^PRODUCT_CHARACTERISTICS' "$DEVICE_MK"; then
+        echo "[INFO] Patching $DEVICE_MK: removing PRODUCT_CHARACTERISTICS (set in product .mk)"
+        sed -i '/^PRODUCT_CHARACTERISTICS/d' "$DEVICE_MK"
     fi
 fi
 
