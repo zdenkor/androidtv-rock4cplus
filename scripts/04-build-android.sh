@@ -109,19 +109,24 @@ cd "$WORK_DIR"
 # Allow missing dependencies (some prebuilts modules may have unresolvable deps)
 export ALLOW_MISSING_DEPENDENCIES=true
 
-# Fix missing Realtek Bluetooth HAL stub for AOSP builds
-if [ ! -f "hardware/realtek/rtkbt/rtkbt.mk" ]; then
-    echo "[INFO] Creating stub for missing hardware/realtek/rtkbt/rtkbt.mk"
-    mkdir -p hardware/realtek/rtkbt
-    echo "# Stub for missing Realtek Bluetooth HAL" > hardware/realtek/rtkbt/rtkbt.mk
+# BSP-specific pre-build fixes
+if [[ "$BSP_CHOICE" == "4" ]]; then
+    # AOSP Android 12 only: missing Realtek Bluetooth HAL
+    if [ ! -f "hardware/realtek/rtkbt/rtkbt.mk" ]; then
+        echo "[INFO] Creating stub for missing hardware/realtek/rtkbt/rtkbt.mk"
+        mkdir -p hardware/realtek/rtkbt
+        echo "# Stub for missing Realtek Bluetooth HAL" > hardware/realtek/rtkbt/rtkbt.mk
+    fi
 fi
 
-# Fix TARGET_DEVICE_DIR manual assignment (Android 12+ forbids this)
-DEVICE_MK="device/rockchip/common/device.mk"
-if [ -f "$DEVICE_MK" ] && grep -q 'TARGET_DEVICE_DIR=' "$DEVICE_MK"; then
-    echo "[INFO] Patching $DEVICE_MK to comment out manual TARGET_DEVICE_DIR"
-    sed -i 's/^[[:space:]]*TARGET_DEVICE_DIR=/#&/' "$DEVICE_MK"
-    sed -i 's/^[[:space:]]*TARGET_DEVICE_DIR :=/#&/' "$DEVICE_MK"
+if [[ "$BSP_CHOICE" == "2" || "$BSP_CHOICE" == "3" || "$BSP_CHOICE" == "4" ]]; then
+    # Android 12+ only: manual TARGET_DEVICE_DIR assignment is forbidden
+    DEVICE_MK="device/rockchip/common/device.mk"
+    if [ -f "$DEVICE_MK" ] && grep -q 'TARGET_DEVICE_DIR=' "$DEVICE_MK"; then
+        echo "[INFO] Patching $DEVICE_MK to comment out manual TARGET_DEVICE_DIR"
+        sed -i 's/^[[:space:]]*TARGET_DEVICE_DIR=/#&/' "$DEVICE_MK"
+        sed -i 's/^[[:space:]]*TARGET_DEVICE_DIR :=/#&/' "$DEVICE_MK"
+    fi
 fi
 
 START_TIME=$(date +%s)
