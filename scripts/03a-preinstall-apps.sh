@@ -430,7 +430,7 @@ if command -v apkeep &>/dev/null; then
         [[ -z "$apk_id" || "$apk_id" == "app_id" || "$apk_id" =~ ^# ]] && continue
         dest="$APPS_DIR/$dest_name"
 
-        # Skip logic: download to temp first, compare sizes, overwrite only if different and > 1MB
+        # Skip logic: download to temp first, compare sizes, overwrite only if different and > 1KB
         temp_dest="$APPS_DIR/.tmp.$dest_name"
         if [[ -f "$dest" && -s "$dest" ]]; then
             old_size=$(stat -c%s "$dest" 2>/dev/null || stat -f%z "$dest" 2>/dev/null)
@@ -558,7 +558,7 @@ if command -v apkeep &>/dev/null; then
                         echo "  Found arm64: $(echo "$arm64_url" | sed 's/.*\///')"
                         read -rp "    Download this version? (y/n): " use_latest
                         if [[ "$use_latest" == "y" || "$use_latest" == "Y" ]]; then
-                            curl -L -o "$temp_dest" "$arm64_url" 2>/dev/null && downloaded=true
+                            curl -L -H "Accept: application/octet-stream" -A "Mozilla/5.0" -o "$temp_dest" "$arm64_url" && downloaded=true
                         fi
                     else
                         # Show all available APKs
@@ -568,7 +568,7 @@ if command -v apkeep &>/dev/null; then
                         if [[ "$apk_choice" =~ ^[0-9]+$ ]]; then
                             chosen_url=$(echo "$apk_urls" | sed -n "${apk_choice}p")
                             if [[ -n "$chosen_url" ]]; then
-                                curl -L -o "$temp_dest" "$chosen_url" 2>/dev/null && downloaded=true
+                                curl -L -H "Accept: application/octet-stream" -A "Mozilla/5.0" -o "$temp_dest" "$chosen_url" && downloaded=true
                             fi
                         fi
                     fi
@@ -576,10 +576,10 @@ if command -v apkeep &>/dev/null; then
             fi
         fi
 
-        # If downloaded file is too small (< 1MB), try GitHub API for correct version
+        # If downloaded file is too small (< 1KB), try GitHub API for correct version
         if [[ -f "$temp_dest" && -s "$temp_dest" ]]; then
             new_size=$(stat -c%s "$temp_dest" 2>/dev/null || stat -f%z "$temp_dest" 2>/dev/null)
-            if [[ $new_size -lt 1000000 && "$fallback_url" == *github.com* ]]; then
+            if [[ $new_size -lt 1000 && "$fallback_url" == *github.com* ]]; then
                 echo "  [WARN] Downloaded file too small ($new_size bytes), searching GitHub API..."
                 owner=$(echo "$fallback_url" | sed -n 's|https://github.com/\([^/]*\)/.*|\1|p')
                 repo=$(echo "$fallback_url" | sed -n 's|https://github.com/[^/]*/\([^/]*\)/.*|\1|p')
@@ -597,7 +597,7 @@ if command -v apkeep &>/dev/null; then
                             echo "  Found: $(echo "$arm64_url" | sed 's/.*\///')"
                             read -rp "    Download this version? (y/n): " use_latest
                             if [[ "$use_latest" == "y" || "$use_latest" == "Y" ]]; then
-                                curl -L -o "$temp_dest" "$arm64_url" 2>/dev/null && downloaded=true
+                                curl -L -H "Accept: application/octet-stream" -A "Mozilla/5.0" -o "$temp_dest" "$arm64_url" && downloaded=true
                             fi
                         else
                             echo "  Available APKs:"
@@ -621,7 +621,7 @@ if command -v apkeep &>/dev/null; then
             if [[ $new_size -eq $old_size && $old_size -gt 0 ]]; then
                 echo "  [SKIP] $dest_name (same size, $old_size bytes)"
                 rm -f "$temp_dest"
-            elif [[ $new_size -gt 1000000 ]]; then
+            elif [[ $new_size -gt 1000 ]]; then
                 mv "$temp_dest" "$dest"
                 echo "  [OK] $dest_name ($new_size bytes)"
             else
