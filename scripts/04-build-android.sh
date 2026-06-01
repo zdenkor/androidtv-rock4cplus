@@ -6,6 +6,7 @@
 # =============================================================================
 
 set -e
+set -o pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BASE_DIR="/mnt/aosp-build"
@@ -186,14 +187,29 @@ case $BSP_CHOICE in
         echo ""
         echo "Build command: make -j\$(nproc)"
         echo ""
-        make -j$(nproc) 2>&1 | tee build.log || {
+        
+        # Build kernel first (required for Android 9)
+        if [ -d "kernel" ] && [ -f "kernel/arch/arm64/configs/rockchip_defconfig" ]; then
+            echo "[4a/4] Building kernel..."
+            make -C kernel ARCH=arm64 rockchip_defconfig && make -C kernel ARCH=arm64 -j$(nproc) Image dtbs || {
+                echo ""
+                echo "========================================"
+                echo "KERNEL BUILD FAILED"
+                echo "========================================"
+                exit 1
+            }
+        fi
+        
+        # Build Android (use PIPESTATUS to catch make failure through tee)
+        make -j$(nproc) 2>&1 | tee build.log
+        if [ "${PIPESTATUS[0]}" -ne 0 ]; then
             echo ""
             echo "========================================"
             echo "BUILD FAILED"
             echo "========================================"
             tail -50 build.log
             exit 1
-        }
+        fi
         
         BUILD_OUTPUT="out/target/product/rk3399_box/system.img"
         ;;
@@ -215,14 +231,15 @@ case $BSP_CHOICE in
             exit 1
         fi
         
-        ./build.sh -UACKup 2>&1 | tee build.log || {
+        ./build.sh -UACKup 2>&1 | tee build.log
+        if [ "${PIPESTATUS[0]}" -ne 0 ]; then
             echo ""
             echo "========================================"
             echo "BUILD FAILED"
             echo "========================================"
             tail -50 build.log
             exit 1
-        }
+        fi
         
         BUILD_OUTPUT="out/target/product/vaaman/system.img"
         ;;
@@ -244,14 +261,15 @@ case $BSP_CHOICE in
             exit 1
         fi
         
-        ./build.sh 2>&1 | tee build.log || {
+        ./build.sh 2>&1 | tee build.log
+        if [ "${PIPESTATUS[0]}" -ne 0 ]; then
             echo ""
             echo "========================================"
             echo "BUILD FAILED"
             echo "========================================"
             tail -50 build.log
             exit 1
-        }
+        fi
         
         BUILD_OUTPUT="out/target/product/rk3399/system.img"
         ;;
@@ -291,14 +309,15 @@ case $BSP_CHOICE in
         echo "Build command: m -j\$(nproc)"
         echo ""
 
-        m -j$(nproc) 2>&1 | tee build.log || {
+        m -j$(nproc) 2>&1 | tee build.log
+        if [ "${PIPESTATUS[0]}" -ne 0 ]; then
             echo ""
             echo "========================================"
             echo "BUILD FAILED"
             echo "========================================"
             tail -50 build.log
             exit 1
-        }
+        fi
         ;;
     
     *)
