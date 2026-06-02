@@ -82,15 +82,15 @@ fi
 if [[ "$BSP_NAME" == *radxa9* ]]; then
     BSP_CHOICE=1
     BSP_TYPE="Radxa Android 9 Pie"
+elif [[ "$BSP_NAME" == *radxa11* ]]; then
+    BSP_CHOICE=4
+    BSP_TYPE="Radxa Android 11 (kernel 4.19)"
 elif [[ "$BSP_NAME" == *vicharak12* ]]; then
     BSP_CHOICE=2
     BSP_TYPE="Vicharak Android 12 (kernel 5.10)"
 elif [[ "$BSP_NAME" == *aosp12* ]]; then
     BSP_CHOICE=3
     BSP_TYPE="AOSP Android 12"
-elif [[ "$BSP_NAME" == *radxa11* ]]; then
-    BSP_CHOICE=4
-    BSP_TYPE="Radxa Android 11 (kernel 4.19)"
 else
     echo "WARNING: Unknown BSP type: $BSP_NAME"
     echo "Defaulting to Vicharak (option 2)"
