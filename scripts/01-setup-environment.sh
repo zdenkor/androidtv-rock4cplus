@@ -288,35 +288,24 @@ fi
 # ---------------------------------------------------------------------------
 # 6. Install apkeep (APK downloader for Google Play, APKPure, etc.)
 # See: https://github.com/EFForg/apkeep
-# Note: apkeep can download from multiple sources - Google Play, APKPure, GitHub, F-Droid
+# Built from source via cargo to link against system OpenSSL (avoids
+# libssl.so version mismatches with prebuilt binaries)
 # ---------------------------------------------------------------------------
 echo "[6/8] Installing apkeep..."
 if ! command -v apkeep &>/dev/null; then
-    APKEEP_INSTALLED=false
-    
-    # Source 1: Build from source with cargo (most reliable)
     if command -v cargo &>/dev/null; then
         echo "  Building apkeep from source with cargo..."
         if cargo install --git https://github.com/EFForg/apkeep.git 2>/dev/null; then
-            APKEEP_INSTALLED=true
             echo "  apkeep installed via cargo"
+        else
+            echo "  WARNING: apkeep build failed."
+            echo "  Apps requiring Google Play download will use alternative sources."
+            echo "  To retry manually: cargo install --git https://github.com/EFForg/apkeep.git"
         fi
-    fi
-    
-    # Source 2: Download from EFForg/apkeep releases
-    if ! $APKEEP_INSTALLED; then
-        echo "  Trying EFForg/apkeep releases..."
-        APKEEP_URL="https://github.com/EFForg/apkeep/releases/latest/download/apkeep-x86_64-unknown-linux-gnu"
-        if curl -sSL "$APKEEP_URL" -o ~/bin/apkeep 2>/dev/null; then
-            chmod +x ~/bin/apkeep && APKEEP_INSTALLED=true
-            echo "  apkeep downloaded from EFForg releases"
-        fi
-    fi
-    
-    if ! $APKEEP_INSTALLED; then
-        echo "  WARNING: Could not install apkeep."
+    else
+        echo "  WARNING: cargo not available — cannot build apkeep."
         echo "  Apps requiring Google Play download will use alternative sources."
-        echo "  To install manually: cargo install --git https://github.com/EFForg/apkeep.git"
+        echo "  Install Rust first: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
     fi
 else
     echo "  apkeep already installed: $(apkeep --version 2>/dev/null || echo 'version unknown')"
