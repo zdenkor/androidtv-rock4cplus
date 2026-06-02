@@ -313,21 +313,30 @@ case $BSP_CHOICE in
         # Fix mixed tabs/spaces in auto_generator.py (patch may introduce tabs)
         AUTO_GEN="device/rockchip/common/auto_generator.py"
         if [ -f "$AUTO_GEN" ]; then
-            echo "[INFO] Fixing mixed tabs/spaces in auto_generator.py..."
+            echo "[INFO] Fixing auto_generator.py..."
             python3 -c "
-import re
 path = '$AUTO_GEN'
 with open(path) as f:
-    content = f.read()
-lines = content.split('\n')
+    lines = f.readlines()
 fixed = []
-for line in lines:
+for i, line in enumerate(lines):
+    # Normalize tabs to spaces
     stripped = line.lstrip('\t')
     leading_tabs = len(line) - len(stripped)
-    fixed.append('    ' * leading_tabs + stripped)
+    line = '    ' * leading_tabs + stripped
+    # Fix: if 'pass' is at same indent as 'if', push it one level deeper
+    if line.rstrip() == 'pass' and i > 0:
+        prev = fixed[-1].rstrip()
+        if prev.startswith('if ') and prev.endswith(':'):
+            # Count indent of the 'if' line
+            prev_indent = len(fixed[-1]) - len(fixed[-1].lstrip(' '))
+            # 'pass' should be 4 spaces deeper than 'if'
+            line = ' ' * (prev_indent + 4) + 'pass\n'
+    fixed.append(line)
 with open(path, 'w') as f:
-    f.write('\n'.join(fixed))
+    f.writelines(fixed)
 print('Fixed auto_generator.py')
+"
 "
         fi
 
