@@ -116,7 +116,7 @@ install_safe \
     libssl-dev cpio pkg-config lzop \
     libelf-dev bison flex \
     u-boot-tools device-tree-compiler swig \
-    python3-dev python3-setuptools
+    python3-dev python3-setuptools python3-lib2to3
 
 # Ensure 'python' command exists (Debian may only have python3)
 if ! command -v python &>/dev/null; then

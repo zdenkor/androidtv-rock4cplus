@@ -193,17 +193,13 @@ case $BSP_CHOICE in
         # Fix Python 2 syntax for Python 3 (Android 9 uses Python 2 scripts)
         # Use Python's official 2to3 tool — handles all edge cases properly
         echo "[INFO] Converting Python 2 scripts to Python 3 using 2to3..."
-        if command -v 2to3 &>/dev/null; then
-            find build libcore external/annotation-tools development frameworks system \
-                -name "*.py" -exec 2to3 -w -n {} + 2>/dev/null || true
-            echo "Python 2to3 conversion complete"
-        else
-            echo "[WARN] 2to3 not found, installing python3-lib2to3..."
-            sudo apt-get install -y python3-lib2to3 2>/dev/null || true
-            find build libcore external/annotation-tools development frameworks system \
-                -name "*.py" -exec 2to3 -w -n {} + 2>/dev/null || true
-            echo "Python 2to3 conversion complete"
+        if ! command -v 2to3 &>/dev/null; then
+            echo "[INFO] Installing 2to3..."
+            sudo apt-get install -y 2to3 2>/dev/null || sudo apt-get install -y python3-lib2to3 2>/dev/null || true
         fi
+        find build libcore external/annotation-tools development frameworks system \
+            -name "*.py" -exec 2to3 -w -n {} + 2>/dev/null || true
+        echo "Python 2to3 conversion complete"
 
         # Build kernel first (required for Android 9)
         if [ -d "kernel" ] && [ -f "kernel/arch/arm64/configs/rockchip_defconfig" ]; then
