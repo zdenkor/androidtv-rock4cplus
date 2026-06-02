@@ -161,12 +161,26 @@ case $BSP_CHOICE in
         echo "For ROCK 4C+, using target 57 (rk3399_box-userdebug)..."
         echo ""
         
-        echo "[3/6] Fixing Python indentation errors BEFORE lunch..."
-        # Proactively fix ALL Python indentation in device/rockchip (convert tabs to spaces)
-        # This MUST be done before lunch, as lunch will trigger auto_generator.py
-        if [ -d "device/rockchip" ]; then
-            echo "Fixing device/rockchip/**/*.py files..."
-            python3 "$SCRIPT_DIR/fix_option1_radxa9_auto_generator.py"
+        echo "[3/6] Fixing auto_generator.py tabs..."
+        AUTO_GEN="device/rockchip/common/auto_generator.py"
+        if [ -f "$AUTO_GEN" ]; then
+            python3 -c "
+import os
+path = '$AUTO_GEN'
+with open(path) as f:
+    lines = f.readlines()
+for i, line in enumerate(lines):
+    stripped = line.lstrip('\t ')
+    indent = len(line) - len(stripped)
+    if '\t' in line[:indent] and ' ' in line[:indent]:
+        space_count = line[:indent].count(' ')
+        tab_count = line[:indent].count('\t')
+        total = tab_count + space_count // 4
+        lines[i] = '\t' * total + stripped
+with open(path, 'w') as f:
+    f.writelines(lines)
+print('Fixed auto_generator.py tabs')
+" 2>/dev/null || true
         fi
         
         # Call lunch with target name and suppress interactive mode
@@ -183,10 +197,26 @@ case $BSP_CHOICE in
         # ====================================================================
         echo "[2/6] Configuring Radxa Android 11 (kernel 4.19)..."
 
-        # Fix Python indentation BEFORE lunch
-        if [ -d "device/rockchip" ]; then
-            echo "Fixing device/rockchip/**/*.py files..."
-            python3 "$SCRIPT_DIR/fix_option1_radxa9_auto_generator.py" 2>/dev/null || true
+        # Fix auto_generator.py tabs
+        AUTO_GEN="device/rockchip/common/auto_generator.py"
+        if [ -f "$AUTO_GEN" ]; then
+            python3 -c "
+import os
+path = '$AUTO_GEN'
+with open(path) as f:
+    lines = f.readlines()
+for i, line in enumerate(lines):
+    stripped = line.lstrip('\t ')
+    indent = len(line) - len(stripped)
+    if '\t' in line[:indent] and ' ' in line[:indent]:
+        space_count = line[:indent].count(' ')
+        tab_count = line[:indent].count('\t')
+        total = tab_count + space_count // 4
+        lines[i] = '\t' * total + stripped
+with open(path, 'w') as f:
+    f.writelines(lines)
+print('Fixed auto_generator.py tabs')
+" 2>/dev/null || true
         fi
 
         # Call lunch
@@ -342,11 +372,26 @@ EOF
             cp -f "$SCRIPT_DIR/../patches/rk3399-rock-4c-plus.dts" "kernel/arch/arm64/boot/dts/rockchip/"
         fi
 
-        echo "[4/6] Fixing Python indentation / build scripts..."
-        if [ -f "device/rockchip/common/auto_generator.py" ]; then
-            python3 "$SCRIPT_DIR/fix_option3_aosp12_auto_generator.py" || true
-        else
-            echo "  Skipping: auto_generator.py not found (may not be needed for this BSP)"
+        echo "[4/6] Fixing auto_generator.py tabs..."
+        AUTO_GEN="device/rockchip/common/auto_generator.py"
+        if [ -f "$AUTO_GEN" ]; then
+            python3 -c "
+import os
+path = '$AUTO_GEN'
+with open(path) as f:
+    lines = f.readlines()
+for i, line in enumerate(lines):
+    stripped = line.lstrip('\t ')
+    indent = len(line) - len(stripped)
+    if '\t' in line[:indent] and ' ' in line[:indent]:
+        space_count = line[:indent].count(' ')
+        tab_count = line[:indent].count('\t')
+        total = tab_count + space_count // 4
+        lines[i] = '\t' * total + stripped
+with open(path, 'w') as f:
+    f.writelines(lines)
+print('Fixed auto_generator.py tabs')
+" 2>/dev/null || true
         fi
 
         echo "[5/6] Detecting AOSP Rockchip lunch target..."
