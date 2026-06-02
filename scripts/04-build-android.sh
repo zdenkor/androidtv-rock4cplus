@@ -458,48 +458,18 @@ case $BSP_CHOICE in
             python3 -c "
 path = '$AUTO_GEN'
 with open(path) as f:
-    lines = f.readlines()
+    content = f.read()
 
-# Normalize tabs to spaces
-for i in range(len(lines)):
-    stripped = lines[i].lstrip('\t')
-    leading_tabs = len(lines[i]) - len(stripped)
-    lines[i] = '    ' * leading_tabs + stripped
+# Normalize all tabs to 4 spaces
+content = content.replace('\t', '    ')
 
-# Fix empty if bodies: insert pass for if statements with no body.
-# Only remove 'pass' (not 'continue') that's at wrong indent.
-fixed = []
-i = 0
-while i < len(lines):
-    line = lines[i]
-    stripped = line.rstrip()
-    cur_indent = len(line) - len(line.lstrip(' '))
-
-    # Skip 'pass' that is at same indent as preceding 'if' (it was a bad patch insert)
-    if stripped == 'pass' and len(fixed) > 0:
-        prev = fixed[-1].rstrip()
-        if prev.startswith('if ') and prev.endswith(':'):
-            prev_indent = len(fixed[-1]) - len(fixed[-1].lstrip(' '))
-            if cur_indent <= prev_indent:
-                i += 1
-                continue
-
-    fixed.append(line)
-
-    # If this is an 'if' with no body, insert pass
-    if stripped.startswith('if ') and stripped.endswith(':'):
-        indent = len(line) - len(line.lstrip(' '))
-        j = i + 1
-        while j < len(lines) and lines[j].strip() == '':
-            j += 1
-        if j < len(lines):
-            next_indent = len(lines[j]) - len(lines[j].lstrip(' '))
-            if next_indent <= indent:
-                fixed.append(' ' * (indent + 4) + 'pass\n')
-    i += 1
+# Fix: if (self.rk_param == 'hwver'): has no body — insert pass after it
+old = 'if (self.rk_param == \"hwver\"):'
+new = 'if (self.rk_param == \"hwver\"):\n            pass'
+content = content.replace(old, new)
 
 with open(path, 'w') as f:
-    f.writelines(fixed)
+    f.write(content)
 print('Fixed auto_generator.py')
 "
         fi
