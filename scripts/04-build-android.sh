@@ -197,13 +197,17 @@ case $BSP_CHOICE in
             echo "[INFO] Installing 2to3..."
             sudo apt-get install -y 2to3 2>/dev/null || sudo apt-get install -y python3-lib2to3 2>/dev/null || true
         fi
+        # Exclude device/linaro/bootloader/edk2 — it bundles Python 2.7.2 test files that are never executed
         find build libcore external/annotation-tools development frameworks system device \
+            -not -path "*/edk2/*" \
             -name "*.py" -exec 2to3 -w -n {} + 2>/dev/null || true
         # 2to3 doesn't fix open("rb")/open("wb") for text processing
         # Python 3's binary mode returns bytes, but many scripts expect strings
         find build libcore external/annotation-tools development frameworks system device \
+            -not -path "*/edk2/*" \
             -name "*.py" -exec sed -i 's/open(filename, "rb")/open(filename, "r")/' {} + 2>/dev/null || true
         find build libcore external/annotation-tools development frameworks system device \
+            -not -path "*/edk2/*" \
             -name "*.py" -exec sed -i 's/open(output_file, "wb")/open(output_file, "w")/' {} + 2>/dev/null || true
         echo "Python 2to3 conversion complete"
 
