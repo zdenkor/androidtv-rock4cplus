@@ -355,9 +355,12 @@ case $BSP_CHOICE in
             fi
 
             # Save list of all .py files that will be touched (for clean/restore later)
+            # Exclude auto-generated test specs (huge embedded data, already Py3-compatible)
             PYFILES_LIST="$WORK_DIR/.2to3_files.txt"
             find build libcore external/annotation-tools development frameworks system device \
                 -not -path "*/edk2/*" \
+                -not -path "*/test/specs/*" \
+                -not -path "*/test/generated/*" \
                 -name "*.py" 2>/dev/null | sort > "$PYFILES_LIST"
             TOTAL_FILES=$(wc -l < "$PYFILES_LIST")
             echo "[INFO] Found $TOTAL_FILES Python files to process (list saved to .2to3_files.txt)"
@@ -375,6 +378,8 @@ case $BSP_CHOICE in
                     fi
                 done < <(find build libcore external/annotation-tools development frameworks system device \
                     -not -path "*/edk2/*" \
+                    -not -path "*/test/specs/*" \
+                    -not -path "*/test/generated/*" \
                     -name "*.py" -print0)
                 printf "\r  [2to3] %d/%d (100%%) done.\n" "$TOTAL_FILES" "$TOTAL_FILES"
             else
@@ -393,6 +398,8 @@ case $BSP_CHOICE in
                 fi
             done < <(find build libcore external/annotation-tools development frameworks system device \
                 -not -path "*/edk2/*" \
+                -not -path "*/test/specs/*" \
+                -not -path "*/test/generated/*" \
                 -name "*.py" -print0)
             printf "\r  [sed-rb] %d/%d (100%%) done.\n" "$TOTAL_FILES" "$TOTAL_FILES"
 
@@ -408,6 +415,8 @@ case $BSP_CHOICE in
                 fi
             done < <(find build libcore external/annotation-tools development frameworks system device \
                 -not -path "*/edk2/*" \
+                -not -path "*/test/specs/*" \
+                -not -path "*/test/generated/*" \
                 -name "*.py" -print0)
             printf "\r  [sed-wb] %d/%d (100%%) done.\n" "$TOTAL_FILES" "$TOTAL_FILES"
 
