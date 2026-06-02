@@ -337,7 +337,6 @@ with open(path, 'w') as f:
     f.writelines(fixed)
 print('Fixed auto_generator.py')
 "
-"
         fi
 
         # Build kernel first (required for Android 9)
