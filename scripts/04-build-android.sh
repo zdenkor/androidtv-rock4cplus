@@ -9,6 +9,31 @@ set -e
 set -o pipefail
 
 # =============================================================================
+# CLI flags
+# =============================================================================
+CLEAN_MODE=false
+for arg in "$@"; do
+    case "$arg" in
+        --clean|--reset)
+            CLEAN_MODE=true
+            ;;
+        --help|-h)
+            echo "Usage: $0 [--clean|--reset]"
+            echo ""
+            echo "  --clean, --reset   Wipe all build caches and restore original source files."
+            echo "                     Removes out/, .2to3_done marker, and git-resets the"
+            echo "                     source tree so the script runs as if for the first time."
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $arg"
+            echo "Usage: $0 [--clean|--reset]"
+            exit 1
+            ;;
+    esac
+done
+
+# =============================================================================
 # Progress helpers
 # =============================================================================
 
@@ -161,6 +186,63 @@ if [ ! -d "$WORK_DIR" ]; then
 fi
 
 cd "$WORK_DIR"
+
+# =============================================================================
+# --clean / --reset: wipe all caches and restore original source
+# =============================================================================
+if $CLEAN_MODE; then
+    echo "============================================"
+    echo " CLEAN/RESET MODE"
+    echo "============================================"
+    echo ""
+    echo "This will:"
+    echo "  1. Remove all build output (out/)"
+    echo "  2. Remove 2to3 conversion marker (.2to3_done)"
+    echo "  3. Git-reset source tree to restore original files"
+    echo "  4. Remove build log"
+    echo ""
+
+    # 1. Remove build output
+    if [ -d "out" ]; then
+        echo "[1/4] Removing out/ ($(du -sh out 2>/dev/null | cut -f1))..."
+        rm -rf out
+        echo "      Done."
+    else
+        echo "[1/4] No out/ directory to remove."
+    fi
+
+    # 2. Remove 2to3 marker
+    if [ -f ".2to3_done" ]; then
+        echo "[2/4] Removing .2to3_done marker..."
+        rm -f .2to3_done
+        echo "      Done."
+    else
+        echo "[2/4] No .2to3_done marker."
+    fi
+
+    # 3. Git reset to restore original source files
+    if [ -d ".git" ]; then
+        echo "[3/4] Git-resetting source tree to restore original files..."
+        git checkout -- .
+        git clean -fd 2>/dev/null || true
+        echo "      Done."
+    else
+        echo "[3/4] No .git directory — skipping git reset."
+    fi
+
+    # 4. Remove build log
+    if [ -f "build.log" ]; then
+        echo "[4/4] Removing build.log..."
+        rm -f build.log
+        echo "      Done."
+    else
+        echo "[4/4] No build.log to remove."
+    fi
+
+    echo ""
+    echo "Clean complete. Proceeding with fresh build..."
+    echo ""
+fi
 
 # Allow missing dependencies (some prebuilts modules may have unresolvable deps)
 export ALLOW_MISSING_DEPENDENCIES=true
