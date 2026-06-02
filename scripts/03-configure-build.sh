@@ -232,10 +232,6 @@ print('Fixed auto_generator.py tabs')
                 fi
             done
         fi
-                    break
-                fi
-            done
-        fi
         if [ -z "$LUNCH_TARGET" ]; then
             echo "WARNING: No known lunch target found. Trying rk3399-userdebug..."
             LUNCH_TARGET="rk3399-userdebug"
