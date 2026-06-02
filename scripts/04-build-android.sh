@@ -508,8 +508,7 @@ print('Fixed auto_generator.py')
         # Build Android (use PIPESTATUS to catch make failure through tee)
         echo "[4b/4] Building Android (make -j$(nproc))..."
 
-        # Final fix: patch insertkeys.py in out/ directly (source is unfindable).
-        # The build system copies it during envsetup; fix the copy in place.
+        # Final fix: patch insertkeys.py in out/ and lock it so make can't overwrite.
         INSERTKEYS_OUT="out/host/linux-x86/bin/insertkeys.py"
         if [ -f "$INSERTKEYS_OUT" ]; then
             python3 -c "
@@ -523,7 +522,8 @@ content = content.replace('ConfigParser.', 'configparser.')
 with open(path, 'w') as f:
     f.write(content)
 "
-            echo "[INFO] Fixed insertkeys.py in out/"
+            sudo chattr +i "$INSERTKEYS_OUT" 2>/dev/null || true
+            echo "[INFO] Fixed and locked insertkeys.py in out/"
         fi
 
         ANDROID_START=$(date +%s)
