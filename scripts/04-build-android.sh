@@ -491,7 +491,21 @@ print('Fixed auto_generator.py')
         # RADXA ANDROID 11 (rk11, kernel 4.19) — uses make
         # ====================================================================
         echo "[3/4] Configuring Radxa Android 11..."
-        lunch rk3399_box-userdebug 2>/dev/null || lunch 2>/dev/null | head -20
+
+        # Auto-detect lunch target (same logic as 03-configure-build.sh)
+        LUNCH_TARGET=""
+        if [ -d "device/rockchip/rk3399" ]; then
+            for product in rk3399_box rk3399 rk3399_all; do
+                if [ -f "device/rockchip/rk3399/${product}.mk" ] || [ -f "device/rockchip/rk3399/${product}/${product}.mk" ]; then
+                    LUNCH_TARGET="${product}-userdebug"
+                    break
+                fi
+            done
+        fi
+        if [ -z "$LUNCH_TARGET" ]; then
+            LUNCH_TARGET="rk3399-userdebug"
+        fi
+        lunch "$LUNCH_TARGET" 2>/dev/null || lunch 2>/dev/null | head -20
         
         echo "[4/4] Building Android 11..."
         echo ""
@@ -558,7 +572,7 @@ with open(path, 'w') as f:
         fi
         echo "Android build finished in $(elapsed_since $ANDROID_START)"
         
-        BUILD_OUTPUT="out/target/product/rk3399_box/system.img"
+        BUILD_OUTPUT="out/target/product/${LUNCH_TARGET%%-*}/system.img"
         ;;
     
     *)

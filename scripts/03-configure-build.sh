@@ -219,8 +219,29 @@ print('Fixed auto_generator.py tabs')
 " 2>/dev/null || true
         fi
 
-        # Call lunch
-        lunch rk3399_box-userdebug < /dev/null
+        # Auto-detect lunch target
+        echo "[2b/6] Detecting lunch target..."
+        LUNCH_TARGET=""
+        if [ -d "device/rockchip/rk3399" ]; then
+            # Try common Radxa product names
+            for product in rk3399_box rk3399 rk3399_all; do
+                if [ -f "device/rockchip/rk3399/${product}.mk" ] || [ -f "device/rockchip/rk3399/${product}/${product}.mk" ]; then
+                    LUNCH_TARGET="${product}-userdebug"
+                    echo "Found product: $LUNCH_TARGET"
+                    break
+                fi
+            done
+        fi
+        if [ -z "$LUNCH_TARGET" ]; then
+            echo "WARNING: No known lunch target found. Trying rk3399-userdebug..."
+            LUNCH_TARGET="rk3399-userdebug"
+        fi
+        lunch "$LUNCH_TARGET" < /dev/null || {
+            echo "ERROR: lunch target '$LUNCH_TARGET' failed"
+            echo "Available products:"
+            find device/rockchip -name "*.mk" -path "*/rk3399/*" | grep -v BoardConfig | head -20
+            exit 1
+        }
 
         echo "[3/6] Android 11 — device tree already included"
         echo "[4/6] Kernel config — using default (Android 11, kernel 4.19)"
