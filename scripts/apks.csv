@@ -1,15 +1,15 @@
-app_id,app_name,app_description,app_priority,filename,fallback_url
-com.smarttube.next,SmartTube,SponsorBlock YouTube,essential,SmartTube.apk,https://github.com/yuliskov/SmartTube/releases/latest/download/SmartTube_stable.apk
-org.xbmc.kodi,Kodi,Media center,essential,Kodi.apk,https://mirrors.kodi.tv/releases/android/arm64-v8a/kodi-21.1-armeabi-v7a-android-arm64-v8a.apk
-com.riviprojectivy.launcher,Projectivy,Clean launcher,essential,Projectivy.apk,https://github.com/rivi-project/projectivy-releases/releases/latest/download/Projectivy.apk
-com.phlox.tvwebbrowser,TVBro,Web browser for TV,essential,TVBro.apk,https://github.com/truefedex/tv-bro/releases/latest/download/TVBro.apk
-org.localsend.localsend_app,LocalSend,AirDrop alternative,essential,LocalSend.apk,https://github.com/localsendl/localsend/releases/latest/download/LocalSend.apk
-flar2.homebutton,ButtonMapper,Remap remote buttons,essential,ButtonMapper.apk,https://github.com/ronaldrosejoseph/remote_button_mapper/releases/latest/download/remote_button_mapper.apk
-org.fdroid.fdroid,F-Droid,Open source app store,essential,Fdroid.apk,https://f-droid.org/F-Droid.apk
-org.adaway,AdAway,System-wide ad blocker,essential,AdAway.apk,https://f-droid.org/repo/org.adaway_20191010.apk
-SKIP,AuroraStore,Anonymous Google Play,additional,AuroraStore.apk,https://www.auroraoss.com/files/AuroraStore/Release/AuroraStore-4.8.3.apk
-org.videolan.vlc,VLC,Media player,additional,VLC.apk,https://mirrors.videolan.org/vlc/android/3.5.5/vlc-android-3.5.5-arm64-v8a.apk
-com.example.tivimate,TiviMate,IPTV player,additional,TiviMate.apk,https://files.tivimate.com/tivimate.apk
-com.lonelycatgame.xplore,Xplore,File manager,additional,Xplore.apk,https://apkpure.com/xplore/com.lonelycatgame.xplore
-eu.chainfire.tv.sideloadlauncher,SideloadLauncher,Show sideloaded apps,additional,SideloadLauncher.apk,
-com.aptoide.tvstore,AptoideTV,Alternative app store,additional,AptoideTV.apk,https://pool.apk.aptoide.com/aptoide-web/cm-aptoide-pt-12060-71289868-2725e9ae81839a4ae69f8f362fc4d7e1.apk?apk_name=aptoide
+app_id,app_name,app_description,app_priority,filename,fallback_url,fdroid_url
+com.smarttube.next,SmartTube,SponsorBlock YouTube,essential,SmartTube.apk,https://github.com/yuliskov/SmartTube/releases/latest/download/SmartTube_stable.apk,https://f-droid.org/en/packages/app.smarttube.fdroid/
+org.xbmc.kodi,Kodi,Media center,essential,Kodi.apk,https://mirrors.kodi.tv/releases/android/arm64-v8a/kodi-21.1-armeabi-v7a-android-arm64-v8a.apk,https://f-droid.org/en/packages/org.xbmc.kodi/
+com.riviprojectivy.launcher,Projectivy,Clean launcher,essential,Projectivy.apk,https://github.com/rivi-project/projectivy-releases/releases/latest/download/Projectivy.apk,
+com.phlox.tvwebbrowser,TVBro,Web browser for TV,essential,TVBro.apk,https://github.com/truefedex/tv-bro/releases/latest/download/TVBro.apk,https://f-droid.org/en/packages/com.phlox.tvwebbrowser/
+org.localsend.localsend_app,LocalSend,AirDrop alternative,essential,LocalSend.apk,https://github.com/localsendl/localsend/releases/latest/download/LocalSend.apk,https://f-droid.org/en/packages/org.localsend.localsend_app/
+flar2.homebutton,ButtonMapper,Remap remote buttons,essential,ButtonMapper.apk,https://github.com/ronaldrosejoseph/remote_button_mapper/releases/latest/download/remote_button_mapper.apk,
+org.fdroid.fdroid,F-Droid,Open source app store,essential,Fdroid.apk,https://f-droid.org/F-Droid.apk,https://f-droid.org/en/packages/org.fdroid.fdroid/
+org.adaway,AdAway,System-wide ad blocker,essential,AdAway.apk,https://f-droid.org/repo/org.adaway_20191010.apk,https://f-droid.org/en/packages/org.adaway/
+SKIP,AuroraStore,Anonymous Google Play,additional,AuroraStore.apk,https://www.auroraoss.com/files/AuroraStore/Release/AuroraStore-4.8.3.apk,https://f-droid.org/en/packages/com.aurora.store/
+org.videolan.vlc,VLC,Media player,additional,VLC.apk,https://mirrors.videolan.org/vlc/android/3.5.5/vlc-android-3.5.5-arm64-v8a.apk,https://f-droid.org/en/packages/org.videolan.vlc/
+com.example.tivimate,TiviMate,IPTV player,additional,TiviMate.apk,https://files.tivimate.com/tivimate.apk,
+com.lonelycatgame.xplore,Xplore,File manager,additional,Xplore.apk,https://apkpure.com/xplore/com.lonelycatgame.xplore,
+eu.chainfire.tv.sideloadlauncher,SideloadLauncher,Show sideloaded apps,additional,SideloadLauncher.apk,,https://f-droid.org/en/packages/eu.chainfire.tv.sideloadlauncher/
+com.aptoide.tvstore,AptoideTV,Alternative app store,additional,AptoideTV.apk,https://pool.apk.aptoide.com/aptoide-web/cm-aptoide-pt-12060-71289868-2725e9ae81839a4ae69f8f362fc4d7e1.apk?apk_name=aptoide,

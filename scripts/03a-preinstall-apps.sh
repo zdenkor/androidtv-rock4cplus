@@ -3,6 +3,7 @@
 # ============================================================================
 # 03a-preinstall-apps.sh
 # Pre-install application selection script
+# Downloads APKs via curl (direct URLs + F-Droid), apkeep as optional fallback
 # ============================================================================
 
 set -e
@@ -14,7 +15,7 @@ BASE_DIR="/mnt/aosp-build"
 declare -a BSP_DIRS=()
 declare -a BSP_NAMES=()
 
-for pattern in "radxa9" "vicharak12" "aosp12"; do
+for pattern in "radxa9" "radxa11" "vicharak12" "aosp12"; do
     for dir in "$BASE_DIR"/androidtv-rock4cplus-"$pattern"*; do
         if [ -d "$dir" ]; then
             BSP_DIRS+=("$dir")
@@ -35,115 +36,11 @@ if [ ${#BSP_DIRS[@]} -eq 0 ]; then
     fi
 fi
 
-# Error if no BSP found
 if [ ${#BSP_DIRS[@]} -eq 0 ]; then
     echo "ERROR: No BSP directories found in $BASE_DIR"
     echo "Run 02-download-source.sh first."
     exit 1
 fi
-
-# Gmail setup for Google Play downloads via apkeep
-# Supports OAuth token (official) or AUTH token (Aurora Store dispenser)
-# See: https://github.com/EFForg/apkeep/blob/master/USAGE-google-play.md
-
-setup_apkeep_credentials() {
-    echo ""
-    echo "============================================"
-    echo " APK Download Source Selection"
-    echo "============================================"
-    echo ""
-    echo "Choose download source:"
-    echo "  1) Google Play (official) - requires credentials"
-    echo "  2) Alternative stores (APKPure, GitHub, etc.)"
-    echo ""
-    read -rp "Select (1/2): " SOURCE_CHOICE
-    
-    case "$SOURCE_CHOICE" in
-        1) USE_GOOGLE_PLAY=true; setup_google_credentials ;;
-        2) USE_GOOGLE_PLAY=false; echo "Will use alternative sources only." ;;
-        *) echo "Invalid selection"; exit 1 ;;
-    esac
-}
-
-setup_google_credentials() {
-    local ini_file="$HOME/.config/apkeep/apkeep.ini"
-    mkdir -p "$(dirname "$ini_file")"
-    
-    echo ""
-    echo "============================================"
-    echo " Gmail Setup for Google Play"
-    echo "============================================"
-    echo ""
-    echo "Choose authentication method:"
-    echo "  1) OAuth token (official method - requires browser)"
-    echo "  2) AUTH token (from Aurora Store dispenser)"
-    echo ""
-    read -rp "Select (1/2): " auth_method
-    
-    case "$auth_method" in
-        1) setup_oauth_credentials "$ini_file" ;;
-        2) setup_auth_credentials "$ini_file" ;;
-        *) echo "Invalid selection"; return 1 ;;
-    esac
-}
-
-setup_oauth_credentials() {
-    local ini_file="$1"
-    echo ""
-    echo "OAuth Token Method:"
-    echo "  1. Visit https://accounts.google.com/EmbeddedSetup"
-    echo "  2. Login with your Gmail"
-    echo "  3. Accept ToS if popup appears"
-    echo "  4. Open browser dev console (F12) ??? Network tab"
-    echo "  5. Find last request to accounts.google.com"
-    echo "  6. In Cookies tab, find 'oauth_token' (starts with 'oauth2_4/')"
-    echo "  7. Copy the value"
-    echo ""
-    read -rp "Gmail address: " APKEEP_EMAIL
-    echo ""
-    read -rsp "OAuth token (starts with 'oauth2_4/'): " OAUTH_TOKEN
-    echo ""
-    
-    if [ -n "$APKEEP_EMAIL" ] && [ -n "$OAUTH_TOKEN" ]; then
-        echo "Exchanging OAuth token for AAS token..."
-        AAS_TOKEN=$(apkeep -e "$APKEEP_EMAIL" --oauth-token "$OAUTH_TOKEN" 2>/dev/null | tail -1)
-        
-        if [ -n "$AAS_TOKEN" ]; then
-            cat > "$ini_file" << EOF
-[google]
-email = $APKEEP_EMAIL
-aas_token = $AAS_TOKEN
-EOF
-            chmod 600 "$ini_file"
-            echo "Credentials saved to $ini_file"
-        else
-            echo "Failed to obtain AAS token. Check your OAuth token."
-        fi
-    fi
-}
-
-setup_auth_credentials() {
-    local ini_file="$1"
-    echo ""
-    echo "AUTH Token Method (from Aurora Store):"
-    echo "  Get free AUTH token from: https://auroraoss.com/AuroraStore/Download"
-    echo "  AUTH tokens start with 'ya29.'"
-    echo ""
-    read -rp "Gmail address: " APKEEP_EMAIL
-    echo ""
-    read -rsp "AUTH token (starts with 'ya29.'): " AUTH_TOKEN
-    echo ""
-    
-    if [ -n "$APKEEP_EMAIL" ] && [ -n "$AUTH_TOKEN" ]; then
-        cat > "$ini_file" << EOF
-[google]
-email = $APKEEP_EMAIL
-auth_token = $AUTH_TOKEN
-EOF
-        chmod 600 "$ini_file"
-        echo "Credentials saved to $ini_file"
-    fi
-}
 
 # Select BSP
 if [ ${#BSP_DIRS[@]} -eq 1 ]; then
@@ -169,200 +66,137 @@ else
     BSP_NAME="${BSP_NAMES[$((CHOICE-1))]}"
 fi
 
-# Determine BSP type
-if [[ "$BSP_NAME" == *radxa9* ]]; then
-    BSP_TYPE="radxa9"
-elif [[ "$BSP_NAME" == *vicharak12* ]]; then
-    BSP_TYPE="vicharak12"
-elif [[ "$BSP_NAME" == *aosp12* ]]; then
-    BSP_TYPE="aosp12"
-else
-    BSP_TYPE="unknown"
-fi
-
-# Define APPS_DIR - download to WORK_DIR/apps
 APPS_DIR="$WORK_DIR/apps"
 mkdir -p "$APPS_DIR"
-SAVED_CHOICES_FILE="$APPS_DIR/.saved_choices"
 
-# App definitions: pkg|apkpure|github|apkmonk|direct|filename|desc
-declare -A APPS
+# ============================================================================
+# Download helpers
+# ============================================================================
 
-# Essential apps (recommended)
-# Format: pkg|apkpure|github|apkmonk|direct|filename|desc
-APPS["SmartTube"]="com.smarttube.next|||https://github.com/yuliskov/SmartTube/releases/latest/download/SmartTube_stable.apk|SmartTube.apk|SponsorBlock YouTube"
-APPS["Kodi"]="org.xbmc.kodi|||https://mirrors.kodi.tv/releases/android/arm64-v8a/kodi-21.1-armeabi-v7a-android-arm64-v8a.apk|Kodi.apk|Media center"
-APPS["Projectivy"]="com.riviprojectivy.launcher||||https://github.com/rivi-project/projectivy-releases/releases/latest/download/Projectivy.apk|Projectivy.apk|Clean launcher"
-APPS["TVBro"]="com.example.tvbro||||https://github.com/truefedex/tv-bro/releases/latest/download/TVBro.apk|TVBro.apk|Web browser for TV"
-APPS["LocalSend"]="com.example.localsend||||https://github.com/localsendl/localsend/releases/latest/download/LocalSend.apk|LocalSend.apk|AirDrop alternative"
-APPS["ButtonMapper"]="com.example.buttonmapper||||https://github.com/marcowch/LazyBeeper/releases/latest/download/ButtonMapper.apk|ButtonMapper.apk|Remap remote buttons"
-APPS["Fdroid"]="org.fdroid.fdroid|||https://f-droid.org/repo/org.fdroid.fdroid_47.apk|Fdroid.apk|Open source app store"
-APPS["AdAway"]="org.adaway|||https://f-droid.org/repo/org.adaway_20191010.apk|AdAway.apk|System-wide ad blocker"
+# Download from a direct URL with retries
+download_url() {
+    local url="$1"
+    local dest="$2"
+    local temp="${dest}.tmp"
+    rm -f "$temp"
 
-# Additional apps
-APPS["AuroraStore"]="com.aurora.store|||||AuroraStore.apk|Anonymous Google Play"
-APPS["VLC"]="org.videolan.vlc|||https://mirrors.videolan.org/vlc/android/3.5.5/vlc-android-3.5.5-arm64-v8a.apk|VLC.apk|Media player"
-APPS["TiviMate"]="com.example.tivimate||||TiviMate.apk|IPTV player"
-APPS["Xplore"]="com.lonelycatgame.xplore||||Xplore.apk|File manager"
-APPS["SideloadLauncher"]="com.example.sideloadlauncher||||SideloadLauncher.apk|Show sideloaded apps"
-APPS["AptoideTV"]="com.aptoide.tvstore||||AptoideTV.apk|Alternative app store"
-
-# Filter apps based on BSP type (Android 9 API 28 compatibility)
-filter_apps() {
-    local app_name="$1"
-    # Show all apps for all BSP types
-    return 0
-}
-
-# Download an app - tries multiple sources in order
-download_app() {
-    local app_name="$1"
-    local app_data="${APPS[$app_name]}"
-    
-    # Parse: pkg|apkpure|github|apkmonk|direct|filename|desc
-    # Handle empty fields - count pipes to determine position
-    local field_count=$(echo "$app_data" | awk -F'|' '{print NF}')
-    echo "    DEBUG: fields in app_data=$field_count" >&2
-    
-    local pkg="${app_data%%|*}"
-    app_data="${app_data#*|}"
-    local apkpure="${app_data%%|*}"
-    app_data="${app_data#*|}"
-    local github="${app_data%%|*}"
-    app_data="${app_data#*|}"
-    local apkmonk="${app_data%%|*}"
-    app_data="${app_data#*|}"
-    local direct="${app_data%%|*}"
-    app_data="${app_data#*|}"
-    local file="${app_data%%|*}"
-    local desc="${app_data##*|}"
-    echo "    DEBUG: direct='$direct' file='$file' desc='$desc'" >&2
-    
-    local dest="$APPS_DIR/$file"
-    local success=false
-    local debug_curl_output=""
-    
-    echo "  Downloading $app_name..."
-    echo "    DEBUG: USE_GOOGLE_PLAY='$USE_GOOGLE_PLAY'" >&2
-    echo "    DEBUG: success='$success'" >&2
-    
-    # Download based on source selection
-    if $USE_GOOGLE_PLAY && command -v apkeep &>/dev/null; then
-        # Load credentials from ini file
-        local ini_file="$HOME/.config/apkeep/apkeep.ini"
-        local email_opt=""
-        local token_opt=""
-        if [ -f "$ini_file" ]; then
-            email=$(grep "^email" "$ini_file" 2>/dev/null | cut -d'=' -f2 | tr -d ' ')
-            if [ -n "$email" ]; then
-                email_opt="-e $email"
-            fi
-            if grep -q "aas_token" "$ini_file" 2>/dev/null; then
-                token_opt="-t $(grep "^aas_token" "$ini_file" | cut -d'=' -f2 | tr -d ' ')"
-            elif grep -q "auth_token" "$ini_file" 2>/dev/null; then
-                token_opt="--auth-token $(grep "^auth_token" "$ini_file" | cut -d'=' -f2 | tr -d ' ')"
+    if curl -L -f --connect-timeout 30 --max-time 300 --retry 3 --retry-delay 5 \
+        -H "Accept: application/octet-stream" \
+        -A "Mozilla/5.0 (Linux; Android 12)" \
+        -o "$temp" "$url" 2>/dev/null; then
+        if [ -f "$temp" ] && [ -s "$temp" ]; then
+            local size=$(stat -c%s "$temp" 2>/dev/null || echo 0)
+            if [ "$size" -gt 1000 ]; then
+                mv "$temp" "$dest"
+                echo "  [OK] $(basename "$dest") ($size bytes)"
+                return 0
             fi
         fi
-        
-        # Try Google Play only
-        if [[ -n "$pkg" && "$pkg" != "$app_name" ]]; then
-            if apkeep -a "$pkg" -d google-play $email_opt $token_opt --accept-tos "$APPS_DIR" 2>/dev/null; then
-                for downloaded in "$APPS_DIR"/*.apk; do
-                    if [[ -f "$downloaded" && "$downloaded" != "$dest" ]]; then
-                        mv "$downloaded" "$dest" 2>/dev/null && success=true && break
-                    fi
-                done
-                if $success; then
-                    echo "  [OK] $app_name (Google Play)"
+    fi
+    rm -f "$temp"
+    return 1
+}
+
+# Download from F-Droid package page (scrapes the APK download link)
+download_fdroid() {
+    local fdroid_url="$1"
+    local dest="$2"
+
+    local page
+    page=$(curl -sL --connect-timeout 15 "$fdroid_url" 2>/dev/null)
+
+    # Extract APK download link from F-Droid page
+    local apk_url
+    apk_url=$(echo "$page" | grep -oP 'https://f-droid\.org/repo/[^"]+\.apk' | head -1)
+    if [ -z "$apk_url" ]; then
+        apk_url=$(echo "$page" | grep -oP 'href="[^"]*\.apk"' | head -1 | sed 's/href="//;s/"//')
+    fi
+
+    if [ -n "$apk_url" ]; then
+        echo "  F-Droid: $(basename "$apk_url")"
+        download_url "$apk_url" "$dest" && return 0
+    fi
+    return 1
+}
+
+# Try apkeep as fallback (Google Play / APKPure / GitHub / F-Droid)
+download_apkeep() {
+    local pkg="$1"
+    local dest="$2"
+
+    if ! command -v apkeep &>/dev/null; then
+        return 1
+    fi
+
+    local temp_dir="$APPS_DIR/.apkeep-tmp"
+    mkdir -p "$temp_dir"
+
+    for source in google-play apk-pure github fdroid; do
+        rm -f "$temp_dir"/*.apk 2>/dev/null
+        if apkeep -a "$pkg" -d "$source" "$temp_dir" 2>/dev/null; then
+            local downloaded
+            downloaded=$(find "$temp_dir" -name "*.apk" -type f 2>/dev/null | head -1)
+            if [ -n "$downloaded" ] && [ -s "$downloaded" ]; then
+                local size=$(stat -c%s "$downloaded" 2>/dev/null || echo 0)
+                if [ "$size" -gt 1000 ]; then
+                    mv "$downloaded" "$dest"
+                    echo "  [OK] $(basename "$dest") ($size bytes via apkeep/$source)"
+                    rm -rf "$temp_dir"
                     return 0
                 fi
             fi
         fi
-        
-        # Google Play failed - ask user if they want alternatives
-        echo "  [FAIL] $app_name (Google Play)"
-        if [[ "$pkg" != "$app_name" ]]; then
-            read -rp "    Try alternatives? (y/n): " try_alt
-            if [[ "$try_alt" != "y" && "$try_alt" != "Y" ]]; then
-                return 1
-            fi
-        fi
-    fi
-    
-    # Try alternatives: APKPure, GitHub, APKMonk, direct URLs
-    # Try APKPure via apkeep
-    if [[ -n "$apkpure" && "$apkpure" != "$app_name" && -z "$success" ]]; then
-        if command -v apkeep &>/dev/null && apkeep -a "$apkpure" -d apk-pure "$APPS_DIR" 2>/dev/null; then
-            for downloaded in "$APPS_DIR"/*.apk; do
-                if [[ -f "$downloaded" && "$downloaded" != "$dest" ]]; then
-                    mv "$downloaded" "$dest" 2>/dev/null && success=true && break
-                fi
-            done
-            if $success; then
-                echo "  [OK] $app_name (APKPure)"
-                return 0
-            fi
-        fi
-    fi
-    
-    # Try GitHub
-    if [[ -n "$github" && "$github" != "$app_name" && -z "$success" ]]; then
-        if command -v apkeep &>/dev/null && apkeep -a "$github" -d github "$APPS_DIR" 2>/dev/null; then
-            for downloaded in "$APPS_DIR"/*.apk; do
-                if [[ -f "$downloaded" && "$downloaded" != "$dest" ]]; then
-                    mv "$downloaded" "$dest" 2>/dev/null && success=true && break
-                fi
-            done
-            if $success; then
-                echo "  [OK] $app_name (GitHub)"
-                return 0
-            fi
-        fi
-    fi
-    
-    # Try APKMonk
-    if [[ -n "$apkmonk" && "$apkmonk" != "$app_name" && -z "$success" ]]; then
-        if command -v apkeep &>/dev/null && apkeep -a "$apkmonk" -d apk-pure "$APPS_DIR" 2>/dev/null; then
-            for downloaded in "$APPS_DIR"/*.apk; do
-                if [[ -f "$downloaded" && "$downloaded" != "$dest" ]]; then
-                    mv "$downloaded" "$dest" 2>/dev/null && success=true && break
-                fi
-            done
-            if $success; then
-                echo "  [OK] $app_name (APKMonk)"
-                return 0
-            fi
-        fi
-    fi
-    
-    # Try direct URL via curl
-    echo "    DEBUG: Trying direct URL: $direct" >&2
-    if [[ -n "$direct" && "$direct" == http* && -z "$success" ]]; then
-        echo "    DEBUG: executing curl -L -o $dest $direct" >&2
-        curl -L -o "$dest" "$direct" 2>&1
-        local exit_code=$?
-        echo "    DEBUG: curl exit code=$exit_code" >&2
-        if [[ -f "$dest" && -s "$dest" ]]; then
-            echo "  [OK] $app_name (direct)"
-            return 0
-        else
-            echo "    DEBUG: file not created or empty" >&2
-        fi
-    fi
-    
-    # Try GitHub URL via curl
-    if [[ -n "$github" && "$github" == http* && -z "$success" ]]; then
-        if curl -L -o "$dest" --progress-bar "$github" 2>/dev/null; then
-            echo "  [OK] $app_name (GitHub curl)"
-            return 0
-        fi
-    fi
-    
-    echo "  [FAIL] $app_name"
+    done
+    rm -rf "$temp_dir"
     return 1
 }
 
-# Display app menu from CSV
+# Download a single app: direct URL → F-Droid → apkeep fallback
+download_app() {
+    local app_name="$1"
+    local pkg="$2"
+    local filename="$3"
+    local fallback_url="$4"
+    local fdroid_url="$5"
+
+    local dest="$APPS_DIR/$filename"
+
+    # Skip if already downloaded and valid
+    if [ -f "$dest" ] && [ -s "$dest" ]; then
+        local existing_size=$(stat -c%s "$dest" 2>/dev/null || echo 0)
+        if [ "$existing_size" -gt 1000 ]; then
+            echo "  [SKIP] $filename (already exists, $existing_size bytes)"
+            return 0
+        fi
+    fi
+
+    echo "  Downloading $app_name..."
+
+    # 1. Try direct URL
+    if [ -n "$fallback_url" ] && [ "${fallback_url:0:4}" = "http" ]; then
+        download_url "$fallback_url" "$dest" && return 0
+    fi
+
+    # 2. Try F-Droid page
+    if [ -n "$fdroid_url" ] && [ "${fdroid_url:0:4}" = "http" ]; then
+        echo "  Trying F-Droid..."
+        download_fdroid "$fdroid_url" "$dest" && return 0
+    fi
+
+    # 3. Try apkeep as last resort
+    if [ -n "$pkg" ] && [ "$pkg" != "SKIP" ]; then
+        echo "  Trying apkeep..."
+        download_apkeep "$pkg" "$dest" && return 0
+    fi
+
+    echo "  [FAIL] $app_name (no working source)"
+    return 1
+}
+
+# ============================================================================
+# Menu
+# ============================================================================
+
 show_menu() {
     local csv_file="$1"
     echo ""
@@ -378,8 +212,7 @@ show_menu() {
     local has_essential=false
     local has_additional=false
 
-    # Essential apps
-    while IFS=, read -r app_id app_name app_desc app_priority filename fallback_url rest; do
+    while IFS=, read -r app_id app_name app_desc app_priority filename fallback_url fdroid_url rest; do
         [[ -z "$app_id" || "$app_id" == "app_id" || "$app_id" =~ ^# ]] && continue
         if [[ "$app_priority" == "essential" ]]; then
             if ! $has_essential; then
@@ -391,8 +224,7 @@ show_menu() {
         fi
     done < "$csv_file"
 
-    # Additional apps
-    while IFS=, read -r app_id app_name app_desc app_priority filename fallback_url rest; do
+    while IFS=, read -r app_id app_name app_desc app_priority filename fallback_url fdroid_url rest; do
         [[ -z "$app_id" || "$app_id" == "app_id" || "$app_id" =~ ^# ]] && continue
         if [[ "$app_priority" == "additional" ]]; then
             if ! $has_additional; then
@@ -412,25 +244,6 @@ show_menu() {
     echo ""
 }
 
-# Validate user choice against available options
-validate_choice() {
-    local choice="$1"
-    local total_apps="$2"
-
-    # Allow A, E, Q (case insensitive)
-    if [[ "$choice" =~ ^[AaEeQq]$ ]]; then
-        return 0
-    fi
-
-    # Allow numbers within range
-    if [[ "$choice" =~ ^[0-9]+$ ]] && [[ "$choice" -ge 1 ]] && [[ "$choice" -le "$total_apps" ]]; then
-        return 0
-    fi
-
-    return 1
-}
-
-# Get total app count from CSV
 get_app_count() {
     local csv_file="$1"
     local count=0
@@ -441,26 +254,22 @@ get_app_count() {
     echo "$count"
 }
 
+# ============================================================================
 # Main
+# ============================================================================
+
 CSV_FILE="$SCRIPT_DIR/apks.csv"
 
 if [[ ! -f "$CSV_FILE" ]]; then
     echo "ERROR: $CSV_FILE not found!"
-    echo "Please create apks.csv in scripts directory with format:"
-    echo "  app_id,app_name,app_description,app_priority,filename,fallback_url"
     exit 1
 fi
 
-setup_apkeep_credentials
-
 TOTAL_APPS=$(get_app_count "$CSV_FILE")
 
-# Show menu and validate input
 while true; do
     show_menu "$CSV_FILE"
     read -rp "Enter choice: " APPS_CHOICES
-
-    # Trim whitespace
     APPS_CHOICES=$(echo "$APPS_CHOICES" | tr -d '[:space:]')
 
     if [[ -z "$APPS_CHOICES" ]]; then
@@ -473,345 +282,54 @@ while true; do
         exit 0
     fi
 
-    if validate_choice "$APPS_CHOICES" "$TOTAL_APPS"; then
+    if [[ "$APPS_CHOICES" =~ ^[AaEe]$ ]]; then
         break
-    else
-        echo "  [ERROR] Invalid choice: '$APPS_CHOICES'. Valid: 1-$TOTAL_APPS, A, E, Q"
-        echo "  Press Enter to continue..."
-        read -r
     fi
+    if [[ "$APPS_CHOICES" =~ ^[0-9]+$ ]] && [ "$APPS_CHOICES" -ge 1 ] && [ "$APPS_CHOICES" -le "$TOTAL_APPS" ]; then
+        break
+    fi
+
+    echo "  [ERROR] Invalid choice: '$APPS_CHOICES'. Valid: 1-$TOTAL_APPS, A, E, Q"
 done
 
-echo "$APPS_CHOICES" > "$SAVED_CHOICES_FILE"
+echo ""
+echo "Downloading apps..."
+echo ""
+
+case "$APPS_CHOICES" in
+    A|a)
+        while IFS=, read -r app_id app_name app_desc app_priority filename fallback_url fdroid_url rest; do
+            [[ -z "$app_id" || "$app_id" == "app_id" || "$app_id" =~ ^# ]] && continue
+            download_app "$app_name" "$app_id" "$filename" "$fallback_url" "$fdroid_url" || true
+        done < "$CSV_FILE"
+        ;;
+    E|e)
+        while IFS=, read -r app_id app_name app_desc app_priority filename fallback_url fdroid_url rest; do
+            [[ -z "$app_id" || "$app_id" == "app_id" || "$app_id" =~ ^# ]] && continue
+            [[ "$app_priority" != "essential" ]] && continue
+            download_app "$app_name" "$app_id" "$filename" "$fallback_url" "$fdroid_url" || true
+        done < "$CSV_FILE"
+        ;;
+    *)
+        local target_num=$APPS_CHOICES
+        local current_num=0
+        while IFS=, read -r app_id app_name app_desc app_priority filename fallback_url fdroid_url rest; do
+            [[ -z "$app_id" || "$app_id" == "app_id" || "$app_id" =~ ^# ]] && continue
+            ((current_num++))
+            if [[ "$current_num" == "$target_num" ]]; then
+                download_app "$app_name" "$app_id" "$filename" "$fallback_url" "$fdroid_url" || true
+                break
+            fi
+        done < "$CSV_FILE"
+        ;;
+esac
 
 echo ""
-echo "Downloading..."
-echo "Using $CSV_FILE"
-cat "$CSV_FILE"
-
-# Download all apps from CSV using apkeep (default source: APKPure)
+echo "============================================"
+echo " Downloads complete!"
+echo "============================================"
 echo ""
-echo "Downloading via apkeep..."
-if command -v apkeep &>/dev/null; then
-    while IFS=, read -r apk_id app_name app_desc app_priority dest_name fallback_url rest; do
-        [[ -z "$apk_id" || "$apk_id" == "app_id" || "$apk_id" =~ ^# ]] && continue
-        dest="$APPS_DIR/$dest_name"
-
-        # Skip logic: download to temp first, compare sizes, overwrite only if different and > 1KB
-        temp_dest="$APPS_DIR/.tmp.$dest_name"
-        if [[ -f "$dest" && -s "$dest" ]]; then
-            old_size=$(stat -c%s "$dest" 2>/dev/null || stat -f%z "$dest" 2>/dev/null)
-        else
-            old_size=0
-        fi
-
-        echo "  Downloading $app_name ($apk_id)..."
-        downloaded=false
-
-        # Check if SKIP mode
-        if [[ "$apk_id" == "SKIP" ]]; then
-            # SKIP mode - use direct URL only
-            if [[ -n "$fallback_url" && "$fallback_url" == http* ]]; then
-                echo "  Using direct URL: $fallback_url"
-                curl -L -H "Accept: application/octet-stream" -A "Mozilla/5.0" -o "$temp_dest" "$fallback_url" 2>/dev/null && downloaded=true
-            else
-                echo "  [FAIL] $dest_name (no URL)"
-            fi
-        elif $USE_GOOGLE_PLAY && command -v apkeep &>/dev/null; then
-            # Google Play mode - try Google Play only
-            echo "  Trying Google Play..."
-            local ini_file="$HOME/.config/apkeep/apkeep.ini"
-            local email_opt=""
-            local token_opt=""
-            if [ -f "$ini_file" ]; then
-                email=$(grep "^email" "$ini_file" 2>/dev/null | cut -d'=' -f2 | tr -d ' ')
-                if [ -n "$email" ]; then
-                    email_opt="-e $email"
-                fi
-                if grep -q "aas_token" "$ini_file" 2>/dev/null; then
-                    token_opt="-t $(grep "^aas_token" "$ini_file" | cut -d'=' -f2 | tr -d ' ')"
-                elif grep -q "auth_token" "$ini_file" 2>/dev/null; then
-                    token_opt="--auth-token $(grep "^auth_token" "$ini_file" | cut -d'=' -f2 | tr -d ' ')"
-                fi
-            fi
-            rm -f "$APPS_DIR/$apk_id.apk" 2>/dev/null
-            if apkeep -a "$apk_id" -d google-play $email_opt $token_opt --accept-tos "$APPS_DIR" 2>/dev/null; then
-                if [[ -f "$APPS_DIR/$apk_id.apk" ]]; then
-                    mv "$APPS_DIR/$apk_id.apk" "$temp_dest" && downloaded=true
-                fi
-            fi
-            if ! $downloaded; then
-                echo "  [FAIL] $dest_name (Google Play)"
-                read -rp "    Try alternative sources? (y/n): " try_alt
-                if [[ "$try_alt" == "y" || "$try_alt" == "Y" ]]; then
-                    # Try APKPure
-                    rm -f "$APPS_DIR/$apk_id.apk" 2>/dev/null
-                    if apkeep -a "$apk_id" -d apk-pure "$APPS_DIR" 2>/dev/null; then
-                        if [[ -f "$APPS_DIR/$apk_id.apk" ]]; then
-                            mv "$APPS_DIR/$apk_id.apk" "$temp_dest" && downloaded=true
-                        fi
-                    fi
-                    # Try other apkeep sources if still not downloaded
-                    if ! $downloaded; then
-                        for source in github fdroid; do
-                            rm -f "$APPS_DIR/$apk_id.apk" 2>/dev/null
-                            if apkeep -a "$apk_id" -d "$source" "$APPS_DIR" 2>/dev/null; then
-                                if [[ -f "$APPS_DIR/$apk_id.apk" ]]; then
-                                    mv "$APPS_DIR/$apk_id.apk" "$temp_dest" && downloaded=true && break
-                                fi
-                            fi
-                        done
-                    fi
-                    # Fallback to CSV URL
-                    if ! $downloaded && [[ -n "$fallback_url" && "$fallback_url" == http* ]]; then
-                        echo "  Trying direct URL: $fallback_url"
-                        curl -L -H "Accept: application/octet-stream" -A "Mozilla/5.0" -o "$temp_dest" "$fallback_url" 2>/dev/null && downloaded=true
-                    fi
-                fi
-            fi
-        elif command -v apkeep &>/dev/null; then
-            # Alternative stores mode - try APKPure first
-            rm -f "$APPS_DIR/$apk_id.apk" 2>/dev/null
-            if apkeep -a "$apk_id" -d apk-pure "$APPS_DIR" 2>/dev/null; then
-                if [[ -f "$APPS_DIR/$apk_id.apk" ]]; then
-                    mv "$APPS_DIR/$apk_id.apk" "$temp_dest" && downloaded=true
-                fi
-            fi
-            # Try other apkeep sources if still not downloaded
-            if ! $downloaded; then
-                for source in github fdroid; do
-                    rm -f "$APPS_DIR/$apk_id.apk" 2>/dev/null
-                    if apkeep -a "$apk_id" -d "$source" "$APPS_DIR" 2>/dev/null; then
-                        if [[ -f "$APPS_DIR/$apk_id.apk" ]]; then
-                            mv "$APPS_DIR/$apk_id.apk" "$temp_dest" && downloaded=true && break
-                        fi
-                    fi
-                done
-            fi
-            # Fallback to CSV URL
-            if ! $downloaded && [[ -n "$fallback_url" && "$fallback_url" == http* ]]; then
-                echo "  Trying direct URL: $fallback_url"
-                curl -L -H "Accept: application/octet-stream" -A "Mozilla/5.0" -o "$temp_dest" "$fallback_url" 2>/dev/null && downloaded=true
-            fi
-        else
-            # No apkeep - use fallback URL only
-            if [[ -n "$fallback_url" && "$fallback_url" == http* ]]; then
-                echo "  Downloading from: $fallback_url"
-                curl -L -H "Accept: application/octet-stream" -A "Mozilla/5.0" -o "$temp_dest" "$fallback_url" 2>/dev/null && downloaded=true
-            else
-                echo "  [FAIL] $dest_name (no method)"
-            fi
-        fi
-
-        # Validate download: if file exists but is too small, mark as not downloaded
-        if $downloaded && [[ -f "$temp_dest" ]]; then
-            tmp_size=$(stat -c%s "$temp_dest" 2>/dev/null || stat -f%z "$temp_dest" 2>/dev/null)
-            if [[ $tmp_size -lt 1000 ]]; then
-                downloaded=false
-            fi
-        fi
-
-        # If still not downloaded and GitHub URL, try API for latest release
-        if ! $downloaded && [[ "$fallback_url" == *github.com* ]]; then
-            owner=$(echo "$fallback_url" | sed -n 's|https://github.com/\([^/]*\)/.*|\1|p')
-            repo=$(echo "$fallback_url" | sed -n 's|https://github.com/[^/]*/\([^/]*\)/.*|\1|p')
-            if [[ -n "$owner" && -n "$repo" ]]; then
-                echo "  Searching GitHub API for latest release..."
-                api_url="https://api.github.com/repos/$owner/$repo/releases/latest"
-                release_data=$(curl -s "$api_url" 2>/dev/null)
-                
-                # Get all APK download URLs from latest release
-                apk_urls=$(echo "$release_data" | grep -o '"browser_download_url": "[^"]*\.apk"' | sed 's/.*": "//;s/"$//' | tr -d '\r')
-                
-                if [[ -n "$apk_urls" ]]; then
-                    # Prefer arm64-v8a, then any arm64 (case-insensitive), then first APK
-                    arm64_url=$(echo "$apk_urls" | grep -i 'arm64-v8a' | head -1)
-                    if [[ -z "$arm64_url" ]]; then
-                        arm64_url=$(echo "$apk_urls" | grep -i 'arm64' | head -1)
-                    fi
-                    if [[ -n "$arm64_url" ]]; then
-                        echo "  Found arm64: $(echo "$arm64_url" | sed 's/.*\///')"
-                        echo "  URL: $arm64_url"
-                        echo "  Auto-downloading from GitHub..."
-                        rm -f "$temp_dest"
-                        # Use wget for GitHub (handles redirects better)
-                        if command -v wget &>/dev/null; then
-                            wget --progress=dot:giga --no-check-certificate --user-agent="Mozilla/5.0" -O "$temp_dest" "$arm64_url" 2>&1 && downloaded=true
-                        fi
-                        if ! $downloaded; then
-                            curl -L -f -H "Accept: application/octet-stream" -A "Mozilla/5.0" --max-redirs 10 --max-time 300 --retry 3 --retry-delay 2 -o "$temp_dest" "$arm64_url" 2>&1 && downloaded=true
-                        fi
-                        if ! $downloaded; then
-                            echo "  [FAIL] GitHub download failed for $arm64_url"
-                        fi
-                    else
-                        # Show all available APKs
-                        echo "  Available APKs:"
-                        echo "$apk_urls" | sed 's|.*/||' | nl
-                        read -rp "    Enter number to download (or n to skip): " apk_choice
-                        if [[ "$apk_choice" =~ ^[0-9]+$ ]]; then
-                            chosen_url=$(echo "$apk_urls" | sed -n "${apk_choice}p")
-                            if [[ -n "$chosen_url" ]]; then
-                                curl -L -H "Accept: application/octet-stream" -A "Mozilla/5.0" -o "$temp_dest" "$chosen_url" && downloaded=true
-                            fi
-                        fi
-                    fi
-                fi
-            fi
-        fi
-
-        # If downloaded file is too small (< 1KB), try GitHub API for correct version
-        if [[ -f "$temp_dest" && -s "$temp_dest" ]]; then
-            new_size=$(stat -c%s "$temp_dest" 2>/dev/null || stat -f%z "$temp_dest" 2>/dev/null)
-            if [[ $new_size -lt 1000 && "$fallback_url" == *github.com* ]]; then
-                echo "  [WARN] Downloaded file too small ($new_size bytes), searching GitHub API..."
-                owner=$(echo "$fallback_url" | sed -n 's|https://github.com/\([^/]*\)/.*|\1|p')
-                repo=$(echo "$fallback_url" | sed -n 's|https://github.com/[^/]*/\([^/]*\)/.*|\1|p')
-                if [[ -n "$owner" && -n "$repo" ]]; then
-                    api_url="https://api.github.com/repos/$owner/$repo/releases/latest"
-                    release_data=$(curl -s "$api_url" 2>/dev/null)
-                    apk_urls=$(echo "$release_data" | grep -o '"browser_download_url": "[^"]*\.apk"' | sed 's/.*": "//;s/"$//' | tr -d '\r')
-                    
-                    if [[ -n "$apk_urls" ]]; then
-                        arm64_url=$(echo "$apk_urls" | grep -i 'arm64-v8a' | head -1)
-                        if [[ -z "$arm64_url" ]]; then
-                            arm64_url=$(echo "$apk_urls" | grep -i 'arm64' | head -1)
-                        fi
-                        if [[ -n "$arm64_url" ]]; then
-                            echo "  Found: $(echo "$arm64_url" | sed 's/.*\///')"
-                            echo "  Auto-downloading from GitHub..."
-                            rm -f "$temp_dest"
-                            downloaded=false
-                            if command -v wget &>/dev/null; then
-                                wget --progress=dot:giga --no-check-certificate --user-agent="Mozilla/5.0" -O "$temp_dest" "$arm64_url" 2>&1 && downloaded=true
-                            fi
-                            if ! $downloaded; then
-                                curl -L -H "Accept: application/octet-stream" -A "Mozilla/5.0" --max-redirs 10 --max-time 300 -o "$temp_dest" "$arm64_url" 2>&1 && downloaded=true
-                            fi
-                            if ! $downloaded; then
-                                echo "  [FAIL] GitHub download failed"
-                            fi
-                        else
-                            echo "  Available APKs:"
-                            echo "$apk_urls" | sed 's|.*/||' | nl
-                            read -rp "    Enter number to download (or n to skip): " apk_choice
-                            if [[ "$apk_choice" =~ ^[0-9]+$ ]]; then
-                                chosen_url=$(echo "$apk_urls" | sed -n "${apk_choice}p")
-                                if [[ -n "$chosen_url" ]]; then
-                                    curl -L -o "$temp_dest" "$chosen_url" 2>/dev/null && downloaded=true
-                                fi
-                            fi
-                        fi
-                    fi
-                fi
-            fi
-        fi
-
-        # Compare temp file with existing
-        if [[ -f "$temp_dest" && -s "$temp_dest" ]]; then
-            new_size=$(stat -c%s "$temp_dest" 2>/dev/null || stat -f%z "$temp_dest" 2>/dev/null)
-            if [[ $new_size -eq $old_size && $old_size -gt 0 ]]; then
-                echo "  [SKIP] $dest_name (same size, $old_size bytes)"
-                rm -f "$temp_dest"
-            elif [[ $new_size -gt 1000 ]]; then
-                mv "$temp_dest" "$dest"
-                echo "  [OK] $dest_name ($new_size bytes)"
-            else
-                echo "  [FAIL] $dest_name (too small, $new_size bytes)"
-                rm -f "$temp_dest"
-            fi
-        elif [[ $old_size -gt 0 ]]; then
-            echo "  [KEEP] $dest_name (download failed, keeping $old_size bytes)"
-        else
-            echo "  [FAIL] $dest_name"
-        fi
-    done < "$CSV_FILE"
-else
-    echo "apkeep not installed - using fallback method"
-    # Read from CSV and download based on choice
-    case "$APPS_CHOICES" in
-        A|a)
-            while IFS=, read -r apk_id app_name app_desc app_priority dest_name fallback_url rest; do
-                [[ -z "$apk_id" || "$apk_id" == "app_id" || "$apk_id" =~ ^# ]] && continue
-                dest="$APPS_DIR/$dest_name"
-                temp_dest="$APPS_DIR/.tmp.$dest_name"
-                echo "  Downloading $app_name..."
-                downloaded=false
-                if [[ -n "$fallback_url" && "$fallback_url" == http* ]]; then
-                    curl -L -H "Accept: application/octet-stream" -A "Mozilla/5.0" -o "$temp_dest" "$fallback_url" 2>/dev/null && downloaded=true
-                fi
-                if $downloaded && [[ -f "$temp_dest" && -s "$temp_dest" ]]; then
-                    new_size=$(stat -c%s "$temp_dest" 2>/dev/null || stat -f%z "$temp_dest" 2>/dev/null)
-                    if [[ $new_size -gt 1000 ]]; then
-                        mv "$temp_dest" "$dest"
-                        echo "  [OK] $dest_name ($new_size bytes)"
-                    else
-                        echo "  [FAIL] $dest_name (too small, $new_size bytes)"
-                        rm -f "$temp_dest"
-                    fi
-                else
-                    echo "  [FAIL] $dest_name"
-                fi
-            done < "$CSV_FILE"
-            ;;
-        E|e)
-            while IFS=, read -r apk_id app_name app_desc app_priority dest_name fallback_url rest; do
-                [[ -z "$apk_id" || "$apk_id" == "app_id" || "$apk_id" =~ ^# ]] && continue
-                [[ "$app_priority" != "essential" ]] && continue
-                dest="$APPS_DIR/$dest_name"
-                temp_dest="$APPS_DIR/.tmp.$dest_name"
-                echo "  Downloading $app_name..."
-                downloaded=false
-                if [[ -n "$fallback_url" && "$fallback_url" == http* ]]; then
-                    curl -L -H "Accept: application/octet-stream" -A "Mozilla/5.0" -o "$temp_dest" "$fallback_url" 2>/dev/null && downloaded=true
-                fi
-                if $downloaded && [[ -f "$temp_dest" && -s "$temp_dest" ]]; then
-                    new_size=$(stat -c%s "$temp_dest" 2>/dev/null || stat -f%z "$temp_dest" 2>/dev/null)
-                    if [[ $new_size -gt 1000 ]]; then
-                        mv "$temp_dest" "$dest"
-                        echo "  [OK] $dest_name ($new_size bytes)"
-                    else
-                        echo "  [FAIL] $dest_name (too small, $new_size bytes)"
-                        rm -f "$temp_dest"
-                    fi
-                else
-                    echo "  [FAIL] $dest_name"
-                fi
-            done < "$CSV_FILE"
-            ;;
-        *)
-            # Number selection - find the Nth app in CSV
-            local target_num=$APPS_CHOICES
-            local current_num=0
-            while IFS=, read -r apk_id app_name app_desc app_priority dest_name fallback_url rest; do
-                [[ -z "$apk_id" || "$apk_id" == "app_id" || "$apk_id" =~ ^# ]] && continue
-                ((current_num++))
-                if [[ "$current_num" == "$target_num" ]]; then
-                    dest="$APPS_DIR/$dest_name"
-                    temp_dest="$APPS_DIR/.tmp.$dest_name"
-                    echo "  Downloading $app_name..."
-                    downloaded=false
-                    if [[ -n "$fallback_url" && "$fallback_url" == http* ]]; then
-                        curl -L -H "Accept: application/octet-stream" -A "Mozilla/5.0" -o "$temp_dest" "$fallback_url" 2>/dev/null && downloaded=true
-                    fi
-                    if $downloaded && [[ -f "$temp_dest" && -s "$temp_dest" ]]; then
-                        new_size=$(stat -c%s "$temp_dest" 2>/dev/null || stat -f%z "$temp_dest" 2>/dev/null)
-                        if [[ $new_size -gt 1000 ]]; then
-                            mv "$temp_dest" "$dest"
-                            echo "  [OK] $dest_name ($new_size bytes)"
-                        else
-                            echo "  [FAIL] $dest_name (too small, $new_size bytes)"
-                            rm -f "$temp_dest"
-                        fi
-                    else
-                        echo "  [FAIL] $dest_name"
-                    fi
-                    break
-                fi
-            done < "$CSV_FILE"
-            ;;
-    esac
-fi
-
+echo "APKs saved to: $APPS_DIR"
 echo ""
-echo "Done! Apps in: $APPS_DIR"
+ls -lh "$APPS_DIR"/*.apk 2>/dev/null || echo "(no APKs downloaded)"
+echo ""
