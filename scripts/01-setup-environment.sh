@@ -140,14 +140,14 @@ install_safe() {
 # ---------------------------------------------------------------------------
 # 1. Update system
 # ---------------------------------------------------------------------------
-echo "[1/8] Updating system packages..."
+echo "[1/10] Updating system packages..."
 sudo apt-get update -y
 sudo apt-get upgrade -y
 
 # ---------------------------------------------------------------------------
 # 2. Install essential build packages
 # ---------------------------------------------------------------------------
-echo "[2/8] Installing essential packages..."
+echo "[2/10] Installing essential packages..."
 install_safe \
     git-core gnupg flex bison build-essential zip curl zlib1g-dev \
     gcc-multilib g++-multilib libc6-dev-i386 \
@@ -161,7 +161,7 @@ install_safe x11proto-core-dev lib32z1-dev libncurses5 libncurses5-dev libtinfo5
 # ---------------------------------------------------------------------------
 # 3. Install AOSP-specific build dependencies
 # ---------------------------------------------------------------------------
-echo "[3/8] Installing AOSP build dependencies..."
+echo "[3/10] Installing AOSP build dependencies..."
 install_safe \
     libssl-dev cpio pkg-config lzop \
     libelf-dev bison flex \
@@ -192,7 +192,7 @@ fi
 # ---------------------------------------------------------------------------
 if [ "$AOSP_VER" = "9" ] || [ "$AOSP_VER" = "11" ]; then
     # Android 9/11 need OpenJDK 8
-    echo "[4/8] Installing OpenJDK 8 (required for Android $AOSP_VER)..."
+    echo "[4/10] Installing OpenJDK 8 (required for Android $AOSP_VER)..."
 
     # Install aptitude first (better dependency resolver)
     echo "Installing aptitude for better dependency resolution..."
@@ -224,7 +224,7 @@ if [ "$AOSP_VER" = "9" ] || [ "$AOSP_VER" = "11" ]; then
     fi
 else
     # Android 12 needs OpenJDK 11
-    echo "[4/8] Installing OpenJDK 11 (required for Android 12)..."
+    echo "[4/10] Installing OpenJDK 11 (required for Android 12)..."
 
     # Install aptitude first (better dependency resolver)
     echo "Installing aptitude for better dependency resolution..."
@@ -264,9 +264,49 @@ java -version 2>&1 | head -3
 echo ""
 
 # ---------------------------------------------------------------------------
-# 5. Install Rust & Cargo (required for apkeep)
+# 5. Install OpenSSL 3.x (Ubuntu 18.04 only ships 1.1, needed by apkeep)
+# Installs to /usr/local/openssl3 — does NOT replace system OpenSSL
 # ---------------------------------------------------------------------------
-echo "[5/8] Installing Rust & Cargo..."
+echo "[5/10] Checking OpenSSL..."
+OPENSSL3_DIR="/usr/local/openssl3"
+if [ -f "$OPENSSL3_DIR/lib64/libssl.so.3" ] || [ -f "$OPENSSL3_DIR/lib/libssl.so.3" ]; then
+    echo "  OpenSSL 3.x already installed at $OPENSSL3_DIR"
+else
+    echo "  Building OpenSSL 3.0 LTS from source..."
+    sudo apt-get install -y build-essential checkinstall zlib1g-dev 2>/dev/null || true
+
+    OPENSSL_VER="3.0.15"
+    BUILD_DIR="/tmp/openssl-build-$$"
+    mkdir -p "$BUILD_DIR"
+    cd "$BUILD_DIR"
+
+    if ! wget -q "https://www.openssl.org/source/openssl-${OPENSSL_VER}.tar.gz"; then
+        echo "  WARNING: Failed to download OpenSSL. Skipping."
+    else
+        tar xf "openssl-${OPENSSL_VER}.tar.gz"
+        cd "openssl-${OPENSSL_VER}"
+        ./Configure --prefix="$OPENSSL3_DIR" --openssldir="$OPENSSL3_DIR" shared zlib
+        make -j$(nproc)
+        sudo make install_sw 2>/dev/null || sudo make install 2>/dev/null || true
+
+        # Add to ldconfig
+        if [ -d "$OPENSSL3_DIR/lib64" ]; then
+            echo "$OPENSSL3_DIR/lib64" | sudo tee /etc/ld.so.conf.d/openssl3.conf
+        elif [ -d "$OPENSSL3_DIR/lib" ]; then
+            echo "$OPENSSL3_DIR/lib" | sudo tee /etc/ld.so.conf.d/openssl3.conf
+        fi
+        sudo ldconfig
+
+        cd /
+        rm -rf "$BUILD_DIR"
+        echo "  OpenSSL 3.0 installed to $OPENSSL3_DIR"
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+# 6. Install Rust & Cargo (required for apkeep)
+# ---------------------------------------------------------------------------
+echo "[6/10] Installing Rust & Cargo..."
 if ! command -v cargo &>/dev/null; then
     echo "  Installing Rust via rustup..."
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y 2>/dev/null || {
@@ -288,33 +328,30 @@ fi
 # ---------------------------------------------------------------------------
 # 6. Install apkeep (APK downloader for Google Play, APKPure, etc.)
 # See: https://github.com/EFForg/apkeep
-# Built from source via cargo to link against system OpenSSL (avoids
-# libssl.so version mismatches with prebuilt binaries)
+# Always built from source via cargo to link against system OpenSSL
+# (avoids libssl.so version mismatches with prebuilt binaries)
 # ---------------------------------------------------------------------------
-echo "[6/8] Installing apkeep..."
-if ! command -v apkeep &>/dev/null; then
-    if command -v cargo &>/dev/null; then
-        echo "  Building apkeep from source with cargo..."
-        if cargo install --git https://github.com/EFForg/apkeep.git 2>/dev/null; then
-            echo "  apkeep installed via cargo"
-        else
-            echo "  WARNING: apkeep build failed."
-            echo "  Apps requiring Google Play download will use alternative sources."
-            echo "  To retry manually: cargo install --git https://github.com/EFForg/apkeep.git"
-        fi
+echo "[7/10] Installing apkeep..."
+if command -v cargo &>/dev/null; then
+    # Always rebuild from source — prebuilt binaries may link against wrong OpenSSL
+    echo "  Building apkeep from source with cargo..."
+    if cargo install --git https://github.com/EFForg/apkeep.git 2>/dev/null; then
+        echo "  apkeep installed via cargo"
     else
-        echo "  WARNING: cargo not available — cannot build apkeep."
+        echo "  WARNING: apkeep build failed."
         echo "  Apps requiring Google Play download will use alternative sources."
-        echo "  Install Rust first: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
+        echo "  To retry manually: cargo install --git https://github.com/EFForg/apkeep.git"
     fi
 else
-    echo "  apkeep already installed: $(apkeep --version 2>/dev/null || echo 'version unknown')"
+    echo "  WARNING: cargo not available — cannot build apkeep."
+    echo "  Apps requiring Google Play download will use alternative sources."
+    echo "  Install Rust first: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
 fi
 
 # ---------------------------------------------------------------------------
 # 6. Install Repo tool (Google's git repository manager)
 # ---------------------------------------------------------------------------
-echo "[7/8] Installing Repo tool..."
+echo "[8/10] Installing Repo tool..."
 mkdir -p ~/bin
 curl -sSL https://storage.googleapis.com/git-repo-downloads/repo -o ~/bin/repo
 chmod a+x ~/bin/repo
@@ -328,7 +365,7 @@ export PATH=~/bin:$PATH
 # ---------------------------------------------------------------------------
 # 7. Configure Git
 # ---------------------------------------------------------------------------
-echo "[8/8] Configuring Git..."
+echo "[9/10] Configuring Git..."
 if [ -z "$(git config --global user.name 2>/dev/null)" ]; then
     echo "Enter your name for Git commits:"
     read -r GIT_NAME
@@ -345,7 +382,7 @@ fi
 # 8. Configure swap (recommended for 16GB RAM systems)
 # ---------------------------------------------------------------------------
 echo ""
-echo "[9/9] Checking swap..."
+echo "[10/10] Checking swap..."
 CURRENT_SWAP=$(free -g | awk '/^Swap:/ {print $2}')
 if [ "$CURRENT_SWAP" -lt 16 ]; then
     echo "Current swap: ${CURRENT_SWAP}GB. Recommended: 16GB+"
