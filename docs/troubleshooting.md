@@ -212,14 +212,9 @@ File "libcore/annotations/generate_annotated_java_files.py", line 34
 SyntaxError: Missing parentheses in call to 'print'. Did you mean print(...)?
 ```
 
-**Cause**: Android 9 uses Python 2 scripts, but modern distros default to Python 3. The `print` statement syntax changed between Python 2 and 3.
+**Cause**: Android 9 uses Python 2 scripts. Build on Ubuntu 18.04 LTS which has Python 2 native, or ensure `python` points to Python 2.
 
-**Solution**: The build script (`04-build-android.sh`) now automatically patches Python 2 print statements. If building manually:
-
-```bash
-# Fix all Python 2 print statements in libcore/annotations
-find libcore/annotations -name "*.py" -exec sed -i 's/^\([[:space:]]*\)print \(.*\)/\1print(\2)/' {} +
-```
+**Solution**: Run `01-setup-environment.sh` which installs Python 2 and symlinks `python → python2` for Android 9/11 builds.
 
 #### General Python Version Issues
 

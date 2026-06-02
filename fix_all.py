@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fix ALL Python 2->3 issues in AOSP build scripts."""
+"""Fix Python 2 compatibility issues in AOSP build scripts."""
 import os, glob, shutil
 
 BASE = '/mnt/aosp-build/androidtv-rock4cplus-radxa9'

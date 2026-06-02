@@ -57,7 +57,12 @@ echo "     - Manifest: radxa/manifests, branch: rockpi-box-9.0"
 echo "     - Most stable, all hardware works"
 echo "     - Directory: $BASE_DIR/androidtv-rock4cplus-radxa9"
 echo ""
-echo "  2) Android 12 (Vicharak BSP, kernel 5.10) ★ RECOMMENDED"
+echo "  2) Android 11 (Radxa rk11, kernel 4.19) ★ RECOMMENDED"
+echo "     - Manifest: radxa/manifests, branch: Android11_Radxa_rk11"
+echo "     - Best built on Ubuntu 18.04 (Python 2 native, no 2to3 needed)"
+echo "     - Directory: $BASE_DIR/androidtv-rock4cplus-radxa11"
+echo ""
+echo "  4) Android 12 (Vicharak BSP, kernel 5.10) EXPERIMENTAL"
 echo "     - Manifest: vicharak-in/rockchip-android-manifest (GitHub)"
 echo "     - Full Rockchip BSP included, no separate downloads needed"
 echo "     - Directory: $BASE_DIR/androidtv-rock4cplus-vicharak12"
@@ -66,11 +71,6 @@ echo "  3) Android 12 AOSP (pure Google, EXPERIMENTAL)"
 echo "     - No Rockchip BSP — manual integration required"
 echo "     - Directory: $BASE_DIR/androidtv-rock4cplus-aosp12"
 echo ""
-echo "  4) Android 11 (Radxa rk11, kernel 4.19) ★ NEW"
-echo "     - Manifest: radxa/manifests, branch: Android11_Radxa_rk11"
-echo "     - Best built on Ubuntu 18.04 (Python 2 native, no 2to3 needed)"
-echo "     - Directory: $BASE_DIR/androidtv-rock4cplus-radxa11"
-echo ""
 read -rp "Enter choice [1-4]: " BUILD_CHOICE
 
 # ---------------------------------------------------------------------------
@@ -78,9 +78,9 @@ read -rp "Enter choice [1-4]: " BUILD_CHOICE
 # ---------------------------------------------------------------------------
 case $BUILD_CHOICE in
     1) WORK_DIR="$BASE_DIR/androidtv-rock4cplus-radxa9" ;;
-    2) WORK_DIR="$BASE_DIR/androidtv-rock4cplus-vicharak12" ;;
-    3) WORK_DIR="$BASE_DIR/androidtv-rock4cplus-aosp12" ;;
-    4) WORK_DIR="$BASE_DIR/androidtv-rock4cplus-radxa11" ;;
+    2) WORK_DIR="$BASE_DIR/androidtv-rock4cplus-radxa11" ;;
+    3) WORK_DIR="$BASE_DIR/androidtv-rock4cplus-vicharak12" ;;
+    4) WORK_DIR="$BASE_DIR/androidtv-rock4cplus-aosp12" ;;
     *) echo "Invalid choice. Exiting."; exit 1 ;;
 esac
 
@@ -147,9 +147,9 @@ case $BUILD_CHOICE in
         echo "rkbin is included in Radxa manifest, skipping manual clone"
         ;;
 
-    2)
+    3)
         # ====================================================================
-        # OPTION 2: Android 12 (Vicharak BSP, kernel 5.10) ★ BEST
+        # OPTION 3: Android 12 (Vicharak BSP, kernel 5.10) ★ BEST
         # ====================================================================
         echo "[2/4] Initializing repo with Vicharak Android 12 manifest..."
         echo ""
@@ -202,7 +202,7 @@ case $BUILD_CHOICE in
         echo "Vicharak BSP ready. Device config at: device/rockchip/rk3399"
         ;;
 
-    3)
+    4)
         # ====================================================================
         # OPTION 4: Android 12 AOSP (Experimental, automatic Rockchip overlay)
         # ====================================================================
@@ -258,9 +258,9 @@ case $BUILD_CHOICE in
         fi
         ;;
 
-    4)
+    2)
         # ====================================================================
-        # OPTION 4: Android 11 (Radxa rk11, kernel 4.19)
+        # OPTION 2: Android 11 (Radxa rk11, kernel 4.19)
         # ====================================================================
         echo "[2/4] Initializing repo with Radxa Android 11 manifest..."
         echo ""
@@ -269,7 +269,6 @@ case $BUILD_CHOICE in
         echo "XML:      rockchip-r-release.xml"
         echo ""
         echo "NOTE: Android 11 builds best on Ubuntu 18.04 LTS (Python 2 native)."
-        echo "On Ubuntu 20.04+, Python 2→3 conversion will be applied automatically."
         echo ""
 
         "$REPO_CMD" init --depth=1 \

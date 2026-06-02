@@ -58,11 +58,11 @@ echo "  1) Android 9 Pie (Radxa, kernel 4.4)"
 echo "     - Best on Ubuntu 18.04 LTS (Python 2 native, JDK 8)"
 echo "     - Most stable, all hardware works"
 echo ""
-echo "  2) Android 11 (Radxa rk11, kernel 4.19)"
+echo "  2) Android 11 (Radxa rk11, kernel 4.19) ★ RECOMMENDED"
 echo "     - Best on Ubuntu 18.04 LTS (Python 2 native, JDK 8)"
 echo "     - Newer kernel, good hardware support"
 echo ""
-echo "  3) Android 12 (Vicharak BSP, kernel 5.10) ★ RECOMMENDED"
+echo "  3) Android 12 (Vicharak BSP, kernel 5.10) EXPERIMENTAL"
 echo "     - Best on Ubuntu 22.04 LTS (Python 3, JDK 11)"
 echo "     - Full Rockchip BSP included"
 echo ""
@@ -166,7 +166,7 @@ install_safe \
     libssl-dev cpio pkg-config lzop \
     libelf-dev bison flex \
     u-boot-tools device-tree-compiler swig \
-    python3-dev python3-setuptools python3-lib2to3
+    python3-dev python3-setuptools
 
 # Android 9/11: also need Python 2 and related packages
 if [ "$AOSP_VER" = "9" ] || [ "$AOSP_VER" = "11" ]; then
