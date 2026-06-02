@@ -343,6 +343,16 @@ case $BSP_CHOICE in
                 echo "[INFO] Installing 2to3..."
                 sudo apt-get install -y 2to3 2>/dev/null || sudo apt-get install -y python3-lib2to3 2>/dev/null || true
             fi
+            # Determine 2to3 command (may be '2to3' or 'python3 -m lib2to3')
+            if command -v 2to3 &>/dev/null; then
+                CMD_2TO3="2to3"
+            elif python3 -m lib2to3 --help &>/dev/null 2>&1; then
+                CMD_2TO3="python3 -m lib2to3"
+            else
+                echo "[WARN] 2to3 not available. Skipping Python 2→3 conversion."
+                echo "[WARN] Build may fail on Python 2 syntax errors."
+                CMD_2TO3=""
+            fi
 
             # Save list of all .py files that will be touched (for clean/restore later)
             PYFILES_LIST="$WORK_DIR/.2to3_files.txt"
@@ -353,48 +363,52 @@ case $BSP_CHOICE in
             echo "[INFO] Found $TOTAL_FILES Python files to process (list saved to .2to3_files.txt)"
 
             # Phase 1: 2to3 conversion with progress
-            echo "[INFO] Phase 1/3: Running 2to3..."
-            PROCESSED=0
-            find build libcore external/annotation-tools development frameworks system device \
-                -not -path "*/edk2/*" \
-                -name "*.py" -print0 | while IFS= read -r -d '' f; do
-                2to3 -w -n "$f" 2>/dev/null
-                PROCESSED=$((PROCESSED + 1))
-                if [ $((PROCESSED % 50)) -eq 0 ] || [ "$PROCESSED" -eq "$TOTAL_FILES" ]; then
-                    PCT=$((PROCESSED * 100 / TOTAL_FILES))
-                    printf "\r  [2to3] %d/%d (%d%%)" "$PROCESSED" "$TOTAL_FILES" "$PCT"
-                fi
-            done
-            printf "\r  [2to3] %d/%d (100%%) done.\n" "$TOTAL_FILES" "$TOTAL_FILES"
+            if [ -n "$CMD_2TO3" ]; then
+                echo "[INFO] Phase 1/3: Running 2to3..."
+                PROCESSED=0
+                while IFS= read -r -d '' f; do
+                    $CMD_2TO3 -w -n "$f" 2>/dev/null || true
+                    PROCESSED=$((PROCESSED + 1))
+                    if [ $((PROCESSED % 50)) -eq 0 ] || [ "$PROCESSED" -eq "$TOTAL_FILES" ]; then
+                        PCT=$((PROCESSED * 100 / TOTAL_FILES))
+                        printf "\r  [2to3] %d/%d (%d%%)" "$PROCESSED" "$TOTAL_FILES" "$PCT"
+                    fi
+                done < <(find build libcore external/annotation-tools development frameworks system device \
+                    -not -path "*/edk2/*" \
+                    -name "*.py" -print0)
+                printf "\r  [2to3] %d/%d (100%%) done.\n" "$TOTAL_FILES" "$TOTAL_FILES"
+            else
+                echo "[INFO] Phase 1/3: Skipping 2to3 (not available)."
+            fi
 
             # Phase 2: fix open(filename, "rb") -> open(filename, "r")
             echo "[INFO] Phase 2/3: Fixing open(filename, \"rb\")..."
             PROCESSED=0
-            find build libcore external/annotation-tools development frameworks system device \
-                -not -path "*/edk2/*" \
-                -name "*.py" -print0 | while IFS= read -r -d '' f; do
-                sed -i 's/open(filename, "rb")/open(filename, "r")/' "$f" 2>/dev/null
+            while IFS= read -r -d '' f; do
+                sed -i 's/open(filename, "rb")/open(filename, "r")/' "$f" 2>/dev/null || true
                 PROCESSED=$((PROCESSED + 1))
                 if [ $((PROCESSED % 50)) -eq 0 ] || [ "$PROCESSED" -eq "$TOTAL_FILES" ]; then
                     PCT=$((PROCESSED * 100 / TOTAL_FILES))
                     printf "\r  [sed-rb] %d/%d (%d%%)" "$PROCESSED" "$TOTAL_FILES" "$PCT"
                 fi
-            done
+            done < <(find build libcore external/annotation-tools development frameworks system device \
+                -not -path "*/edk2/*" \
+                -name "*.py" -print0)
             printf "\r  [sed-rb] %d/%d (100%%) done.\n" "$TOTAL_FILES" "$TOTAL_FILES"
 
             # Phase 3: fix open(output_file, "wb") -> open(output_file, "w")
             echo "[INFO] Phase 3/3: Fixing open(output_file, \"wb\")..."
             PROCESSED=0
-            find build libcore external/annotation-tools development frameworks system device \
-                -not -path "*/edk2/*" \
-                -name "*.py" -print0 | while IFS= read -r -d '' f; do
-                sed -i 's/open(output_file, "wb")/open(output_file, "w")/' "$f" 2>/dev/null
+            while IFS= read -r -d '' f; do
+                sed -i 's/open(output_file, "wb")/open(output_file, "w")/' "$f" 2>/dev/null || true
                 PROCESSED=$((PROCESSED + 1))
                 if [ $((PROCESSED % 50)) -eq 0 ] || [ "$PROCESSED" -eq "$TOTAL_FILES" ]; then
                     PCT=$((PROCESSED * 100 / TOTAL_FILES))
                     printf "\r  [sed-wb] %d/%d (%d%%)" "$PROCESSED" "$TOTAL_FILES" "$PCT"
                 fi
-            done
+            done < <(find build libcore external/annotation-tools development frameworks system device \
+                -not -path "*/edk2/*" \
+                -name "*.py" -print0)
             printf "\r  [sed-wb] %d/%d (100%%) done.\n" "$TOTAL_FILES" "$TOTAL_FILES"
 
             # Revert insertkeys.py: it genuinely needs binary mode to read .x509.pem certs
