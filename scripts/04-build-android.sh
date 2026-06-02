@@ -508,12 +508,12 @@ print('Fixed auto_generator.py')
         # Build Android (use PIPESTATUS to catch make failure through tee)
         echo "[4b/4] Building Android (make -j$(nproc))..."
 
-        # Final fix: find and patch insertkeys.py source, then delete out/ copy
-        # so it regenerates from the fixed source during make.
-        INSERTKEYS_SRC=$(find . -name "insertkeys.py" -not -path "*/out/*" 2>/dev/null | head -1)
-        if [ -n "$INSERTKEYS_SRC" ] && [ -f "$INSERTKEYS_SRC" ]; then
+        # Final fix: patch insertkeys.py in out/ directly (source is unfindable).
+        # The build system copies it during envsetup; fix the copy in place.
+        INSERTKEYS_OUT="out/host/linux-x86/bin/insertkeys.py"
+        if [ -f "$INSERTKEYS_OUT" ]; then
             python3 -c "
-path = '$INSERTKEYS_SRC'
+path = '$INSERTKEYS_OUT'
 with open(path) as f:
     content = f.read()
 content = content.replace('if line is not \"\":', 'if line != \"\":')
@@ -523,12 +523,8 @@ content = content.replace('ConfigParser.', 'configparser.')
 with open(path, 'w') as f:
     f.write(content)
 "
-            echo "[INFO] Fixed insertkeys.py source at $INSERTKEYS_SRC"
-        else
-            echo "[WARN] insertkeys.py not found in source tree"
+            echo "[INFO] Fixed insertkeys.py in out/"
         fi
-        # Delete out/ copy so it regenerates from fixed source
-        rm -f out/host/linux-x86/bin/insertkeys.py 2>/dev/null || true
 
         ANDROID_START=$(date +%s)
         make -j$(nproc) 2>&1 | tee build.log
