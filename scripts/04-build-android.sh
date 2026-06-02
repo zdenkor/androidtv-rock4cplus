@@ -199,10 +199,12 @@ case $BSP_CHOICE in
         fi
         find build libcore external/annotation-tools development frameworks system device \
             -name "*.py" -exec 2to3 -w -n {} + 2>/dev/null || true
-        # 2to3 doesn't fix open("rb") -> open("r") for text processing
-        # Python 3's open("rb") returns bytes, but many scripts expect strings
+        # 2to3 doesn't fix open("rb")/open("wb") for text processing
+        # Python 3's binary mode returns bytes, but many scripts expect strings
         find build libcore external/annotation-tools development frameworks system device \
             -name "*.py" -exec sed -i 's/open(filename, "rb")/open(filename, "r")/' {} + 2>/dev/null || true
+        find build libcore external/annotation-tools development frameworks system device \
+            -name "*.py" -exec sed -i 's/open(output_file, "wb")/open(output_file, "w")/' {} + 2>/dev/null || true
         echo "Python 2to3 conversion complete"
 
         # Build kernel first (required for Android 9)
