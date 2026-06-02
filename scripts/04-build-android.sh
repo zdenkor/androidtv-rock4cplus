@@ -369,8 +369,9 @@ case $BSP_CHOICE in
                     continue
                 fi
                 # Skip files with no Python 2 patterns (nothing to convert)
-                # Patterns: print statement, xrange, except X, e, has_key, backticks, <>, raw_input, apply(), reduce()
-                if ! grep -qPm1 '(?<!\.)\bprint\s+[^(]|\bxrange\b|\bhas_key\b|`[^`]+`|<>|\braw_input\b|\bapply\s*\(|\breduce\s*\(' "$f" 2>/dev/null; then
+                # Patterns: print statement, xrange, has_key, backticks, <>,
+                # raw_input, apply(), reduce(), ConfigParser, StringIO, urllib2, urlparse
+                if ! grep -qPm1 '(?<!\.)\bprint\s+[^(]|\bxrange\b|\bhas_key\b|`[^`]+`|<>|\braw_input\b|\bapply\s*\(|\breduce\s*\(|\bConfigParser\b|\bStringIO\b|\burllib2\b|\burlparse\b|\bcommands\b|\b__builtin__\b' "$f" 2>/dev/null; then
                     continue
                 fi
                 echo "$f"
@@ -433,13 +434,15 @@ case $BSP_CHOICE in
         # Post-2to3 fixes (always run, even if 2to3 was skipped via marker)
         # -----------------------------------------------------------------
 
-        # Fix insertkeys.py: revert binary mode + fix "is not" literal
+        # Fix insertkeys.py: revert binary mode + fix "is not" literal + Py2 imports
         INSERTKEYS="build/tools/security/insertkeys.py"
         if [ -f "$INSERTKEYS" ]; then
             sed -i 's/open(filename, "r")/open(filename, "rb")/' "$INSERTKEYS"
             sed -i 's/open(output_file, "w")/open(output_file, "wb")/' "$INSERTKEYS"
             sed -i 's/if line is not "":/if line != "":/' "$INSERTKEYS"
-            echo "[INFO] Fixed insertkeys.py (binary mode + syntax)"
+            sed -i 's/import ConfigParser/import configparser/' "$INSERTKEYS"
+            sed -i 's/import StringIO/from io import StringIO/' "$INSERTKEYS"
+            echo "[INFO] Fixed insertkeys.py (binary mode + syntax + Py2 imports)"
         fi
         # Also fix the copy already staged in out/ (build copies it there)
         INSERTKEYS_OUT="out/host/linux-x86/bin/insertkeys.py"
@@ -447,6 +450,8 @@ case $BSP_CHOICE in
             sed -i 's/open(filename, "r")/open(filename, "rb")/' "$INSERTKEYS_OUT"
             sed -i 's/open(output_file, "w")/open(output_file, "wb")/' "$INSERTKEYS_OUT"
             sed -i 's/if line is not "":/if line != "":/' "$INSERTKEYS_OUT"
+            sed -i 's/import ConfigParser/import configparser/' "$INSERTKEYS_OUT"
+            sed -i 's/import StringIO/from io import StringIO/' "$INSERTKEYS_OUT"
             echo "[INFO] Fixed insertkeys.py in out/ as well"
         fi
         # Remove stale mac_permissions intermediates so they regenerate
