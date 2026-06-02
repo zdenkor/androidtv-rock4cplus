@@ -425,29 +425,32 @@ case $BSP_CHOICE in
             done < "$PYFILES_LIST"
             printf "\r  [sed-wb] %d/%d (100%%) done.\n" "$TOTAL_FILES" "$TOTAL_FILES"
 
-            # Revert insertkeys.py: it genuinely needs binary mode to read .x509.pem certs
-            INSERTKEYS="build/tools/security/insertkeys.py"
-            if [ -f "$INSERTKEYS" ]; then
-                sed -i 's/open(filename, "r")/open(filename, "rb")/' "$INSERTKEYS"
-                sed -i 's/open(output_file, "w")/open(output_file, "wb")/' "$INSERTKEYS"
-                # Fix Python 2 "is not" with literal (2to3 misses this)
-                sed -i 's/if line is not "":/if line != "":/' "$INSERTKEYS"
-                echo "[INFO] Restored binary mode + fixed syntax in insertkeys.py"
-            fi
-            # Also fix the copy already staged in out/ (build copies it there)
-            INSERTKEYS_OUT="out/host/linux-x86/bin/insertkeys.py"
-            if [ -f "$INSERTKEYS_OUT" ]; then
-                sed -i 's/open(filename, "r")/open(filename, "rb")/' "$INSERTKEYS_OUT"
-                sed -i 's/open(output_file, "w")/open(output_file, "wb")/' "$INSERTKEYS_OUT"
-                sed -i 's/if line is not "":/if line != "":/' "$INSERTKEYS_OUT"
-                echo "[INFO] Fixed insertkeys.py in out/ as well"
-            fi
-            # Remove stale generated mac_permissions intermediates so they regenerate
-            rm -f out/target/product/*/obj/ETC/plat_mac_permissions.xml_intermediates/plat_mac_permissions.xml 2>/dev/null || true
-
             touch "$MARKER"
             echo "Python 2to3 conversion complete"
         fi
+
+        # -----------------------------------------------------------------
+        # Post-2to3 fixes (always run, even if 2to3 was skipped via marker)
+        # -----------------------------------------------------------------
+
+        # Fix insertkeys.py: revert binary mode + fix "is not" literal
+        INSERTKEYS="build/tools/security/insertkeys.py"
+        if [ -f "$INSERTKEYS" ]; then
+            sed -i 's/open(filename, "r")/open(filename, "rb")/' "$INSERTKEYS"
+            sed -i 's/open(output_file, "w")/open(output_file, "wb")/' "$INSERTKEYS"
+            sed -i 's/if line is not "":/if line != "":/' "$INSERTKEYS"
+            echo "[INFO] Fixed insertkeys.py (binary mode + syntax)"
+        fi
+        # Also fix the copy already staged in out/ (build copies it there)
+        INSERTKEYS_OUT="out/host/linux-x86/bin/insertkeys.py"
+        if [ -f "$INSERTKEYS_OUT" ]; then
+            sed -i 's/open(filename, "r")/open(filename, "rb")/' "$INSERTKEYS_OUT"
+            sed -i 's/open(output_file, "w")/open(output_file, "wb")/' "$INSERTKEYS_OUT"
+            sed -i 's/if line is not "":/if line != "":/' "$INSERTKEYS_OUT"
+            echo "[INFO] Fixed insertkeys.py in out/ as well"
+        fi
+        # Remove stale mac_permissions intermediates so they regenerate
+        rm -f out/target/product/*/obj/ETC/*mac_permissions.xml_intermediates/*mac_permissions.xml 2>/dev/null || true
 
         # Fix mixed tabs/spaces in auto_generator.py (patch may introduce tabs)
         AUTO_GEN="device/rockchip/common/auto_generator.py"
