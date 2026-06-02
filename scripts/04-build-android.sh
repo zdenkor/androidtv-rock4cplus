@@ -516,7 +516,7 @@ print('Fixed auto_generator.py')
 
         # Final fix: find and patch insertkeys.py source, then delete out/ copy
         # so it regenerates from the fixed source during make.
-        INSERTKEYS_SRC=$(find build frameworks system device external -name "insertkeys.py" -not -path "*/out/*" 2>/dev/null | head -1)
+        INSERTKEYS_SRC=$(find . -name "insertkeys.py" -not -path "*/out/*" 2>/dev/null | head -1)
         if [ -n "$INSERTKEYS_SRC" ] && [ -f "$INSERTKEYS_SRC" ]; then
             python3 -c "
 path = '$INSERTKEYS_SRC'
@@ -528,9 +528,10 @@ content = content.replace('import StringIO', 'from io import StringIO')
 content = content.replace('ConfigParser.', 'configparser.')
 with open(path, 'w') as f:
     f.write(content)
-print('Fixed')
 "
             echo "[INFO] Fixed insertkeys.py source at $INSERTKEYS_SRC"
+        else
+            echo "[WARN] insertkeys.py not found in source tree"
         fi
         # Delete out/ copy so it regenerates from fixed source
         rm -f out/host/linux-x86/bin/insertkeys.py 2>/dev/null || true
