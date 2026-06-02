@@ -8,6 +8,38 @@
 set -e
 set -o pipefail
 
+# =============================================================================
+# Progress helpers
+# =============================================================================
+
+# Show a spinner while a background task runs.
+# Usage: start_spinner "Doing work..." &
+#        SPINNER_PID=$!
+#        ... long task ...
+#        kill $SPINNER_PID 2>/dev/null
+#        printf "\r%-80s\r" ""  # clear line
+_spin_chars="⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+start_spinner() {
+    local msg="$1"
+    local i=0
+    while true; do
+        printf "\r%s %s" "${_spin_chars:$((i % 10)):1}" "$msg"
+        i=$((i + 1))
+        sleep 0.1
+    done
+}
+
+# Print elapsed time since $1 (seconds since epoch).
+elapsed_since() {
+    local start="$1"
+    local now
+    now=$(date +%s)
+    local elapsed=$((now - start))
+    local min=$((elapsed / 60))
+    local sec=$((elapsed % 60))
+    printf "%dm %ds" "$min" "$sec"
+}
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BASE_DIR="/mnt/aosp-build"
 
@@ -202,25 +234,87 @@ case $BSP_CHOICE in
                 echo "[INFO] Installing 2to3..."
                 sudo apt-get install -y 2to3 2>/dev/null || sudo apt-get install -y python3-lib2to3 2>/dev/null || true
             fi
-            # Only convert files that actually contain Python 2 syntax (grep pre-filter for speed)
-            # Exclude edk2 bundled Python 2.7.2 (never executed by host)
+
+            # Count total .py files first (for progress tracking)
+            TOTAL_FILES=$(find build libcore external/annotation-tools development frameworks system device \
+                -not -path "*/edk2/*" \
+                -name "*.py" 2>/dev/null | wc -l)
+            echo "[INFO] Found $TOTAL_FILES Python files to process"
+
+            # Phase 1: 2to3 conversion with progress
+            echo "[INFO] Phase 1/3: Running 2to3..."
+            PROCESSED=0
             find build libcore external/annotation-tools development frameworks system device \
                 -not -path "*/edk2/*" \
-                -name "*.py" -print0 | xargs -0 -P $(nproc) -I {} sh -c '2to3 -w -n "$1" 2>/dev/null' _ {} || true
-            # 2to3 doesn't fix open("rb")/open("wb") for text processing
+                -name "*.py" -print0 | while IFS= read -r -d '' f; do
+                2to3 -w -n "$f" 2>/dev/null
+                PROCESSED=$((PROCESSED + 1))
+                if [ $((PROCESSED % 50)) -eq 0 ] || [ "$PROCESSED" -eq "$TOTAL_FILES" ]; then
+                    PCT=$((PROCESSED * 100 / TOTAL_FILES))
+                    printf "\r  [2to3] %d/%d (%d%%)" "$PROCESSED" "$TOTAL_FILES" "$PCT"
+                fi
+            done
+            printf "\r  [2to3] %d/%d (100%%) done.\n" "$TOTAL_FILES" "$TOTAL_FILES"
+
+            # Phase 2: fix open(filename, "rb") -> open(filename, "r")
+            echo "[INFO] Phase 2/3: Fixing open(filename, \"rb\")..."
+            PROCESSED=0
             find build libcore external/annotation-tools development frameworks system device \
                 -not -path "*/edk2/*" \
-                -name "*.py" -print0 | xargs -0 -P $(nproc) sed -i 's/open(filename, "rb")/open(filename, "r")/' 2>/dev/null || true
+                -name "*.py" -print0 | while IFS= read -r -d '' f; do
+                sed -i 's/open(filename, "rb")/open(filename, "r")/' "$f" 2>/dev/null
+                PROCESSED=$((PROCESSED + 1))
+                if [ $((PROCESSED % 50)) -eq 0 ] || [ "$PROCESSED" -eq "$TOTAL_FILES" ]; then
+                    PCT=$((PROCESSED * 100 / TOTAL_FILES))
+                    printf "\r  [sed-rb] %d/%d (%d%%)" "$PROCESSED" "$TOTAL_FILES" "$PCT"
+                fi
+            done
+            printf "\r  [sed-rb] %d/%d (100%%) done.\n" "$TOTAL_FILES" "$TOTAL_FILES"
+
+            # Phase 3: fix open(output_file, "wb") -> open(output_file, "w")
+            echo "[INFO] Phase 3/3: Fixing open(output_file, \"wb\")..."
+            PROCESSED=0
             find build libcore external/annotation-tools development frameworks system device \
                 -not -path "*/edk2/*" \
-                -name "*.py" -print0 | xargs -0 -P $(nproc) sed -i 's/open(output_file, "wb")/open(output_file, "w")/' 2>/dev/null || true
+                -name "*.py" -print0 | while IFS= read -r -d '' f; do
+                sed -i 's/open(output_file, "wb")/open(output_file, "w")/' "$f" 2>/dev/null
+                PROCESSED=$((PROCESSED + 1))
+                if [ $((PROCESSED % 50)) -eq 0 ] || [ "$PROCESSED" -eq "$TOTAL_FILES" ]; then
+                    PCT=$((PROCESSED * 100 / TOTAL_FILES))
+                    printf "\r  [sed-wb] %d/%d (%d%%)" "$PROCESSED" "$TOTAL_FILES" "$PCT"
+                fi
+            done
+            printf "\r  [sed-wb] %d/%d (100%%) done.\n" "$TOTAL_FILES" "$TOTAL_FILES"
+
             touch "$MARKER"
             echo "Python 2to3 conversion complete"
+        fi
+
+        # Fix mixed tabs/spaces in auto_generator.py (patch may introduce tabs)
+        AUTO_GEN="device/rockchip/common/auto_generator.py"
+        if [ -f "$AUTO_GEN" ]; then
+            echo "[INFO] Fixing mixed tabs/spaces in auto_generator.py..."
+            python3 -c "
+import re
+path = '$AUTO_GEN'
+with open(path) as f:
+    content = f.read()
+lines = content.split('\n')
+fixed = []
+for line in lines:
+    stripped = line.lstrip('\t')
+    leading_tabs = len(line) - len(stripped)
+    fixed.append('    ' * leading_tabs + stripped)
+with open(path, 'w') as f:
+    f.write('\n'.join(fixed))
+print('Fixed auto_generator.py')
+"
         fi
 
         # Build kernel first (required for Android 9)
         if [ -d "kernel" ] && [ -f "kernel/arch/arm64/configs/rockchip_defconfig" ]; then
             echo "[4a/4] Building kernel..."
+            KERNEL_START=$(date +%s)
             # Fix for GCC 10+ "duplicate 'extern'" error on yylloc in dtc
             # dtc-parser.tab.h already declares 'extern YYLTYPE yylloc;'
             # so the declaration in dtc-lexer.l causes a duplicate extern error.
@@ -245,9 +339,12 @@ case $BSP_CHOICE in
                 echo "========================================"
                 exit 1
             }
+            echo "Kernel build finished in $(elapsed_since $KERNEL_START)"
         fi
         
         # Build Android (use PIPESTATUS to catch make failure through tee)
+        echo "[4b/4] Building Android (make -j$(nproc))..."
+        ANDROID_START=$(date +%s)
         make -j$(nproc) 2>&1 | tee build.log
         if [ "${PIPESTATUS[0]}" -ne 0 ]; then
             echo ""
@@ -257,6 +354,7 @@ case $BSP_CHOICE in
             tail -50 build.log
             exit 1
         fi
+        echo "Android build finished in $(elapsed_since $ANDROID_START)"
         
         BUILD_OUTPUT="out/target/product/rk3399_box/system.img"
         ;;
@@ -278,6 +376,7 @@ case $BSP_CHOICE in
             exit 1
         fi
         
+        VICHARAK_START=$(date +%s)
         ./build.sh -UACKup 2>&1 | tee build.log
         if [ "${PIPESTATUS[0]}" -ne 0 ]; then
             echo ""
@@ -287,6 +386,7 @@ case $BSP_CHOICE in
             tail -50 build.log
             exit 1
         fi
+        echo "Build finished in $(elapsed_since $VICHARAK_START)"
         
         BUILD_OUTPUT="out/target/product/vaaman/system.img"
         ;;
@@ -308,6 +408,7 @@ case $BSP_CHOICE in
             exit 1
         fi
         
+        ADVANTECH_START=$(date +%s)
         ./build.sh 2>&1 | tee build.log
         if [ "${PIPESTATUS[0]}" -ne 0 ]; then
             echo ""
@@ -317,6 +418,7 @@ case $BSP_CHOICE in
             tail -50 build.log
             exit 1
         fi
+        echo "Build finished in $(elapsed_since $ADVANTECH_START)"
         
         BUILD_OUTPUT="out/target/product/rk3399/system.img"
         ;;
@@ -356,6 +458,7 @@ case $BSP_CHOICE in
         echo "Build command: m -j\$(nproc)"
         echo ""
 
+        AOSP_START=$(date +%s)
         m -j$(nproc) 2>&1 | tee build.log
         if [ "${PIPESTATUS[0]}" -ne 0 ]; then
             echo ""
@@ -365,6 +468,7 @@ case $BSP_CHOICE in
             tail -50 build.log
             exit 1
         fi
+        echo "Build finished in $(elapsed_since $AOSP_START)"
         ;;
     
     *)
