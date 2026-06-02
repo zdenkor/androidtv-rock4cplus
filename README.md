@@ -68,7 +68,8 @@ This repository provides a complete, automated build system for compiling Androi
 
 ### Preinstalled Apps (Optional)
 
-Run `03a-preinstall-apps.sh` to bake apps directly into the system image.
+Run `03a-preinstall-apps.sh` to download and integrate apps into the system image.
+Apps are downloaded via **curl** from direct URLs and F-Droid, with apkeep as an optional fallback for Android 12 builds.
 
 **Essential (recommended):**
 
@@ -241,7 +242,7 @@ AndroidTV for Radxa4C+/
 │   ├── 03-configure-build.sh        # Detect BSP from .build-config, apply config
 │   ├── 04-build-android.sh          # Detect BSP from .build-config, build
 │   ├── 05-flash-device.sh           # Flash to device
-│   ├── 03a-preinstall-apps.sh       # Download & integrate apps
+│   ├── 03a-preinstall-apps.sh       # Download apps (curl + F-Droid, apkeep fallback)
 │   └── fix_prebuilts.py             # Sanitize Soong modules (called by 03)
 ├── patches/
 │   └── rk3399-rock-4c-plus.dts      # ROCK 4C+ device tree (RK3399-T OPP table)
