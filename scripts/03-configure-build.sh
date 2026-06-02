@@ -223,11 +223,15 @@ print('Fixed auto_generator.py tabs')
         echo "[2b/6] Detecting lunch target..."
         LUNCH_TARGET=""
         if [ -d "device/rockchip/rk3399" ]; then
-            # Try common Radxa product names
-            for product in rk3399_box rk3399 rk3399_all; do
+            # Try ROCK 4C+ specific targets first, then fall back to generic
+            for product in rk3399_ROCKPI4C_Plus_Android11 rk3399_ROCKPI4C_Android11 rk3399_ROCKPI4B_Android11 rk3399_Android11 rk3399_box rk3399; do
                 if [ -f "device/rockchip/rk3399/${product}.mk" ] || [ -f "device/rockchip/rk3399/${product}/${product}.mk" ]; then
                     LUNCH_TARGET="${product}-userdebug"
                     echo "Found product: $LUNCH_TARGET"
+                    break
+                fi
+            done
+        fi
                     break
                 fi
             done

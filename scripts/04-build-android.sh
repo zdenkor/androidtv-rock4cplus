@@ -495,7 +495,7 @@ print('Fixed auto_generator.py')
         # Auto-detect lunch target (same logic as 03-configure-build.sh)
         LUNCH_TARGET=""
         if [ -d "device/rockchip/rk3399" ]; then
-            for product in rk3399_box rk3399 rk3399_all; do
+            for product in rk3399_ROCKPI4C_Plus_Android11 rk3399_ROCKPI4C_Android11 rk3399_ROCKPI4B_Android11 rk3399_Android11 rk3399_box rk3399; do
                 if [ -f "device/rockchip/rk3399/${product}.mk" ] || [ -f "device/rockchip/rk3399/${product}/${product}.mk" ]; then
                     LUNCH_TARGET="${product}-userdebug"
                     break
