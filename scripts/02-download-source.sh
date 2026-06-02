@@ -66,7 +66,12 @@ echo "  3) Android 12 AOSP (pure Google, EXPERIMENTAL)"
 echo "     - No Rockchip BSP — manual integration required"
 echo "     - Directory: $BASE_DIR/androidtv-rock4cplus-aosp12"
 echo ""
-read -rp "Enter choice [1-3]: " BUILD_CHOICE
+echo "  4) Android 11 (Radxa rk11, kernel 4.19) ★ NEW"
+echo "     - Manifest: radxa/manifests, branch: Android11_Radxa_rk11"
+echo "     - Best built on Ubuntu 18.04 (Python 2 native, no 2to3 needed)"
+echo "     - Directory: $BASE_DIR/androidtv-rock4cplus-radxa11"
+echo ""
+read -rp "Enter choice [1-4]: " BUILD_CHOICE
 
 # ---------------------------------------------------------------------------
 # Set BSP-specific work directory
@@ -75,6 +80,7 @@ case $BUILD_CHOICE in
     1) WORK_DIR="$BASE_DIR/androidtv-rock4cplus-radxa9" ;;
     2) WORK_DIR="$BASE_DIR/androidtv-rock4cplus-vicharak12" ;;
     3) WORK_DIR="$BASE_DIR/androidtv-rock4cplus-aosp12" ;;
+    4) WORK_DIR="$BASE_DIR/androidtv-rock4cplus-radxa11" ;;
     *) echo "Invalid choice. Exiting."; exit 1 ;;
 esac
 
@@ -251,6 +257,37 @@ case $BUILD_CHOICE in
             cp -f "$SCRIPT_DIR/../patches/rk3399-rock-4c-plus.dts" "$WORK_DIR/kernel/arch/arm64/boot/dts/rockchip/"
         fi
         ;;
+
+    4)
+        # ====================================================================
+        # OPTION 4: Android 11 (Radxa rk11, kernel 4.19)
+        # ====================================================================
+        echo "[2/4] Initializing repo with Radxa Android 11 manifest..."
+        echo ""
+        echo "Manifest: https://github.com/radxa/manifests.git"
+        echo "Branch:   Android11_Radxa_rk11"
+        echo "XML:      rockchip-r-release.xml"
+        echo ""
+        echo "NOTE: Android 11 builds best on Ubuntu 18.04 LTS (Python 2 native)."
+        echo "On Ubuntu 20.04+, Python 2→3 conversion will be applied automatically."
+        echo ""
+
+        "$REPO_CMD" init --depth=1 \
+            -u https://github.com/radxa/manifests.git \
+            -b Android11_Radxa_rk11 \
+            -m rockchip-r-release.xml
+
+        echo ""
+        echo "[3/4] Syncing repositories (this will take a while)..."
+        echo "Estimated download: ~80GB"
+        echo ""
+        "$REPO_CMD" sync -c -j$(nproc) --no-tags --no-clone-bundle
+
+        echo "[4/4] Android 11 source ready."
+        echo ""
+        echo "Radxa Android 11 BSP ready. Device config at: device/rockchip/rk3399"
+        ;;
+
     *)
         echo "Invalid choice. Exiting."
         exit 1

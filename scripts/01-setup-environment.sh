@@ -1,8 +1,8 @@
 #!/bin/bash
 # =============================================================================
 # 01-setup-environment.sh
-# Sets up the build environment for Android TV 12 (AOSP)
-# Supports: Ubuntu 22.04+ / Debian 11+ (on WSL2 or native)
+# Sets up the build environment for Android TV (AOSP)
+# Supports: Ubuntu 18.04/22.04+ / Debian 11+ (on WSL2 or native)
 # Target: Radxa ROCK 4C+ (RK3399-T)
 # =============================================================================
 

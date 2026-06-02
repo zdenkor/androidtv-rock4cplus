@@ -54,7 +54,7 @@ fi
 declare -a BSP_DIRS=()
 declare -a BSP_NAMES=()
 
-for pattern in "radxa9" "vicharak12" "aosp12"; do
+for pattern in "radxa9" "vicharak12" "aosp12" "radxa11"; do
     for dir in "$BASE_DIR"/androidtv-rock4cplus-"$pattern"*; do
         if [ -d "$dir" ]; then
             BSP_DIRS+=("$dir")
@@ -86,6 +86,8 @@ get_bsp_type() {
         echo "Advantech Android 12 (kernel 4.19)"
     elif [[ "$name" == *aosp12* ]]; then
         echo "AOSP Android 12"
+    elif [[ "$name" == *radxa11* ]]; then
+        echo "Radxa Android 11 (kernel 4.19)"
     else
         echo "Unknown"
     fi
@@ -141,6 +143,9 @@ elif [[ "$BSP_NAME" == *advantech12* ]]; then
 elif [[ "$BSP_NAME" == *aosp12* ]]; then
     BSP_CHOICE=4
     BSP_TYPE="AOSP Android 12"
+elif [[ "$BSP_NAME" == *radxa11* ]]; then
+    BSP_CHOICE=5
+    BSP_TYPE="Radxa Android 11 (kernel 4.19)"
 else
     echo "WARNING: Unknown BSP type: $BSP_NAME"
     echo "Defaulting to Vicharak (option 2)"
@@ -284,8 +289,8 @@ if [[ "$BSP_CHOICE" == "4" ]]; then
     fi
 fi
 
-if [[ "$BSP_CHOICE" == "2" || "$BSP_CHOICE" == "3" || "$BSP_CHOICE" == "4" ]]; then
-    # Android 12+ only: manual TARGET_DEVICE_DIR assignment is forbidden
+if [[ "$BSP_CHOICE" == "2" || "$BSP_CHOICE" == "3" || "$BSP_CHOICE" == "4" || "$BSP_CHOICE" == "5" ]]; then
+    # Android 11/12+: manual TARGET_DEVICE_DIR assignment is forbidden
     DEVICE_MK="device/rockchip/common/device.mk"
     if [ -f "$DEVICE_MK" ] && grep -q 'TARGET_DEVICE_DIR=' "$DEVICE_MK"; then
         echo "[INFO] Patching $DEVICE_MK to comment out manual TARGET_DEVICE_DIR"
@@ -682,6 +687,142 @@ INSERTKEYSEOF
             exit 1
         fi
         echo "Build finished in $(elapsed_since $AOSP_START)"
+        ;;
+    
+    5)
+        # ====================================================================
+        # RADXA ANDROID 11 (rk11, kernel 4.19) — uses make
+        # ====================================================================
+        echo "[3/4] Configuring Radxa Android 11..."
+        lunch rk3399_box-userdebug 2>/dev/null || lunch 2>/dev/null | head -20
+        
+        echo "[4/4] Building Android 11..."
+        echo ""
+        echo "Build command: make -j\$(nproc)"
+        echo ""
+        echo "NOTE: Android 11 builds best on Ubuntu 18.04 (Python 2 native)."
+        echo "On Ubuntu 20.04+, Python 2→3 conversion will be applied."
+        echo ""
+
+        # Python 2→3 conversion (same as Android 9, only if on Python 3 host)
+        MARKER="$WORK_DIR/.2to3_done"
+        if [ -f "$MARKER" ]; then
+            echo "[INFO] Python 2to3 conversion already done, skipping."
+        else
+            # Check if we're on Python 2 (Ubuntu 18.04) — skip 2to3 entirely
+            PY_VER=$(python --version 2>&1 || echo "unknown")
+            if echo "$PY_VER" | grep -q "Python 2"; then
+                echo "[INFO] Python 2 detected ($PY_VER) — skipping 2to3 conversion."
+                touch "$MARKER"
+            else
+                echo "[INFO] Python 3 detected — converting Python 2 scripts..."
+                if ! command -v 2to3 &>/dev/null; then
+                    echo "[INFO] Installing 2to3..."
+                    sudo apt-get install -y 2to3 2>/dev/null || sudo apt-get install -y python3-lib2to3 2>/dev/null || true
+                fi
+                if command -v 2to3 &>/dev/null; then
+                    CMD_2TO3="2to3"
+                elif python3 -m lib2to3 --help &>/dev/null 2>&1; then
+                    CMD_2TO3="python3 -m lib2to3"
+                else
+                    CMD_2TO3=""
+                fi
+
+                PYFILES_LIST="$WORK_DIR/.2to3_files.txt"
+                echo "[INFO] Scanning Python files..."
+                find build libcore external/annotation-tools development frameworks system device \
+                    -not -path "*/edk2/*" \
+                    -name "*.py" -type f 2>/dev/null | while IFS= read -r f; do
+                    size=$(stat -c%s "$f" 2>/dev/null || echo 0)
+                    if [ "$size" -gt 102400 ]; then continue; fi
+                    if ! grep -qPm1 '(?<!\.)\bprint\s+[^(]|\bxrange\b|\bhas_key\b|`[^`]+`|<>|\braw_input\b|\bapply\s*\(|\breduce\s*\(|\bConfigParser\b|\bStringIO\b|\burllib2\b|\burlparse\b|\bcommands\b|\b__builtin__\b' "$f" 2>/dev/null; then
+                        continue
+                    fi
+                    echo "$f"
+                done | sort > "$PYFILES_LIST"
+                TOTAL_FILES=$(wc -l < "$PYFILES_LIST")
+                echo "[INFO] $TOTAL_FILES files need conversion"
+
+                if [ -n "$CMD_2TO3" ] && [ "$TOTAL_FILES" -gt 0 ]; then
+                    echo "[INFO] Running 2to3..."
+                    PROCESSED=0
+                    while IFS= read -r f; do
+                        [ -z "$f" ] && continue
+                        $CMD_2TO3 -w -n "$f" 2>/dev/null || true
+                        PROCESSED=$((PROCESSED + 1))
+                        if [ $((PROCESSED % 50)) -eq 0 ] || [ "$PROCESSED" -eq "$TOTAL_FILES" ]; then
+                            PCT=$((PROCESSED * 100 / TOTAL_FILES))
+                            printf "\r  [2to3] %d/%d (%d%%)" "$PROCESSED" "$TOTAL_FILES" "$PCT"
+                        fi
+                    done < "$PYFILES_LIST"
+                    printf "\r  [2to3] %d/%d (100%%) done.\n" "$TOTAL_FILES" "$TOTAL_FILES"
+                fi
+                touch "$MARKER"
+                echo "Python 2to3 conversion complete"
+            fi
+        fi
+
+        # Fix auto_generator.py (same patch issue as Android 9)
+        AUTO_GEN="device/rockchip/common/auto_generator.py"
+        if [ -f "$AUTO_GEN" ]; then
+            echo "[INFO] Fixing auto_generator.py..."
+            python3 -c "
+path = '$AUTO_GEN'
+with open(path) as f:
+    content = f.read()
+content = content.replace('\t', '    ')
+content = content.replace('if (self.rk_param == \"hwver\"):', 'if (self.rk_param == \"hwver\"):\n            pass')
+with open(path, 'w') as f:
+    f.write(content)
+" 2>/dev/null || python -c "
+path = '$AUTO_GEN'
+with open(path) as f:
+    content = f.read()
+content = content.replace('\t', '    ')
+content = content.replace('if (self.rk_param == \"hwver\"):', 'if (self.rk_param == \"hwver\"):\n            pass')
+with open(path, 'w') as f:
+    f.write(content)
+" 2>/dev/null || true
+            echo "  Done."
+        fi
+
+        # Build kernel first
+        if [ -d "kernel" ] && [ -f "kernel/arch/arm64/configs/rockchip_defconfig" ]; then
+            echo "[4a/4] Building kernel..."
+            KERNEL_START=$(date +%s)
+            DTC_LEXER="kernel/scripts/dtc/dtc-lexer.l"
+            DTC_LEXER_GEN="kernel/scripts/dtc/dtc-lexer.lex.c"
+            if [ -f "$DTC_LEXER" ] && grep -q "YYLTYPE yylloc" "$DTC_LEXER"; then
+                sed -i '/YYLTYPE yylloc/d' "$DTC_LEXER"
+            fi
+            if [ -f "$DTC_LEXER_GEN" ] && grep -q "YYLTYPE yylloc" "$DTC_LEXER_GEN"; then
+                sed -i '/YYLTYPE yylloc/d' "$DTC_LEXER_GEN"
+            fi
+            make -C kernel ARCH=arm64 clean 2>/dev/null || true
+            make -C kernel ARCH=arm64 rockchip_defconfig && make -C kernel ARCH=arm64 -j$(nproc) Image dtbs || {
+                echo ""
+                echo "========================================"
+                echo "KERNEL BUILD FAILED"
+                echo "========================================"
+                exit 1
+            }
+            echo "Kernel build finished in $(elapsed_since $KERNEL_START)"
+        fi
+
+        echo "[4b/4] Building Android (make -j$(nproc))..."
+        ANDROID_START=$(date +%s)
+        make -j$(nproc) 2>&1 | tee build.log
+        if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+            echo ""
+            echo "========================================"
+            echo "BUILD FAILED"
+            echo "========================================"
+            tail -50 build.log
+            exit 1
+        fi
+        echo "Android build finished in $(elapsed_since $ANDROID_START)"
+        
+        BUILD_OUTPUT="out/target/product/rk3399_box/system.img"
         ;;
     
     *)

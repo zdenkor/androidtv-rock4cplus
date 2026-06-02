@@ -1,7 +1,8 @@
 #!/bin/bash
 # =============================================================================
 # 05-flash-device.sh
-# Flashes Android TV 12 to Radxa ROCK 4C+ (RK3399-T)
+# Flashes Android TV to Radxa ROCK 4C+ (RK3399-T)
+# Supports: Android 9/11/12 BSPs
 # =============================================================================
 
 set -e
@@ -13,18 +14,19 @@ CONFIG_FILE="$SCRIPT_DIR/../.build-config"
 if [ -f "$CONFIG_FILE" ]; then
     source "$CONFIG_FILE"
 else
-    echo "ERROR: No .build-config found. Run 00-setup-usb.sh first!"
+    echo "ERROR: No .build-config found. Run 02-download-source.sh first!"
     exit 1
 fi
 
 echo "============================================"
-echo " Flashing Android TV 12 to ROCK 4C+"
+echo " Flashing Android TV to ROCK 4C+"
 echo "============================================"
 echo ""
 
-# Vicharak output is in rockdev/Image-rk3399/ or rockdev/Image/
+# Search for build output in common locations
 OUT_DIR=""
-for d in "$WORK_DIR/rockdev/Image-rk3399" "$WORK_DIR/rockdev/Image" "$WORK_DIR/out/target/product/rk3399"; do
+for d in "$WORK_DIR/rockdev/Image-rk3399" "$WORK_DIR/rockdev/Image" \
+         "$WORK_DIR/out/target/product/rk3399" "$WORK_DIR/out/target/product/rk3399_box"; do
     if [ -d "$d" ]; then
         OUT_DIR="$d"
         break

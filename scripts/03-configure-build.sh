@@ -23,7 +23,7 @@ declare -a BSP_NAMES=()
 
 # Find all BSP directories and sort them in the desired order:
 # 1. Radxa Android 9, 2. Vicharak Android 12, 3. AOSP Android 12
-for pattern in "radxa9" "vicharak12" "aosp12"; do
+for pattern in "radxa9" "vicharak12" "aosp12" "radxa11"; do
     for dir in "$BASE_DIR"/androidtv-rock4cplus-"$pattern"*; do
         if [ -d "$dir" ]; then
             BSP_DIRS+=("$dir")
@@ -88,6 +88,9 @@ elif [[ "$BSP_NAME" == *vicharak12* ]]; then
 elif [[ "$BSP_NAME" == *aosp12* ]]; then
     BSP_CHOICE=3
     BSP_TYPE="AOSP Android 12"
+elif [[ "$BSP_NAME" == *radxa11* ]]; then
+    BSP_CHOICE=4
+    BSP_TYPE="Radxa Android 11 (kernel 4.19)"
 else
     echo "WARNING: Unknown BSP type: $BSP_NAME"
     echo "Defaulting to Vicharak (option 2)"
