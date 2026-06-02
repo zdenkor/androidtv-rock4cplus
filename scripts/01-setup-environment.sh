@@ -264,18 +264,40 @@ java -version 2>&1 | head -3
 echo ""
 
 # ---------------------------------------------------------------------------
-# 5. Install apkeep (APK downloader for Google Play, APKPure, etc.)
+# 5. Install Rust & Cargo (required for apkeep)
+# ---------------------------------------------------------------------------
+echo "[5/8] Installing Rust & Cargo..."
+if ! command -v cargo &>/dev/null; then
+    echo "  Installing Rust via rustup..."
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y 2>/dev/null || {
+        echo "  rustup failed, trying apt package..."
+        install_safe cargo
+    }
+    # Source cargo env for this session
+    if [ -f "$HOME/.cargo/env" ]; then
+        source "$HOME/.cargo/env"
+    fi
+fi
+
+if command -v cargo &>/dev/null; then
+    echo "  cargo installed: $(cargo --version)"
+else
+    echo "  WARNING: cargo not available. apkeep will use prebuilt binary."
+fi
+
+# ---------------------------------------------------------------------------
+# 6. Install apkeep (APK downloader for Google Play, APKPure, etc.)
 # See: https://github.com/EFForg/apkeep
 # Note: apkeep can download from multiple sources - Google Play, APKPure, GitHub, F-Droid
 # ---------------------------------------------------------------------------
-echo "[5/8] Installing apkeep..."
+echo "[6/8] Installing apkeep..."
 if ! command -v apkeep &>/dev/null; then
     APKEEP_INSTALLED=false
     
-    # Source 1: Build from source with cargo (most reliable if Rust is available)
+    # Source 1: Build from source with cargo (most reliable)
     if command -v cargo &>/dev/null; then
         echo "  Building apkeep from source with cargo..."
-        if cargo install apkeep 2>/dev/null; then
+        if cargo install --git https://github.com/EFForg/apkeep.git 2>/dev/null; then
             APKEEP_INSTALLED=true
             echo "  apkeep installed via cargo"
         fi
@@ -294,7 +316,7 @@ if ! command -v apkeep &>/dev/null; then
     if ! $APKEEP_INSTALLED; then
         echo "  WARNING: Could not install apkeep."
         echo "  Apps requiring Google Play download will use alternative sources."
-        echo "  To install manually: cargo install apkeep"
+        echo "  To install manually: cargo install --git https://github.com/EFForg/apkeep.git"
     fi
 else
     echo "  apkeep already installed: $(apkeep --version 2>/dev/null || echo 'version unknown')"
@@ -303,7 +325,7 @@ fi
 # ---------------------------------------------------------------------------
 # 6. Install Repo tool (Google's git repository manager)
 # ---------------------------------------------------------------------------
-echo "[6/8] Installing Repo tool..."
+echo "[7/8] Installing Repo tool..."
 mkdir -p ~/bin
 curl -sSL https://storage.googleapis.com/git-repo-downloads/repo -o ~/bin/repo
 chmod a+x ~/bin/repo
@@ -317,7 +339,7 @@ export PATH=~/bin:$PATH
 # ---------------------------------------------------------------------------
 # 7. Configure Git
 # ---------------------------------------------------------------------------
-echo "[7/8] Configuring Git..."
+echo "[8/8] Configuring Git..."
 if [ -z "$(git config --global user.name 2>/dev/null)" ]; then
     echo "Enter your name for Git commits:"
     read -r GIT_NAME
@@ -334,7 +356,7 @@ fi
 # 8. Configure swap (recommended for 16GB RAM systems)
 # ---------------------------------------------------------------------------
 echo ""
-echo "[8/8] Checking swap..."
+echo "[9/9] Checking swap..."
 CURRENT_SWAP=$(free -g | awk '/^Swap:/ {print $2}')
 if [ "$CURRENT_SWAP" -lt 16 ]; then
     echo "Current swap: ${CURRENT_SWAP}GB. Recommended: 16GB+"
