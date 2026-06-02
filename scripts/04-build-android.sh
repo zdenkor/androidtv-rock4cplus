@@ -196,39 +196,61 @@ else
 
                 # 1. Remove build output
                 if [ -d "out" ]; then
-                    echo "  [1/4] Removing out/..."
+                    echo "  [1/5] Removing out/..."
                     rm -rf out
                     echo "        Done."
                 else
-                    echo "  [1/4] No out/ to remove."
+                    echo "  [1/5] No out/ to remove."
                 fi
 
-                # 2. Remove 2to3 marker
+                # 2. Remove 2to3 marker and restore modified .py files
                 if [ -f ".2to3_done" ]; then
-                    echo "  [2/4] Removing .2to3_done marker..."
+                    echo "  [2/5] Removing .2to3_done marker..."
                     rm -f .2to3_done
                     echo "        Done."
                 else
-                    echo "  [2/4] No .2to3_done marker."
+                    echo "  [2/5] No .2to3_done marker."
                 fi
 
-                # 3. Git reset to restore original source files
-                if [ -d ".git" ]; then
-                    echo "  [3/4] Git-resetting source tree to restore original files..."
-                    git checkout -- .
+                # 3. Restore 2to3-modified .py files back to original
+                PYFILES_LIST=".2to3_files.txt"
+                if [ -f "$PYFILES_LIST" ]; then
+                    echo "  [3/5] Restoring 2to3-modified Python files..."
+                    RESTORED=0
+                    FAILED=0
+                    while IFS= read -r f; do
+                        if [ -f "$f" ]; then
+                            # Try git checkout on the file (works in repo-based trees)
+                            if git -C "$(dirname "$f")" checkout -- "$(basename "$f")" 2>/dev/null; then
+                                RESTORED=$((RESTORED + 1))
+                            else
+                                FAILED=$((FAILED + 1))
+                            fi
+                        fi
+                    done < "$PYFILES_LIST"
+                    rm -f "$PYFILES_LIST"
+                    echo "        Restored $RESTORED files ($FAILED could not be restored — will be re-converted)"
+                else
+                    echo "  [3/5] No .2to3_files.txt — skipping file restore."
+                fi
+
+                # 4. Git reset any other modified tracked files
+                if git rev-parse --git-dir >/dev/null 2>&1; then
+                    echo "  [4/5] Git-resetting any other modified tracked files..."
+                    git checkout -- . 2>/dev/null || true
                     git clean -fd 2>/dev/null || true
                     echo "        Done."
                 else
-                    echo "  [3/4] No .git directory — skipping git reset."
+                    echo "  [4/5] No top-level .git — skipping git reset."
                 fi
 
-                # 4. Remove build log
+                # 5. Remove build log
                 if [ -f "build.log" ]; then
-                    echo "  [4/4] Removing build.log..."
+                    echo "  [5/5] Removing build.log..."
                     rm -f build.log
                     echo "        Done."
                 else
-                    echo "  [4/4] No build.log to remove."
+                    echo "  [5/5] No build.log to remove."
                 fi
 
                 echo ""
@@ -322,11 +344,13 @@ case $BSP_CHOICE in
                 sudo apt-get install -y 2to3 2>/dev/null || sudo apt-get install -y python3-lib2to3 2>/dev/null || true
             fi
 
-            # Count total .py files first (for progress tracking)
-            TOTAL_FILES=$(find build libcore external/annotation-tools development frameworks system device \
+            # Save list of all .py files that will be touched (for clean/restore later)
+            PYFILES_LIST="$WORK_DIR/.2to3_files.txt"
+            find build libcore external/annotation-tools development frameworks system device \
                 -not -path "*/edk2/*" \
-                -name "*.py" 2>/dev/null | wc -l)
-            echo "[INFO] Found $TOTAL_FILES Python files to process"
+                -name "*.py" 2>/dev/null | sort > "$PYFILES_LIST"
+            TOTAL_FILES=$(wc -l < "$PYFILES_LIST")
+            echo "[INFO] Found $TOTAL_FILES Python files to process (list saved to .2to3_files.txt)"
 
             # Phase 1: 2to3 conversion with progress
             echo "[INFO] Phase 1/3: Running 2to3..."
