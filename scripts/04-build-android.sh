@@ -514,15 +514,26 @@ print('Fixed auto_generator.py')
         # Build Android (use PIPESTATUS to catch make failure through tee)
         echo "[4b/4] Building Android (make -j$(nproc))..."
 
-        # Final fix: patch out/ copy of insertkeys.py right before make.
-        # The build system copies it during envsetup/lunch, so fix it now.
-        INSERTKEYS_OUT="out/host/linux-x86/bin/insertkeys.py"
-        if [ -f "$INSERTKEYS_OUT" ]; then
-            sed -i 's/if line is not "":/if line != "":/' "$INSERTKEYS_OUT"
-            sed -i 's/import ConfigParser/import configparser/' "$INSERTKEYS_OUT"
-            sed -i 's/import StringIO/from io import StringIO/' "$INSERTKEYS_OUT"
-            echo "[INFO] Patched insertkeys.py in out/ before build"
+        # Final fix: find and patch insertkeys.py source, then delete out/ copy
+        # so it regenerates from the fixed source during make.
+        INSERTKEYS_SRC=$(find build frameworks system device external -name "insertkeys.py" -not -path "*/out/*" 2>/dev/null | head -1)
+        if [ -n "$INSERTKEYS_SRC" ] && [ -f "$INSERTKEYS_SRC" ]; then
+            python3 -c "
+path = '$INSERTKEYS_SRC'
+with open(path) as f:
+    content = f.read()
+content = content.replace('if line is not \"\":', 'if line != \"\":')
+content = content.replace('import ConfigParser', 'import configparser')
+content = content.replace('import StringIO', 'from io import StringIO')
+content = content.replace('ConfigParser.', 'configparser.')
+with open(path, 'w') as f:
+    f.write(content)
+print('Fixed')
+"
+            echo "[INFO] Fixed insertkeys.py source at $INSERTKEYS_SRC"
         fi
+        # Delete out/ copy so it regenerates from fixed source
+        rm -f out/host/linux-x86/bin/insertkeys.py 2>/dev/null || true
 
         ANDROID_START=$(date +%s)
         make -j$(nproc) 2>&1 | tee build.log
