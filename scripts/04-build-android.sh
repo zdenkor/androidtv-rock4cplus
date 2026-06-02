@@ -355,32 +355,43 @@ case $BSP_CHOICE in
             fi
 
             # Save list of all .py files that will be touched (for clean/restore later)
-            # Exclude auto-generated test specs (huge embedded data, already Py3-compatible)
+            # Dynamic pre-filter: skip files > 100KB (auto-generated data dumps)
+            # and files with no Python 2 syntax (nothing for 2to3 to do)
             PYFILES_LIST="$WORK_DIR/.2to3_files.txt"
+            echo "[INFO] Scanning Python files (skipping edk2, files >100KB, and files with no Py2 syntax)..."
+
             find build libcore external/annotation-tools development frameworks system device \
                 -not -path "*/edk2/*" \
-                -not -path "*/test/specs/*" \
-                -not -path "*/test/generated/*" \
-                -name "*.py" 2>/dev/null | sort > "$PYFILES_LIST"
-            TOTAL_FILES=$(wc -l < "$PYFILES_LIST")
-            echo "[INFO] Found $TOTAL_FILES Python files to process (list saved to .2to3_files.txt)"
+                -name "*.py" -type f 2>/dev/null | while IFS= read -r f; do
+                # Skip files larger than 100KB (auto-generated data, already Py3)
+                size=$(stat -c%s "$f" 2>/dev/null || echo 0)
+                if [ "$size" -gt 102400 ]; then
+                    continue
+                fi
+                # Skip files with no Python 2 patterns (nothing to convert)
+                # Patterns: print statement, xrange, except X, e, has_key, backticks, <>, raw_input, apply(), reduce()
+                if ! grep -qPm1 '(?<!\.)\bprint\s+[^(]|\bxrange\b|\bhas_key\b|`[^`]+`|<>|\braw_input\b|\bapply\s*\(|\breduce\s*\(' "$f" 2>/dev/null; then
+                    continue
+                fi
+                echo "$f"
+            done | sort > "$PYFILES_LIST"
 
-            # Phase 1: 2to3 conversion with progress
+            TOTAL_FILES=$(wc -l < "$PYFILES_LIST")
+            echo "[INFO] $TOTAL_FILES files need conversion (skipped large/generated + already-Py3 files)"
+
+            # Phase 1: 2to3 conversion with progress (reads from pre-filtered list)
             if [ -n "$CMD_2TO3" ]; then
                 echo "[INFO] Phase 1/3: Running 2to3..."
                 PROCESSED=0
-                while IFS= read -r -d '' f; do
+                while IFS= read -r f; do
+                    [ -z "$f" ] && continue
                     $CMD_2TO3 -w -n "$f" 2>/dev/null || true
                     PROCESSED=$((PROCESSED + 1))
                     if [ $((PROCESSED % 50)) -eq 0 ] || [ "$PROCESSED" -eq "$TOTAL_FILES" ]; then
                         PCT=$((PROCESSED * 100 / TOTAL_FILES))
                         printf "\r  [2to3] %d/%d (%d%%)" "$PROCESSED" "$TOTAL_FILES" "$PCT"
                     fi
-                done < <(find build libcore external/annotation-tools development frameworks system device \
-                    -not -path "*/edk2/*" \
-                    -not -path "*/test/specs/*" \
-                    -not -path "*/test/generated/*" \
-                    -name "*.py" -print0)
+                done < "$PYFILES_LIST"
                 printf "\r  [2to3] %d/%d (100%%) done.\n" "$TOTAL_FILES" "$TOTAL_FILES"
             else
                 echo "[INFO] Phase 1/3: Skipping 2to3 (not available)."
@@ -389,35 +400,29 @@ case $BSP_CHOICE in
             # Phase 2: fix open(filename, "rb") -> open(filename, "r")
             echo "[INFO] Phase 2/3: Fixing open(filename, \"rb\")..."
             PROCESSED=0
-            while IFS= read -r -d '' f; do
+            while IFS= read -r f; do
+                [ -z "$f" ] && continue
                 sed -i 's/open(filename, "rb")/open(filename, "r")/' "$f" 2>/dev/null || true
                 PROCESSED=$((PROCESSED + 1))
                 if [ $((PROCESSED % 50)) -eq 0 ] || [ "$PROCESSED" -eq "$TOTAL_FILES" ]; then
                     PCT=$((PROCESSED * 100 / TOTAL_FILES))
                     printf "\r  [sed-rb] %d/%d (%d%%)" "$PROCESSED" "$TOTAL_FILES" "$PCT"
                 fi
-            done < <(find build libcore external/annotation-tools development frameworks system device \
-                -not -path "*/edk2/*" \
-                -not -path "*/test/specs/*" \
-                -not -path "*/test/generated/*" \
-                -name "*.py" -print0)
+            done < "$PYFILES_LIST"
             printf "\r  [sed-rb] %d/%d (100%%) done.\n" "$TOTAL_FILES" "$TOTAL_FILES"
 
             # Phase 3: fix open(output_file, "wb") -> open(output_file, "w")
             echo "[INFO] Phase 3/3: Fixing open(output_file, \"wb\")..."
             PROCESSED=0
-            while IFS= read -r -d '' f; do
+            while IFS= read -r f; do
+                [ -z "$f" ] && continue
                 sed -i 's/open(output_file, "wb")/open(output_file, "w")/' "$f" 2>/dev/null || true
                 PROCESSED=$((PROCESSED + 1))
                 if [ $((PROCESSED % 50)) -eq 0 ] || [ "$PROCESSED" -eq "$TOTAL_FILES" ]; then
                     PCT=$((PROCESSED * 100 / TOTAL_FILES))
                     printf "\r  [sed-wb] %d/%d (%d%%)" "$PROCESSED" "$TOTAL_FILES" "$PCT"
                 fi
-            done < <(find build libcore external/annotation-tools development frameworks system device \
-                -not -path "*/edk2/*" \
-                -not -path "*/test/specs/*" \
-                -not -path "*/test/generated/*" \
-                -name "*.py" -print0)
+            done < "$PYFILES_LIST"
             printf "\r  [sed-wb] %d/%d (100%%) done.\n" "$TOTAL_FILES" "$TOTAL_FILES"
 
             # Revert insertkeys.py: it genuinely needs binary mode to read .x509.pem certs
