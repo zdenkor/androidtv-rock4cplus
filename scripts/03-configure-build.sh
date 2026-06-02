@@ -22,8 +22,8 @@ declare -a BSP_DIRS=()
 declare -a BSP_NAMES=()
 
 # Find all BSP directories and sort them in the desired order:
-# 1. Radxa Android 9, 2. Vicharak Android 12, 3. AOSP Android 12
-for pattern in "radxa9" "vicharak12" "aosp12" "radxa11"; do
+# 1. Radxa Android 9, 2. Radxa Android 11, 3. Vicharak Android 12, 4. AOSP Android 12
+for pattern in "radxa9" "radxa11" "vicharak12" "aosp12"; do
     for dir in "$BASE_DIR"/androidtv-rock4cplus-"$pattern"*; do
         if [ -d "$dir" ]; then
             BSP_DIRS+=("$dir")
