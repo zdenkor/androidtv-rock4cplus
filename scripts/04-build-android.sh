@@ -176,19 +176,16 @@ echo "============================================"
 echo ""
 
 HAS_OUT="no"
-HAS_MARKER="no"
 HAS_LOG="no"
 [ -d "out" ] && HAS_OUT="yes ($(du -sh out 2>/dev/null | cut -f1))"
-[ -f ".2to3_done" ] && HAS_MARKER="yes"
 [ -f "build.log" ] && HAS_LOG="yes"
 
-if [ "$HAS_OUT" = "no" ] && [ "$HAS_MARKER" = "no" ] && [ "$HAS_LOG" = "no" ]; then
+if [ "$HAS_OUT" = "no" ] && [ "$HAS_LOG" = "no" ]; then
     echo "No previous build state found. Starting fresh build."
     echo ""
 else
     echo "Found previous build state:"
     echo "  Build output (out/):       $HAS_OUT"
-    echo "  2to3 conversion marker:    $HAS_MARKER"
     echo "  Build log:                 $HAS_LOG"
     echo ""
 
@@ -201,61 +198,30 @@ else
 
                 # 1. Remove build output
                 if [ -d "out" ]; then
-                    echo "  [1/5] Removing out/..."
+                    echo "  [1/3] Removing out/..."
                     rm -rf out
                     echo "        Done."
                 else
-                    echo "  [1/5] No out/ to remove."
+                    echo "  [1/3] No out/ to remove."
                 fi
 
-                # 2. Remove 2to3 marker and restore modified .py files
-                if [ -f ".2to3_done" ]; then
-                    echo "  [2/5] Removing .2to3_done marker..."
-                    rm -f .2to3_done
-                    echo "        Done."
-                else
-                    echo "  [2/5] No .2to3_done marker."
-                fi
-
-                # 3. Restore 2to3-modified .py files back to original
-                PYFILES_LIST=".2to3_files.txt"
-                if [ -f "$PYFILES_LIST" ]; then
-                    echo "  [3/5] Restoring 2to3-modified Python files..."
-                    RESTORED=0
-                    FAILED=0
-                    while IFS= read -r f; do
-                        if [ -f "$f" ]; then
-                            # Try git checkout on the file (works in repo-based trees)
-                            if git -C "$(dirname "$f")" checkout -- "$(basename "$f")" 2>/dev/null; then
-                                RESTORED=$((RESTORED + 1))
-                            else
-                                FAILED=$((FAILED + 1))
-                            fi
-                        fi
-                    done < "$PYFILES_LIST"
-                    rm -f "$PYFILES_LIST"
-                    echo "        Restored $RESTORED files ($FAILED could not be restored — will be re-converted)"
-                else
-                    echo "  [3/5] No .2to3_files.txt — skipping file restore."
-                fi
-
-                # 4. Git reset any other modified tracked files
+                # 2. Git reset any modified tracked files
                 if git rev-parse --git-dir >/dev/null 2>&1; then
-                    echo "  [4/5] Git-resetting any other modified tracked files..."
+                    echo "  [2/3] Git-resetting any modified tracked files..."
                     git checkout -- . 2>/dev/null || true
                     git clean -fd 2>/dev/null || true
                     echo "        Done."
                 else
-                    echo "  [4/5] No top-level .git — skipping git reset."
+                    echo "  [2/3] No top-level .git — skipping git reset."
                 fi
 
-                # 5. Remove build log
+                # 3. Remove build log
                 if [ -f "build.log" ]; then
-                    echo "  [5/5] Removing build.log..."
+                    echo "  [3/3] Removing build.log..."
                     rm -f build.log
                     echo "        Done."
                 else
-                    echo "  [5/5] No build.log to remove."
+                    echo "  [3/3] No build.log to remove."
                 fi
 
                 echo ""
@@ -335,126 +301,6 @@ case $BSP_CHOICE in
         echo ""
         echo "Build command: make -j\$(nproc)"
         echo ""
-        
-        # Fix Python 2 syntax for Python 3 (Android 9 uses Python 2 scripts)
-        # Use Python's official 2to3 tool — handles all edge cases properly
-        # Only runs once; skip if already done (marker file check)
-        MARKER="$WORK_DIR/.2to3_done"
-        if [ -f "$MARKER" ]; then
-            echo "[INFO] Python 2to3 conversion already done, skipping."
-        else
-            echo "[INFO] Converting Python 2 scripts to Python 3 using 2to3..."
-            if ! command -v 2to3 &>/dev/null; then
-                echo "[INFO] Installing 2to3..."
-                sudo apt-get install -y 2to3 2>/dev/null || sudo apt-get install -y python3-lib2to3 2>/dev/null || true
-            fi
-            # Determine 2to3 command (may be '2to3' or 'python3 -m lib2to3')
-            if command -v 2to3 &>/dev/null; then
-                CMD_2TO3="2to3"
-            elif python3 -m lib2to3 --help &>/dev/null 2>&1; then
-                CMD_2TO3="python3 -m lib2to3"
-            else
-                echo "[WARN] 2to3 not available. Skipping Python 2→3 conversion."
-                echo "[WARN] Build may fail on Python 2 syntax errors."
-                CMD_2TO3=""
-            fi
-
-            # Save list of all .py files that will be touched (for clean/restore later)
-            # Dynamic pre-filter: skip files > 100KB (auto-generated data dumps)
-            # and files with no Python 2 syntax (nothing for 2to3 to do)
-            PYFILES_LIST="$WORK_DIR/.2to3_files.txt"
-            echo "[INFO] Scanning Python files (skipping edk2, files >100KB, and files with no Py2 syntax)..."
-
-            find build libcore external/annotation-tools development frameworks system device \
-                -not -path "*/edk2/*" \
-                -name "*.py" -type f 2>/dev/null | while IFS= read -r f; do
-                # Skip files larger than 100KB (auto-generated data, already Py3)
-                size=$(stat -c%s "$f" 2>/dev/null || echo 0)
-                if [ "$size" -gt 102400 ]; then
-                    continue
-                fi
-                # Skip files with no Python 2 patterns (nothing to convert)
-                # Patterns: print statement, xrange, has_key, backticks, <>,
-                # raw_input, apply(), reduce(), ConfigParser, StringIO, urllib2, urlparse
-                if ! grep -qPm1 '(?<!\.)\bprint\s+[^(]|\bxrange\b|\bhas_key\b|`[^`]+`|<>|\braw_input\b|\bapply\s*\(|\breduce\s*\(|\bConfigParser\b|\bStringIO\b|\burllib2\b|\burlparse\b|\bcommands\b|\b__builtin__\b' "$f" 2>/dev/null; then
-                    continue
-                fi
-                echo "$f"
-            done | sort > "$PYFILES_LIST"
-
-            TOTAL_FILES=$(wc -l < "$PYFILES_LIST")
-            echo "[INFO] $TOTAL_FILES files need conversion (skipped large/generated + already-Py3 files)"
-
-            # Phase 1: 2to3 conversion with progress (reads from pre-filtered list)
-            if [ -n "$CMD_2TO3" ]; then
-                echo "[INFO] Phase 1/3: Running 2to3..."
-                PROCESSED=0
-                while IFS= read -r f; do
-                    [ -z "$f" ] && continue
-                    $CMD_2TO3 -w -n "$f" 2>/dev/null || true
-                    PROCESSED=$((PROCESSED + 1))
-                    if [ $((PROCESSED % 50)) -eq 0 ] || [ "$PROCESSED" -eq "$TOTAL_FILES" ]; then
-                        PCT=$((PROCESSED * 100 / TOTAL_FILES))
-                        printf "\r  [2to3] %d/%d (%d%%)" "$PROCESSED" "$TOTAL_FILES" "$PCT"
-                    fi
-                done < "$PYFILES_LIST"
-                printf "\r  [2to3] %d/%d (100%%) done.\n" "$TOTAL_FILES" "$TOTAL_FILES"
-            else
-                echo "[INFO] Phase 1/3: Skipping 2to3 (not available)."
-            fi
-
-            # Phase 2: fix open(filename, "rb") -> open(filename, "r")
-            echo "[INFO] Phase 2/3: Fixing open(filename, \"rb\")..."
-            PROCESSED=0
-            while IFS= read -r f; do
-                [ -z "$f" ] && continue
-                sed -i 's/open(filename, "rb")/open(filename, "r")/' "$f" 2>/dev/null || true
-                PROCESSED=$((PROCESSED + 1))
-                if [ $((PROCESSED % 50)) -eq 0 ] || [ "$PROCESSED" -eq "$TOTAL_FILES" ]; then
-                    PCT=$((PROCESSED * 100 / TOTAL_FILES))
-                    printf "\r  [sed-rb] %d/%d (%d%%)" "$PROCESSED" "$TOTAL_FILES" "$PCT"
-                fi
-            done < "$PYFILES_LIST"
-            printf "\r  [sed-rb] %d/%d (100%%) done.\n" "$TOTAL_FILES" "$TOTAL_FILES"
-
-            # Phase 3: fix open(output_file, "wb") -> open(output_file, "w")
-            echo "[INFO] Phase 3/3: Fixing open(output_file, \"wb\")..."
-            PROCESSED=0
-            while IFS= read -r f; do
-                [ -z "$f" ] && continue
-                sed -i 's/open(output_file, "wb")/open(output_file, "w")/' "$f" 2>/dev/null || true
-                PROCESSED=$((PROCESSED + 1))
-                if [ $((PROCESSED % 50)) -eq 0 ] || [ "$PROCESSED" -eq "$TOTAL_FILES" ]; then
-                    PCT=$((PROCESSED * 100 / TOTAL_FILES))
-                    printf "\r  [sed-wb] %d/%d (%d%%)" "$PROCESSED" "$TOTAL_FILES" "$PCT"
-                fi
-            done < "$PYFILES_LIST"
-            printf "\r  [sed-wb] %d/%d (100%%) done.\n" "$TOTAL_FILES" "$TOTAL_FILES"
-
-            touch "$MARKER"
-            echo "Python 2to3 conversion complete"
-        fi
-
-        # -----------------------------------------------------------------
-        # Post-2to3 fixes (always run, even if 2to3 was skipped via marker)
-        # -----------------------------------------------------------------
-
-        # Fix insertkeys.py wherever it lives in the source tree.
-        # 2to3 correctly converts "rb"→"r" (PEM certs are text).
-        # But it misses "is not" literal and Py2 imports.
-        INSERTKEYS_SRC=$(find . -path "*/insertkeys.py" -not -path "*/out/*" 2>/dev/null | head -1)
-        if [ -n "$INSERTKEYS_SRC" ] && [ -f "$INSERTKEYS_SRC" ]; then
-            sed -i 's/if line is not "":/if line != "":/' "$INSERTKEYS_SRC"
-            sed -i 's/import ConfigParser/import configparser/' "$INSERTKEYS_SRC"
-            sed -i 's/import StringIO/from io import StringIO/' "$INSERTKEYS_SRC"
-            echo "[INFO] Fixed insertkeys.py at $INSERTKEYS_SRC"
-        else
-            echo "[INFO] insertkeys.py not found in source — will fix out/ copy before build"
-        fi
-        # Delete out/ copy so it regenerates from the fixed source
-        rm -f out/host/linux-x86/bin/insertkeys.py 2>/dev/null || true
-        # Remove stale mac_permissions intermediates so they regenerate
-        rm -f out/target/product/*/obj/ETC/*mac_permissions.xml_intermediates/*mac_permissions.xml 2>/dev/null || true
 
         # Fix mixed tabs/spaces in auto_generator.py (patch may introduce tabs)
         AUTO_GEN="device/rockchip/common/auto_generator.py"
@@ -512,55 +358,6 @@ print('Fixed auto_generator.py')
         
         # Build Android (use PIPESTATUS to catch make failure through tee)
         echo "[4b/4] Building Android (make -j$(nproc))..."
-
-        # Final fix: replace broken insertkeys.py with a working Python 3 version.
-        INSERTKEYS_OUT="out/host/linux-x86/bin/insertkeys.py"
-        mkdir -p "$(dirname "$INSERTKEYS_OUT")"
-        # Unlock if previously locked with chattr +i
-        sudo chattr -i "$INSERTKEYS_OUT" 2>/dev/null || true
-        # Remove if exists (may be locked or corrupted)
-        rm -f "$INSERTKEYS_OUT" 2>/dev/null || sudo rm -f "$INSERTKEYS_OUT" 2>/dev/null || true
-        cat > "$INSERTKEYS_OUT" << 'INSERTKEYSEOF'
-#!/usr/bin/env python3
-"""Minimal insertkeys.py replacement — copies mac_permissions.xml to output."""
-import sys, os, shutil
-
-def main():
-    # Args: -t variant -c keydir input_keys -o output input_xml [more_xmls...]
-    # We just need to copy the last positional arg (input XML) to -o output
-    args = sys.argv[1:]
-    output = None
-    inputs = []
-    i = 0
-    while i < len(args):
-        if args[i] == '-o' and i + 1 < len(args):
-            output = args[i + 1]
-            i += 2
-        elif args[i] in ('-t', '-c'):
-            i += 2
-        else:
-            inputs.append(args[i])
-            i += 1
-
-    if output and inputs:
-        # Copy the last input XML to output
-        src = inputs[-1]
-        if os.path.exists(src):
-            os.makedirs(os.path.dirname(output), exist_ok=True)
-            shutil.copyfile(src, output)
-            print(f"Copied {src} -> {output}")
-        else:
-            # Create empty output
-            os.makedirs(os.path.dirname(output), exist_ok=True)
-            with open(output, 'w') as f:
-                f.write('<?xml version="1.0"?>\n<policy/>\n')
-    sys.exit(0)
-
-if __name__ == '__main__':
-    main()
-INSERTKEYSEOF
-        chmod +x "$INSERTKEYS_OUT"
-        echo "[INFO] Replaced insertkeys.py with working Python 3 version"
 
         ANDROID_START=$(date +%s)
         make -j$(nproc) 2>&1 | tee build.log
@@ -700,67 +497,6 @@ INSERTKEYSEOF
         echo ""
         echo "Build command: make -j\$(nproc)"
         echo ""
-        echo "NOTE: Android 11 builds best on Ubuntu 18.04 (Python 2 native)."
-        echo "On Ubuntu 20.04+, Python 2→3 conversion will be applied."
-        echo ""
-
-        # Python 2→3 conversion (same as Android 9, only if on Python 3 host)
-        MARKER="$WORK_DIR/.2to3_done"
-        if [ -f "$MARKER" ]; then
-            echo "[INFO] Python 2to3 conversion already done, skipping."
-        else
-            # Check if we're on Python 2 (Ubuntu 18.04) — skip 2to3 entirely
-            PY_VER=$(python --version 2>&1 || echo "unknown")
-            if echo "$PY_VER" | grep -q "Python 2"; then
-                echo "[INFO] Python 2 detected ($PY_VER) — skipping 2to3 conversion."
-                touch "$MARKER"
-            else
-                echo "[INFO] Python 3 detected — converting Python 2 scripts..."
-                if ! command -v 2to3 &>/dev/null; then
-                    echo "[INFO] Installing 2to3..."
-                    sudo apt-get install -y 2to3 2>/dev/null || sudo apt-get install -y python3-lib2to3 2>/dev/null || true
-                fi
-                if command -v 2to3 &>/dev/null; then
-                    CMD_2TO3="2to3"
-                elif python3 -m lib2to3 --help &>/dev/null 2>&1; then
-                    CMD_2TO3="python3 -m lib2to3"
-                else
-                    CMD_2TO3=""
-                fi
-
-                PYFILES_LIST="$WORK_DIR/.2to3_files.txt"
-                echo "[INFO] Scanning Python files..."
-                find build libcore external/annotation-tools development frameworks system device \
-                    -not -path "*/edk2/*" \
-                    -name "*.py" -type f 2>/dev/null | while IFS= read -r f; do
-                    size=$(stat -c%s "$f" 2>/dev/null || echo 0)
-                    if [ "$size" -gt 102400 ]; then continue; fi
-                    if ! grep -qPm1 '(?<!\.)\bprint\s+[^(]|\bxrange\b|\bhas_key\b|`[^`]+`|<>|\braw_input\b|\bapply\s*\(|\breduce\s*\(|\bConfigParser\b|\bStringIO\b|\burllib2\b|\burlparse\b|\bcommands\b|\b__builtin__\b' "$f" 2>/dev/null; then
-                        continue
-                    fi
-                    echo "$f"
-                done | sort > "$PYFILES_LIST"
-                TOTAL_FILES=$(wc -l < "$PYFILES_LIST")
-                echo "[INFO] $TOTAL_FILES files need conversion"
-
-                if [ -n "$CMD_2TO3" ] && [ "$TOTAL_FILES" -gt 0 ]; then
-                    echo "[INFO] Running 2to3..."
-                    PROCESSED=0
-                    while IFS= read -r f; do
-                        [ -z "$f" ] && continue
-                        $CMD_2TO3 -w -n "$f" 2>/dev/null || true
-                        PROCESSED=$((PROCESSED + 1))
-                        if [ $((PROCESSED % 50)) -eq 0 ] || [ "$PROCESSED" -eq "$TOTAL_FILES" ]; then
-                            PCT=$((PROCESSED * 100 / TOTAL_FILES))
-                            printf "\r  [2to3] %d/%d (%d%%)" "$PROCESSED" "$TOTAL_FILES" "$PCT"
-                        fi
-                    done < "$PYFILES_LIST"
-                    printf "\r  [2to3] %d/%d (100%%) done.\n" "$TOTAL_FILES" "$TOTAL_FILES"
-                fi
-                touch "$MARKER"
-                echo "Python 2to3 conversion complete"
-            fi
-        fi
 
         # Fix auto_generator.py (same patch issue as Android 9)
         AUTO_GEN="device/rockchip/common/auto_generator.py"

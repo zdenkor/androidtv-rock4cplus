@@ -2,8 +2,9 @@
 # =============================================================================
 # 01-setup-environment.sh
 # Sets up the build environment for Android TV (AOSP)
-# Supports: Ubuntu 18.04/22.04+ / Debian 11+ (on WSL2 or native)
+# Supports: Ubuntu 18.04 / 20.04 / 22.04 (on WSL2 or native)
 # Target: Radxa ROCK 4C+ (RK3399-T)
+# AOSP versions: Android 9 Pie, Android 11, Android 12
 # =============================================================================
 
 set -e
@@ -37,35 +38,90 @@ if [ -f /etc/os-release ]; then
     DISTRO="$ID"
     DISTRO_VERSION="$VERSION_ID"
 else
-    echo "WARNING: Cannot detect distribution. Assuming Debian/Ubuntu."
+    echo "WARNING: Cannot detect distribution. Assuming Ubuntu."
     DISTRO="unknown"
 fi
 
 echo "============================================"
-echo " Android TV 12 Build Environment Setup"
+echo " Android TV Build Environment Setup"
 echo " Detected: $DISTRO $DISTRO_VERSION"
 echo " Target: Radxa ROCK 4C+ (RK3399-T)"
 echo "============================================"
 echo ""
 
-# Recommended OS check
-if [ "$DISTRO" = "debian" ] && [ "$DISTRO_VERSION" = "13" ]; then
-    echo "============================================"
-    echo " WARNING: Debian 13 (trixie) detected"
-    echo "============================================"
-    echo ""
-    echo "Debian 13 has limited OpenJDK 8 support."
-    echo "For best compatibility, consider using Ubuntu 22.04 LTS instead."
-    echo ""
-    echo "To install Ubuntu 22.04 in WSL2:"
-    echo "  wsl --install -d Ubuntu-22.04"
-    echo ""
-    read -rp "Continue with Debian 13? [y/N]: " CONFIRM
-    if [ "$CONFIRM" != "y" ]; then
-        echo "Aborted. Please install Ubuntu 22.04 and try again."
+# =============================================================================
+# Choose AOSP version to build
+# =============================================================================
+echo "Select which Android version you want to build:"
+echo ""
+echo "  1) Android 9 Pie (Radxa, kernel 4.4)"
+echo "     - Best on Ubuntu 18.04 LTS (Python 2 native, JDK 8)"
+echo "     - Most stable, all hardware works"
+echo ""
+echo "  2) Android 11 (Radxa rk11, kernel 4.19)"
+echo "     - Best on Ubuntu 18.04 LTS (Python 2 native, JDK 8)"
+echo "     - Newer kernel, good hardware support"
+echo ""
+echo "  3) Android 12 (Vicharak BSP, kernel 5.10) ★ RECOMMENDED"
+echo "     - Best on Ubuntu 22.04 LTS (Python 3, JDK 11)"
+echo "     - Full Rockchip BSP included"
+echo ""
+echo "  4) Android 12 AOSP (pure Google, EXPERIMENTAL)"
+echo "     - Best on Ubuntu 22.04 LTS (Python 3, JDK 11)"
+echo "     - No Rockchip BSP — manual integration required"
+echo ""
+
+# If BSP_CHOICE already set from .build-config, use it; otherwise prompt
+if [ -n "$BSP_CHOICE" ] && [ "$BSP_CHOICE" -ge 1 ] 2>/dev/null && [ "$BSP_CHOICE" -le 4 ] 2>/dev/null; then
+    AOSP_CHOICE="$BSP_CHOICE"
+    echo "Using saved BSP choice: $AOSP_CHOICE"
+else
+    read -rp "Enter choice [1-4]: " AOSP_CHOICE
+    if ! [[ "$AOSP_CHOICE" =~ ^[1-4]$ ]]; then
+        echo "Invalid choice. Exiting."
         exit 1
     fi
-    echo ""
+fi
+
+# Map choice to version name
+case $AOSP_CHOICE in
+    1) AOSP_VERSION="Android 9 Pie"; AOSP_VER="9" ;;
+    2) AOSP_VERSION="Android 11"; AOSP_VER="11" ;;
+    3) AOSP_VERSION="Android 12 (Vicharak)"; AOSP_VER="12" ;;
+    4) AOSP_VERSION="Android 12 (AOSP)"; AOSP_VER="12" ;;
+esac
+
+echo ""
+echo "Selected: $AOSP_VERSION"
+echo ""
+
+# =============================================================================
+# OS recommendation based on AOSP version
+# =============================================================================
+if [ "$AOSP_VER" = "9" ] || [ "$AOSP_VER" = "11" ]; then
+    # Android 9/11 need Python 2 and JDK 8 — Ubuntu 18.04 is ideal
+    if [ "$DISTRO" = "ubuntu" ] && [ "$DISTRO_VERSION" != "18.04" ]; then
+        echo "============================================"
+        echo " NOTE: $AOSP_VERSION builds best on Ubuntu 18.04 LTS"
+        echo "============================================"
+        echo ""
+        echo "You are running $DISTRO $DISTRO_VERSION."
+        echo "Android 9/11 use Python 2 scripts and need JDK 8."
+        echo "On newer Ubuntu, JDK 8 will be pulled from the bionic repo."
+        echo ""
+        echo "For best results, install Ubuntu 18.04 in WSL2:"
+        echo "  wsl --install -d Ubuntu-18.04"
+        echo ""
+        read -rp "Continue with $DISTRO $DISTRO_VERSION? [y/N]: " CONFIRM
+        if [ "$CONFIRM" != "y" ] && [ "$CONFIRM" != "Y" ]; then
+            echo "Aborted. Please install Ubuntu 18.04 and try again."
+            exit 1
+        fi
+        echo ""
+    fi
+else
+    # Android 12 needs Python 3 and JDK 11 — Ubuntu 20.04/22.04 is ideal
+    :
 fi
 
 # Helper: install packages, skipping any that don't exist in the repo
@@ -100,13 +156,7 @@ install_safe \
     bc dosfstools mtools rsync
 
 # Distro-specific: x11proto / 32z1 / ncurses / lz4
-if [ "$DISTRO" = "debian" ]; then
-    install_safe x11proto-dev lib32z1-dev libncurses-dev libtinfo6 lz4
-elif [ "$DISTRO" = "ubuntu" ]; then
-    install_safe x11proto-core-dev lib32z1-dev libncurses5 libncurses5-dev libtinfo5 liblz4-tool
-else
-    install_safe x11proto-core-dev x11proto-dev lib32z1-dev libncurses-dev libncurses5-dev libtinfo6 libtinfo5 lz4 liblz4-tool
-fi
+install_safe x11proto-core-dev lib32z1-dev libncurses5 libncurses5-dev libtinfo5 liblz4-tool
 
 # ---------------------------------------------------------------------------
 # 3. Install AOSP-specific build dependencies
@@ -118,69 +168,95 @@ install_safe \
     u-boot-tools device-tree-compiler swig \
     python3-dev python3-setuptools python3-lib2to3
 
-# Ensure 'python' command exists (Debian may only have python3)
-if ! command -v python &>/dev/null; then
-    echo "Creating python -> python3 symlink..."
-    sudo ln -sf /usr/bin/python3 /usr/bin/python
+# Android 9/11: also need Python 2 and related packages
+if [ "$AOSP_VER" = "9" ] || [ "$AOSP_VER" = "11" ]; then
+    echo "[3a/8] Installing Python 2 packages (required for Android $AOSP_VER)..."
+    install_safe python python-dev python2 python2-dev python-jinja2 python-markupsafe
+    # Ensure 'python' points to python2 (not python3) for Android 9/11
+    if command -v python2 &>/dev/null; then
+        if ! command -v python &>/dev/null || ! python --version 2>&1 | grep -q "Python 2"; then
+            echo "Creating python -> python2 symlink for Android $AOSP_VER..."
+            sudo ln -sf /usr/bin/python2 /usr/bin/python
+        fi
+    fi
+else
+    # Android 12: ensure 'python' command exists
+    if ! command -v python &>/dev/null; then
+        echo "Creating python -> python3 symlink..."
+        sudo ln -sf /usr/bin/python3 /usr/bin/python
+    fi
 fi
 
 # ---------------------------------------------------------------------------
-# 4. Install Java (OpenJDK 11 - required for Android 12)
+# 4. Install Java (version depends on AOSP target)
 # ---------------------------------------------------------------------------
-echo "[4/8] Installing OpenJDK 11..."
+if [ "$AOSP_VER" = "9" ] || [ "$AOSP_VER" = "11" ]; then
+    # Android 9/11 need OpenJDK 8
+    echo "[4/8] Installing OpenJDK 8 (required for Android $AOSP_VER)..."
 
-# Install aptitude first (better dependency resolver)
-echo "Installing aptitude for better dependency resolution..."
-sudo apt-get install -y aptitude 2>/dev/null || true
+    # Install aptitude first (better dependency resolver)
+    echo "Installing aptitude for better dependency resolution..."
+    sudo apt-get install -y aptitude 2>/dev/null || true
 
-# Fix broken packages first
-echo "Checking for broken packages..."
-sudo apt-get install -f -y 2>/dev/null || true
+    # Fix broken packages first
+    echo "Checking for broken packages..."
+    sudo apt-get install -f -y 2>/dev/null || true
 
-# Try to install libjpeg8 first (required by openjdk-11-jre on Debian)
-echo "Attempting to install libjpeg8..."
-sudo apt-get install -y libjpeg8 2>/dev/null || {
-    echo "libjpeg8 not available, trying alternative..."
-    # Try to download and install manually
-    if command -v wget &>/dev/null; then
-        echo "Downloading libjpeg8 from Debian repos..."
-        sudo apt-get download libjpeg8 2>/dev/null || {
-            echo "Creating dummy libjpeg8 package..."
-            sudo apt-get install -y libjpeg62-turbo 2>/dev/null || true
+    if apt-cache show openjdk-8-jdk &>/dev/null; then
+        # Available directly (Ubuntu 18.04)
+        echo "Installing OpenJDK 8..."
+        sudo apt-get install -y openjdk-8-jdk openjdk-8-jre-headless 2>/dev/null || {
+            echo "WARNING: OpenJDK 8 install failed. Trying aptitude..."
+            sudo aptitude install -y openjdk-8-jdk 2>/dev/null || true
+        }
+    else
+        # Ubuntu 20.04+ — add bionic repo for JDK 8
+        echo "Ubuntu $DISTRO_VERSION detected — pulling OpenJDK 8 from bionic repo..."
+        echo "deb http://archive.ubuntu.com/ubuntu bionic main universe" | sudo tee /etc/apt/sources.list.d/bionic-jdk8.list
+        sudo apt-get update -y
+        sudo apt-get install -y openjdk-8-jdk openjdk-8-jre-headless 2>/dev/null || {
+            echo "WARNING: OpenJDK 8 not available from bionic. Trying alternative..."
+            sudo apt-get install -y openjdk-11-jdk
+            echo "NOTE: JDK 11 installed. Android $AOSP_VER may have build issues with JDK 11."
+        }
+        sudo rm /etc/apt/sources.list.d/bionic-jdk8.list
+        sudo apt-get update -y
+    fi
+else
+    # Android 12 needs OpenJDK 11
+    echo "[4/8] Installing OpenJDK 11 (required for Android 12)..."
+
+    # Install aptitude first (better dependency resolver)
+    echo "Installing aptitude for better dependency resolution..."
+    sudo apt-get install -y aptitude 2>/dev/null || true
+
+    # Fix broken packages first
+    echo "Checking for broken packages..."
+    sudo apt-get install -f -y 2>/dev/null || true
+
+    # Try to install libjpeg8 first (required by openjdk-11-jre on older Ubuntu)
+    echo "Attempting to install libjpeg8..."
+    sudo apt-get install -y libjpeg8 2>/dev/null || {
+        echo "libjpeg8 not available, trying alternative..."
+        sudo apt-get install -y libjpeg62-turbo 2>/dev/null || true
+    }
+
+    # Use aptitude for better dependency resolution
+    if apt-cache show openjdk-11-jdk &>/dev/null; then
+        # Available directly (Ubuntu 20.04/22.04)
+        echo "Installing OpenJDK 11 using aptitude..."
+        sudo aptitude install -y openjdk-11-jdk 2>/dev/null || {
+            echo "WARNING: OpenJDK 11 not available. Using OpenJDK 17 instead..."
+            sudo apt-get install -y openjdk-17-jdk
+        }
+    else
+        # Ubuntu 24.04+ — try to find any available JDK
+        echo "Trying to install OpenJDK 11 from Ubuntu repos..."
+        sudo aptitude install -y openjdk-11-jdk 2>/dev/null || {
+            echo "WARNING: OpenJDK 11 not found. Using OpenJDK 17 (may cause build issues)..."
+            sudo apt-get install -y openjdk-17-jdk
         }
     fi
-}
-
-# Use aptitude for better dependency resolution
-if apt-cache show openjdk-11-jdk &>/dev/null; then
-    # Available directly (Ubuntu 20.04/22.04, Debian 11)
-    echo "Installing OpenJDK 11 using aptitude..."
-    # Try to install with aptitude, but if it fails, use JDK 17
-    sudo aptitude install -y openjdk-11-jdk 2>/dev/null || {
-        echo "WARNING: OpenJDK 11 not available. Using OpenJDK 17 instead..."
-        sudo apt-get install -y openjdk-17-jdk
-    }
-elif [ "$DISTRO" = "debian" ]; then
-    # Debian 12+ removed OpenJDK 11 — pull from bullseye repo temporarily
-    echo "Debian 12+ detected — pulling OpenJDK 11 from bullseye repo..."
-    echo "deb http://deb.debian.org/debian bullseye main" | sudo tee /etc/apt/sources.list.d/bullseye-jdk.list
-    sudo apt-get update -y
-    sudo aptitude install -y --allow-downgrades openjdk-11-jdk openjdk-11-jre-headless 2>/dev/null || {
-        echo "WARNING: OpenJDK 11 not available. Using OpenJDK 17 instead..."
-        sudo apt-get install -y openjdk-17-jdk
-    }
-    sudo rm /etc/apt/sources.list.d/bullseye-jdk.list
-    sudo apt-get update -y
-elif [ "$DISTRO" = "ubuntu" ]; then
-    # Ubuntu 24.04+ — try to find any available JDK
-    echo "Trying to install OpenJDK 11 from Ubuntu repos..."
-    sudo aptitude install -y openjdk-11-jdk 2>/dev/null || {
-        echo "WARNING: OpenJDK 11 not found. Using OpenJDK 17 (may cause build issues)..."
-        sudo apt-get install -y openjdk-17-jdk
-    }
-else
-    echo "WARNING: Unknown distro. Trying OpenJDK 11, falling back to 17..."
-    sudo aptitude install -y openjdk-11-jdk 2>/dev/null || sudo apt-get install -y openjdk-17-jdk
 fi
 
 # Verify Java
@@ -289,10 +365,16 @@ echo "============================================"
 echo " Environment setup complete!"
 echo "============================================"
 echo ""
+echo "Target AOSP version: $AOSP_VERSION"
+echo ""
 echo "Installed tools summary:"
 echo "  - wget, curl, git, repo"
 echo "  - apkeep (APKMirror / F-Droid downloader)"
-echo "  - OpenJDK 11, Python 3, ccache"
+if [ "$AOSP_VER" = "9" ] || [ "$AOSP_VER" = "11" ]; then
+    echo "  - OpenJDK 8, Python 2, ccache"
+else
+    echo "  - OpenJDK 11, Python 3, ccache"
+fi
 echo ""
 echo "Next step: Run 02-download-source.sh"
 echo ""

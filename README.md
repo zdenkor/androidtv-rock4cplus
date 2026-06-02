@@ -1,11 +1,12 @@
 # Android TV for Radxa ROCK 4C+
 
-!!! WORK IN POGRESS, DO NOT USE IT RIGHT NOW !!!
+!!! WORK IN PROGRESS, DO NOT USE IT RIGHT NOW !!!
 
 Build **Android 9–12** for the **Radxa ROCK 4C+** (Rockchip RK3399-T) from source using **multiple BSP options**.
 
 > **Supported BSPs:**
 > - [Vicharak Android 12](https://github.com/vicharak-in/rockchip-android-manifest) — kernel 5.10, full Rockchip HALs, last updated Dec 2025 (**recommended**)
+> - Radxa Android 11 — kernel 4.19, Radxa rk11 BSP
 > - Radxa Android 9 Pie — kernel 4.4, official Radxa BSP
 > - AOSP 12 — experimental, partially automated Rockchip BSP overlay
 
@@ -15,24 +16,25 @@ Build **Android 9–12** for the **Radxa ROCK 4C+** (Rockchip RK3399-T) from sou
 
 This repository provides a complete, automated build system for compiling Android from AOSP source for the Radxa ROCK 4C+ single-board computer. It includes:
 
-- **Multi-BSP support** — choose between Vicharak (Android 12), Radxa (Android 9), or AOSP 12 during `02-download-source.sh`
-- **Isolated build directories** — each BSP downloads to its own directory (`/mnt/aosp-build/androidtv-rock4cplus-{vicharak12,radxa9,aosp12}`)
+- **Multi-BSP support** — choose between Vicharak (Android 12), Radxa (Android 11), Radxa (Android 9), or AOSP 12 during `02-download-source.sh`
+- **Isolated build directories** — each BSP downloads to its own directory (`/mnt/aosp-build/androidtv-rock4cplus-{vicharak12,radxa11,radxa9,aosp12}`)
 - **BSP-aware scripts** — all build scripts auto-detect which BSP was selected and apply correct configuration
 - **Automated scripts** for USB setup, environment preparation, source download, configuration, building, and flashing
-- **Prebuilts compatibility fixes** for Ubuntu 22.04 / WSL2 (Soong sanitization, missing manifests, symlink fixes)
+- **Prebuilts compatibility fixes** for Ubuntu 18.04/20.04/22.04 / WSL2 (Soong sanitization, missing manifests, symlink fixes)
 - **Android TV configuration** (Leanback Launcher, HDMI-CEC, IR remote support)
 - **Optional GApps integration** (MindTheGapps or NikGApps)
 - **Optional preinstalled apps** (SmartTube, Kodi, Projectivy Launcher, etc.)
 
-### Recommended OS: Ubuntu 22.04 LTS
+### Recommended OS
 
-| Component | Ubuntu 22.04 | Notes |
-|-----------|--------------|-------|
-| OpenJDK 8 | ✅ Available | For Android 9 (Radxa) |
-| OpenJDK 11 | ✅ Available | For Android 12 (Vicharak) |
-| OpenJDK 17 | ✅ Available | For Android 12 (all BSPs) |
-| Dependencies | ✅ All in repos | No extra repos needed |
-| WSL2 Support | ✅ | Works perfectly |
+| AOSP Version | Recommended Ubuntu | Python | JDK |
+|---|---|---|---|
+| Android 9 Pie | **Ubuntu 18.04 LTS** | Python 2 (native) | OpenJDK 8 |
+| Android 11 | **Ubuntu 18.04 LTS** | Python 2 (native) | OpenJDK 8 |
+| Android 12 (Vicharak) | **Ubuntu 22.04 LTS** | Python 3 | OpenJDK 11 |
+| Android 12 (AOSP) | **Ubuntu 22.04 LTS** | Python 3 | OpenJDK 11 |
+
+> **Note:** Android 9/11 can also build on Ubuntu 20.04/22.04 — the setup script will pull JDK 8 from the bionic repo. However, Ubuntu 18.04 is recommended for the smoothest experience with these older AOSP versions (Python 2 native, no extra repos needed).
 
 ### Key Components
 
@@ -41,6 +43,7 @@ This repository provides a complete, automated build system for compiling Androi
 | BSP | Android | Kernel | Status | Use Case |
 |-----|---------|--------|--------|----------|
 | **Vicharak** | 12 | 5.10 | ✅ Recommended | Latest, most features |
+| Radxa rk11 | 11 | 4.19 | ✅ Stable | Newer than 9, good HW support |
 | Radxa | 9 Pie | 4.4 | ✅ Stable | Official support, mature |
 | AOSP | 12 | 5.10+ | ⚠️ Partial | Rockchip overlay installed automatically |
 
@@ -112,7 +115,7 @@ Run `03a-preinstall-apps.sh` to bake apps directly into the system image.
 - **CPU**: 8+ cores recommended
 - **RAM**: 32GB+ (16GB minimum with swap)
 - **Disk**: 300GB+ free space — **USB 3.0 external drive strongly recommended**
-- **OS**: **Ubuntu 22.04 LTS**
+- **OS**: **Ubuntu 18.04 LTS** (Android 9/11) or **Ubuntu 22.04 LTS** (Android 12)
 
 ### Why Use a USB Drive?
 AOSP source + build output requires **300GB+**. An external USB 3.0 SSD/HDD formatted as **ext4** is required — NTFS/exFAT will corrupt the source tree (AOSP needs case-sensitive filesystem).
@@ -121,7 +124,10 @@ AOSP source + build output requires **300GB+**. An external USB 3.0 SSD/HDD form
 If you are on Windows, use WSL2 with a USB drive:
 ```powershell
 # In PowerShell (Admin):
-wsl --install -d Ubuntu-22.04  # or Ubuntu-20.04
+# For Android 9/11:
+wsl --install -d Ubuntu-18.04
+# For Android 12:
+wsl --install -d Ubuntu-22.04
 wsl --set-default-version 2
 
 # Attach USB drive to WSL2:
@@ -138,12 +144,13 @@ processors=8
 swap=32GB
 ```
 
-### Native Linux (Ubuntu 22.04 LTS or Ubuntu 20.04 LTS)
+### Native Linux (Ubuntu 18.04 LTS or Ubuntu 22.04 LTS)
 If you are on native Linux, simply plug in your USB drive and skip the WSL2 steps above.
 
 **Recommended distributions:**
-- **Ubuntu 22.04 LTS** — Recommended (all JDKs available, no extra repos)
-- Ubuntu 20.04 LTS — Works well
+- **Ubuntu 18.04 LTS** — Best for Android 9/11 (Python 2 native, JDK 8 in repos)
+- **Ubuntu 22.04 LTS** — Best for Android 12 (Python 3, JDK 11 in repos)
+- Ubuntu 20.04 LTS — Works for all versions (may need bionic repo for JDK 8)
 
 ---
 
@@ -176,21 +183,22 @@ cd androidtv-rock4cplus
 
 ## Quick Start
 
-All scripts are designed to run inside **WSL2 or native Debian/Ubuntu**.
+All scripts are designed to run inside **WSL2 or native Ubuntu**.
 
 ### How It Works (Multi-BSP)
 
-1. **02-download-source.sh** prompts you to select a BSP (1-4)
-2. Downloads the BSP source to a **separate directory** (e.g., `/mnt/aosp-build/androidtv-rock4cplus-vicharak12`)
-3. Creates `.build-config` storing `BSP_CHOICE` and `WORK_DIR`
-4. **Remaining scripts automatically detect and use the correct BSP**
+1. **01-setup-environment.sh** prompts you to select an AOSP version (1-4) and installs the correct JDK and Python
+2. **02-download-source.sh** prompts you to select a BSP (1-4)
+3. Downloads the BSP source to a **separate directory** (e.g., `/mnt/aosp-build/androidtv-rock4cplus-vicharak12`)
+4. Creates `.build-config` storing `BSP_CHOICE` and `WORK_DIR`
+5. **Remaining scripts automatically detect and use the correct BSP**
 
 ### Quick Start Steps
 
 ```bash
 chmod +x scripts/*.sh
 ./scripts/00-setup-usb.sh         # Format USB, mount it, copy repo to USB
-./scripts/01-setup-environment.sh # Install dependencies (Ubuntu 22.04 recommended)
+./scripts/01-setup-environment.sh # Select AOSP version, install dependencies
 ./scripts/02-download-source.sh   # Select BSP (1-4), download source (~80GB)
 ./scripts/03-configure-build.sh   # Auto-detect BSP, apply correct config
 ./scripts/03a-preinstall-apps.sh   # Optional: preinstall apps
@@ -210,7 +218,7 @@ cd /mnt/aosp-build/androidtv-rock4cplus
 | Step | Script | Description | Multi-BSP Support |
 |------|--------|-------------|-------------------|
 | 0 | `./scripts/00-setup-usb.sh` | Format & mount USB drive as ext4, copy repo | — |
-| 1 | `./scripts/01-setup-environment.sh` | Install build dependencies & JDK (Ubuntu 22.04 recommended) | — |
+| 1 | `./scripts/01-setup-environment.sh` | **Select AOSP version (1-4), install correct JDK & Python** | ✅ Prompts for choice |
 | 2 | `./scripts/02-download-source.sh` | **Select BSP (1-4), download source** (~80GB) | ✅ Prompts for choice |
 | 3 | `./scripts/03-configure-build.sh` | **Auto-detect BSP, apply correct config** | ✅ Reads `.build-config` |
 | 3b | `./scripts/03a-preinstall-apps.sh` | (Optional) Preinstall apps into build | — |
@@ -228,7 +236,7 @@ AndroidTV for Radxa4C+/
 ├── .gitignore
 ├── scripts/
 │   ├── 00-setup-usb.sh              # Format & mount USB drive (ext4)
-│   ├── 01-setup-environment.sh      # Install dependencies & tools
+│   ├── 01-setup-environment.sh      # Select AOSP version, install deps & tools
 │   ├── 02-download-source.sh        # Select BSP (1-4), download to separate dir
 │   ├── 03-configure-build.sh        # Detect BSP from .build-config, apply config
 │   ├── 04-build-android.sh          # Detect BSP from .build-config, build
@@ -247,9 +255,10 @@ AndroidTV for Radxa4C+/
 # Build Directory Structure (created by scripts):
 /mnt/aosp-build/
 ├── androidtv-rock4cplus/            # Main repo (git cloned here)
-├── androidtv-rock4cplus-vicharak12/ # Vicharak BSP (option 2)
+├── androidtv-rock4cplus-vicharak12/ # Vicharak BSP (option 3)
+├── androidtv-rock4cplus-radxa11/    # Radxa Android 11 (option 2)
 ├── androidtv-rock4cplus-radxa9/     # Radxa Android 9 (option 1)
-└── androidtv-rock4cplus-aosp12/     # AOSP 12 (option 3)
+└── androidtv-rock4cplus-aosp12/     # AOSP 12 (option 4)
 ```
 
 ### .build-config (Auto-generated)
@@ -335,9 +344,10 @@ sudo mount /mnt/aosp-build
 
 ### BSP Selection
 
-- **Vicharak (Option 2)** — **Recommended** for Android TV 12. Latest kernel (5.10), most features, actively maintained.
-- **Radxa 9 (Option 1)** — Android 9 Pie. Officially supported by Radxa, stable, older features.
-- **AOSP (Option 3)** — Experimental. Pure AOSP requires manual Rockchip BSP integration (kernel, HALs, device tree).
+- **Vicharak (Option 3)** — **Recommended** for Android TV 12. Latest kernel (5.10), most features, actively maintained.
+- **Radxa 11 (Option 2)** — Android 11 with kernel 4.19. Newer than Android 9, good hardware support. Best built on Ubuntu 18.04.
+- **Radxa 9 (Option 1)** — Android 9 Pie. Officially supported by Radxa, stable, older features. Best built on Ubuntu 18.04.
+- **AOSP (Option 4)** — Experimental. Pure AOSP requires manual Rockchip BSP integration (kernel, HALs, device tree).
 
 Each BSP downloads to its own directory. You can build multiple BSPs in sequence without conflicts.
 
