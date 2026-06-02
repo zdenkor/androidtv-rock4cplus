@@ -83,13 +83,13 @@ if [[ "$BSP_NAME" == *radxa9* ]]; then
     BSP_CHOICE=1
     BSP_TYPE="Radxa Android 9 Pie"
 elif [[ "$BSP_NAME" == *radxa11* ]]; then
-    BSP_CHOICE=4
+    BSP_CHOICE=2
     BSP_TYPE="Radxa Android 11 (kernel 4.19)"
 elif [[ "$BSP_NAME" == *vicharak12* ]]; then
-    BSP_CHOICE=2
+    BSP_CHOICE=3
     BSP_TYPE="Vicharak Android 12 (kernel 5.10)"
 elif [[ "$BSP_NAME" == *aosp12* ]]; then
-    BSP_CHOICE=3
+    BSP_CHOICE=4
     BSP_TYPE="AOSP Android 12"
 else
     echo "WARNING: Unknown BSP type: $BSP_NAME"
@@ -178,6 +178,33 @@ case $BSP_CHOICE in
         ;;
     
     2)
+        # ====================================================================
+        # RADXA ANDROID 11 (rk11, kernel 4.19)
+        # ====================================================================
+        echo "[2/6] Configuring Radxa Android 11 (kernel 4.19)..."
+
+        # Fix Python indentation BEFORE lunch
+        if [ -d "device/rockchip" ]; then
+            echo "Fixing device/rockchip/**/*.py files..."
+            python3 "$SCRIPT_DIR/fix_option1_radxa9_auto_generator.py" 2>/dev/null || true
+        fi
+
+        # Call lunch
+        lunch rk3399_box-userdebug < /dev/null
+
+        echo "[3/6] Android 11 — device tree already included"
+        echo "[4/6] Kernel config — using default (Android 11, kernel 4.19)"
+        echo "[5/6] Applying ROCK 4C+ device tree..."
+        DTS_DIR="kernel/arch/arm64/boot/dts/rockchip"
+        if [ -d "$DTS_DIR" ] && [ -f "$DTS_DIR/rk3399-rock-pi-4.dts" ]; then
+            cp "$DTS_DIR/rk3399-rock-pi-4.dts" "$DTS_DIR/rk3399-rock-4c-plus.dts"
+            echo "Created rk3399-rock-4c-plus.dts"
+        fi
+
+        echo "[6/6] Prebuilts fixes — minimal"
+        ;;
+    
+    3)
         # ====================================================================
         # VICHARAK ANDROID 12 (kernel 5.10) ★ RECOMMENDED
         # ====================================================================
@@ -277,7 +304,7 @@ EOF
         # fix_prebuilts.py removed - using universal fix scripts instead
         ;;
     
-    3)
+    4)
         # ====================================================================
         # AOSP ANDROID 12 (EXPERIMENTAL)
         # ====================================================================
