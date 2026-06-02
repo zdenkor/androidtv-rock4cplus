@@ -466,7 +466,8 @@ for i in range(len(lines)):
     leading_tabs = len(lines[i]) - len(stripped)
     lines[i] = '    ' * leading_tabs + stripped
 
-# Fix empty if bodies and remove stray pass/continue at wrong indent
+# Fix empty if bodies: insert pass for if statements with no body.
+# Only remove 'pass' (not 'continue') that's at wrong indent.
 fixed = []
 i = 0
 while i < len(lines):
@@ -474,13 +475,12 @@ while i < len(lines):
     stripped = line.rstrip()
     cur_indent = len(line) - len(line.lstrip(' '))
 
-    # Skip stray 'pass' or 'continue' that are at same/lower indent than previous 'if'
-    if stripped in ('pass', 'continue') and len(fixed) > 0:
+    # Skip 'pass' that is at same indent as preceding 'if' (it was a bad patch insert)
+    if stripped == 'pass' and len(fixed) > 0:
         prev = fixed[-1].rstrip()
         if prev.startswith('if ') and prev.endswith(':'):
             prev_indent = len(fixed[-1]) - len(fixed[-1].lstrip(' '))
             if cur_indent <= prev_indent:
-                # This pass/continue belongs to outer block, not the if — skip it
                 i += 1
                 continue
 
