@@ -3,7 +3,7 @@
 @@ -110,6 +110,7 @@ class Rockchip_hwConfig():
                  continue
          if (self.rk_param == 'hwver'):
-+            pass
++		pass
          if (self.rk_param == 'bootdelay'):
              continue
  
