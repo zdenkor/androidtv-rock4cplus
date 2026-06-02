@@ -459,21 +459,45 @@ case $BSP_CHOICE in
 path = '$AUTO_GEN'
 with open(path) as f:
     lines = f.readlines()
+
+# Normalize tabs to spaces
+for i in range(len(lines)):
+    stripped = lines[i].lstrip('\t')
+    leading_tabs = len(lines[i]) - len(stripped)
+    lines[i] = '    ' * leading_tabs + stripped
+
+# Fix empty if bodies and remove stray pass/continue at wrong indent
 fixed = []
-for i, line in enumerate(lines):
-    # Normalize tabs to spaces
-    stripped = line.lstrip('\t')
-    leading_tabs = len(line) - len(stripped)
-    line = '    ' * leading_tabs + stripped
-    # Fix: if 'pass' is at same indent as 'if', push it one level deeper
-    if line.rstrip() == 'pass' and i > 0:
+i = 0
+while i < len(lines):
+    line = lines[i]
+    stripped = line.rstrip()
+    cur_indent = len(line) - len(line.lstrip(' '))
+
+    # Skip stray 'pass' or 'continue' that are at same/lower indent than previous 'if'
+    if stripped in ('pass', 'continue') and len(fixed) > 0:
         prev = fixed[-1].rstrip()
         if prev.startswith('if ') and prev.endswith(':'):
-            # Count indent of the 'if' line
             prev_indent = len(fixed[-1]) - len(fixed[-1].lstrip(' '))
-            # 'pass' should be 4 spaces deeper than 'if'
-            line = ' ' * (prev_indent + 4) + 'pass\n'
+            if cur_indent <= prev_indent:
+                # This pass/continue belongs to outer block, not the if — skip it
+                i += 1
+                continue
+
     fixed.append(line)
+
+    # If this is an 'if' with no body, insert pass
+    if stripped.startswith('if ') and stripped.endswith(':'):
+        indent = len(line) - len(line.lstrip(' '))
+        j = i + 1
+        while j < len(lines) and lines[j].strip() == '':
+            j += 1
+        if j < len(lines):
+            next_indent = len(lines[j]) - len(lines[j].lstrip(' '))
+            if next_indent <= indent:
+                fixed.append(' ' * (indent + 4) + 'pass\n')
+    i += 1
+
 with open(path, 'w') as f:
     f.writelines(fixed)
 print('Fixed auto_generator.py')
