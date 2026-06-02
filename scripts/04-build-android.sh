@@ -192,24 +192,31 @@ case $BSP_CHOICE in
         
         # Fix Python 2 syntax for Python 3 (Android 9 uses Python 2 scripts)
         # Use Python's official 2to3 tool — handles all edge cases properly
-        echo "[INFO] Converting Python 2 scripts to Python 3 using 2to3..."
-        if ! command -v 2to3 &>/dev/null; then
-            echo "[INFO] Installing 2to3..."
-            sudo apt-get install -y 2to3 2>/dev/null || sudo apt-get install -y python3-lib2to3 2>/dev/null || true
+        # Only runs once; skip if already done (marker file check)
+        MARKER="$WORK_DIR/.2to3_done"
+        if [ -f "$MARKER" ]; then
+            echo "[INFO] Python 2to3 conversion already done, skipping."
+        else
+            echo "[INFO] Converting Python 2 scripts to Python 3 using 2to3..."
+            if ! command -v 2to3 &>/dev/null; then
+                echo "[INFO] Installing 2to3..."
+                sudo apt-get install -y 2to3 2>/dev/null || sudo apt-get install -y python3-lib2to3 2>/dev/null || true
+            fi
+            # Only convert files that actually contain Python 2 syntax (grep pre-filter for speed)
+            # Exclude edk2 bundled Python 2.7.2 (never executed by host)
+            find build libcore external/annotation-tools development frameworks system device \
+                -not -path "*/edk2/*" \
+                -name "*.py" -print0 | xargs -0 -P $(nproc) -I {} sh -c '2to3 -w -n "$1" 2>/dev/null' _ {} || true
+            # 2to3 doesn't fix open("rb")/open("wb") for text processing
+            find build libcore external/annotation-tools development frameworks system device \
+                -not -path "*/edk2/*" \
+                -name "*.py" -print0 | xargs -0 -P $(nproc) sed -i 's/open(filename, "rb")/open(filename, "r")/' 2>/dev/null || true
+            find build libcore external/annotation-tools development frameworks system device \
+                -not -path "*/edk2/*" \
+                -name "*.py" -print0 | xargs -0 -P $(nproc) sed -i 's/open(output_file, "wb")/open(output_file, "w")/' 2>/dev/null || true
+            touch "$MARKER"
+            echo "Python 2to3 conversion complete"
         fi
-        # Exclude device/linaro/bootloader/edk2 — it bundles Python 2.7.2 test files that are never executed
-        find build libcore external/annotation-tools development frameworks system device \
-            -not -path "*/edk2/*" \
-            -name "*.py" -exec 2to3 -w -n {} + 2>/dev/null || true
-        # 2to3 doesn't fix open("rb")/open("wb") for text processing
-        # Python 3's binary mode returns bytes, but many scripts expect strings
-        find build libcore external/annotation-tools development frameworks system device \
-            -not -path "*/edk2/*" \
-            -name "*.py" -exec sed -i 's/open(filename, "rb")/open(filename, "r")/' {} + 2>/dev/null || true
-        find build libcore external/annotation-tools development frameworks system device \
-            -not -path "*/edk2/*" \
-            -name "*.py" -exec sed -i 's/open(output_file, "wb")/open(output_file, "w")/' {} + 2>/dev/null || true
-        echo "Python 2to3 conversion complete"
 
         # Build kernel first (required for Android 9)
         if [ -d "kernel" ] && [ -f "kernel/arch/arm64/configs/rockchip_defconfig" ]; then
