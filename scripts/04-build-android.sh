@@ -197,7 +197,7 @@ case $BSP_CHOICE in
             echo "[INFO] Installing 2to3..."
             sudo apt-get install -y 2to3 2>/dev/null || sudo apt-get install -y python3-lib2to3 2>/dev/null || true
         fi
-        find build libcore external/annotation-tools development frameworks system \
+        find build libcore external/annotation-tools development frameworks system device \
             -name "*.py" -exec 2to3 -w -n {} + 2>/dev/null || true
         echo "Python 2to3 conversion complete"
 
