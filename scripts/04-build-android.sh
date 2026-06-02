@@ -434,14 +434,17 @@ case $BSP_CHOICE in
         # Post-2to3 fixes (always run, even if 2to3 was skipped via marker)
         # -----------------------------------------------------------------
 
-        # Fix insertkeys.py: 2to3 correctly converts "rb"→"r" (PEM certs are text).
-        # But it misses "is not" literal and Py2 imports. Fix those.
-        INSERTKEYS="build/tools/security/insertkeys.py"
-        if [ -f "$INSERTKEYS" ]; then
-            sed -i 's/if line is not "":/if line != "":/' "$INSERTKEYS"
-            sed -i 's/import ConfigParser/import configparser/' "$INSERTKEYS"
-            sed -i 's/import StringIO/from io import StringIO/' "$INSERTKEYS"
-            echo "[INFO] Fixed insertkeys.py (syntax + Py2 imports)"
+        # Fix insertkeys.py wherever it lives in the source tree.
+        # 2to3 correctly converts "rb"→"r" (PEM certs are text).
+        # But it misses "is not" literal and Py2 imports.
+        INSERTKEYS_SRC=$(find . -path "*/insertkeys.py" -not -path "*/out/*" 2>/dev/null | head -1)
+        if [ -n "$INSERTKEYS_SRC" ] && [ -f "$INSERTKEYS_SRC" ]; then
+            sed -i 's/if line is not "":/if line != "":/' "$INSERTKEYS_SRC"
+            sed -i 's/import ConfigParser/import configparser/' "$INSERTKEYS_SRC"
+            sed -i 's/import StringIO/from io import StringIO/' "$INSERTKEYS_SRC"
+            echo "[INFO] Fixed insertkeys.py at $INSERTKEYS_SRC"
+        else
+            echo "[INFO] insertkeys.py not found in source — will fix out/ copy before build"
         fi
         # Delete out/ copy so it regenerates from the fixed source
         rm -f out/host/linux-x86/bin/insertkeys.py 2>/dev/null || true
@@ -510,6 +513,17 @@ print('Fixed auto_generator.py')
         
         # Build Android (use PIPESTATUS to catch make failure through tee)
         echo "[4b/4] Building Android (make -j$(nproc))..."
+
+        # Final fix: patch out/ copy of insertkeys.py right before make.
+        # The build system copies it during envsetup/lunch, so fix it now.
+        INSERTKEYS_OUT="out/host/linux-x86/bin/insertkeys.py"
+        if [ -f "$INSERTKEYS_OUT" ]; then
+            sed -i 's/if line is not "":/if line != "":/' "$INSERTKEYS_OUT"
+            sed -i 's/import ConfigParser/import configparser/' "$INSERTKEYS_OUT"
+            sed -i 's/import StringIO/from io import StringIO/' "$INSERTKEYS_OUT"
+            echo "[INFO] Patched insertkeys.py in out/ before build"
+        fi
+
         ANDROID_START=$(date +%s)
         make -j$(nproc) 2>&1 | tee build.log
         if [ "${PIPESTATUS[0]}" -ne 0 ]; then
