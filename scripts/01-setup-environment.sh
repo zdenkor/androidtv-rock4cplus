@@ -333,14 +333,15 @@ fi
 # ---------------------------------------------------------------------------
 echo "[7/10] Installing apkeep..."
 if command -v cargo &>/dev/null; then
-    # Always rebuild from source — prebuilt binaries may link against wrong OpenSSL
+    # Remove any stale prebuilt binary (may be linked against wrong glibc/OpenSSL)
+    rm -f ~/.cargo/bin/apkeep 2>/dev/null || true
     echo "  Building apkeep from source with cargo..."
-    if cargo install --git https://github.com/EFForg/apkeep.git 2>/dev/null; then
+    if cargo install --force --git https://github.com/EFForg/apkeep.git 2>/dev/null; then
         echo "  apkeep installed via cargo"
     else
         echo "  WARNING: apkeep build failed."
         echo "  Apps requiring Google Play download will use alternative sources."
-        echo "  To retry manually: cargo install --git https://github.com/EFForg/apkeep.git"
+        echo "  To retry manually: cargo install --force --git https://github.com/EFForg/apkeep.git"
     fi
 else
     echo "  WARNING: cargo not available — cannot build apkeep."
