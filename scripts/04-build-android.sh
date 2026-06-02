@@ -434,26 +434,17 @@ case $BSP_CHOICE in
         # Post-2to3 fixes (always run, even if 2to3 was skipped via marker)
         # -----------------------------------------------------------------
 
-        # Fix insertkeys.py: revert binary mode + fix "is not" literal + Py2 imports
+        # Fix insertkeys.py: 2to3 correctly converts "rb"→"r" (PEM certs are text).
+        # But it misses "is not" literal and Py2 imports. Fix those.
         INSERTKEYS="build/tools/security/insertkeys.py"
         if [ -f "$INSERTKEYS" ]; then
-            sed -i 's/open(filename, "r")/open(filename, "rb")/' "$INSERTKEYS"
-            sed -i 's/open(output_file, "w")/open(output_file, "wb")/' "$INSERTKEYS"
             sed -i 's/if line is not "":/if line != "":/' "$INSERTKEYS"
             sed -i 's/import ConfigParser/import configparser/' "$INSERTKEYS"
             sed -i 's/import StringIO/from io import StringIO/' "$INSERTKEYS"
-            echo "[INFO] Fixed insertkeys.py (binary mode + syntax + Py2 imports)"
+            echo "[INFO] Fixed insertkeys.py (syntax + Py2 imports)"
         fi
-        # Also fix the copy already staged in out/ (build copies it there)
-        INSERTKEYS_OUT="out/host/linux-x86/bin/insertkeys.py"
-        if [ -f "$INSERTKEYS_OUT" ]; then
-            sed -i 's/open(filename, "r")/open(filename, "rb")/' "$INSERTKEYS_OUT"
-            sed -i 's/open(output_file, "w")/open(output_file, "wb")/' "$INSERTKEYS_OUT"
-            sed -i 's/if line is not "":/if line != "":/' "$INSERTKEYS_OUT"
-            sed -i 's/import ConfigParser/import configparser/' "$INSERTKEYS_OUT"
-            sed -i 's/import StringIO/from io import StringIO/' "$INSERTKEYS_OUT"
-            echo "[INFO] Fixed insertkeys.py in out/ as well"
-        fi
+        # Delete out/ copy so it regenerates from the fixed source
+        rm -f out/host/linux-x86/bin/insertkeys.py 2>/dev/null || true
         # Remove stale mac_permissions intermediates so they regenerate
         rm -f out/target/product/*/obj/ETC/*mac_permissions.xml_intermediates/*mac_permissions.xml 2>/dev/null || true
 
