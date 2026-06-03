@@ -50,11 +50,11 @@ if [ ! -d "$BASE_DIR" ]; then
     exit 1
 fi
 
-# Detect all downloaded BSP directories in fixed order: 1=radxa9, 2=vicharak12, 3=aosp12
+# Detect all downloaded BSP directories in fixed order: 1=radxa9, 2=radxa11, 3=vicharak12, 4=aosp12
 declare -a BSP_DIRS=()
 declare -a BSP_NAMES=()
 
-for pattern in "radxa9" "vicharak12" "aosp12" "radxa11"; do
+for pattern in "radxa9" "radxa11" "vicharak12" "aosp12"; do
     for dir in "$BASE_DIR"/androidtv-rock4cplus-"$pattern"*; do
         if [ -d "$dir" ]; then
             BSP_DIRS+=("$dir")
@@ -134,8 +134,11 @@ fi
 if [[ "$BSP_NAME" == *radxa9* ]]; then
     BSP_CHOICE=1
     BSP_TYPE="Radxa Android 9 Pie"
-elif [[ "$BSP_NAME" == *vicharak12* ]]; then
+elif [[ "$BSP_NAME" == *radxa11* ]]; then
     BSP_CHOICE=2
+    BSP_TYPE="Radxa Android 11 (kernel 4.19)"
+elif [[ "$BSP_NAME" == *vicharak12* ]]; then
+    BSP_CHOICE=3
     BSP_TYPE="Vicharak Android 12 (kernel 5.10)"
 elif [[ "$BSP_NAME" == *advantech12* ]]; then
     BSP_CHOICE=3
@@ -143,13 +146,10 @@ elif [[ "$BSP_NAME" == *advantech12* ]]; then
 elif [[ "$BSP_NAME" == *aosp12* ]]; then
     BSP_CHOICE=4
     BSP_TYPE="AOSP Android 12"
-elif [[ "$BSP_NAME" == *radxa11* ]]; then
-    BSP_CHOICE=5
-    BSP_TYPE="Radxa Android 11 (kernel 4.19)"
 else
     echo "WARNING: Unknown BSP type: $BSP_NAME"
-    echo "Defaulting to Vicharak (option 2)"
-    BSP_CHOICE=2
+    echo "Defaulting to Vicharak (option 3)"
+    BSP_CHOICE=3
     BSP_TYPE="Vicharak Android 12 (kernel 5.10)"
 fi
 
@@ -376,118 +376,6 @@ print('Fixed auto_generator.py')
     
     2)
         # ====================================================================
-        # VICHARAK ANDROID 12 — uses ./build.sh
-        # ====================================================================
-        echo "[3/4] Configuring Vicharak Android 12..."
-        lunch rk3399-userdebug 2>/dev/null || lunch 2>/dev/null | head -20
-        
-        echo "[4/4] Building Vicharak Android 12..."
-        echo ""
-        echo "Build command: ./build.sh -UACKup"
-        echo ""
-        
-        if [ ! -f "build.sh" ]; then
-            echo "ERROR: build.sh not found!"
-            exit 1
-        fi
-        
-        VICHARAK_START=$(date +%s)
-        ./build.sh -UACKup 2>&1 | tee build.log
-        if [ "${PIPESTATUS[0]}" -ne 0 ]; then
-            echo ""
-            echo "========================================"
-            echo "BUILD FAILED"
-            echo "========================================"
-            tail -50 build.log
-            exit 1
-        fi
-        echo "Build finished in $(elapsed_since $VICHARAK_START)"
-        
-        BUILD_OUTPUT="out/target/product/vaaman/system.img"
-        ;;
-    
-    3)
-        # ====================================================================
-        # ADVANTECH ANDROID 12 — uses ./build.sh
-        # ====================================================================
-        echo "[3/4] Configuring Advantech Android 12..."
-        lunch rk3399-userdebug 2>/dev/null || lunch 2>/dev/null | head -20
-        
-        echo "[4/4] Building Advantech Android 12..."
-        echo ""
-        echo "Build command: ./build.sh"
-        echo ""
-        
-        if [ ! -f "build.sh" ]; then
-            echo "ERROR: build.sh not found!"
-            exit 1
-        fi
-        
-        ADVANTECH_START=$(date +%s)
-        ./build.sh 2>&1 | tee build.log
-        if [ "${PIPESTATUS[0]}" -ne 0 ]; then
-            echo ""
-            echo "========================================"
-            echo "BUILD FAILED"
-            echo "========================================"
-            tail -50 build.log
-            exit 1
-        fi
-        echo "Build finished in $(elapsed_since $ADVANTECH_START)"
-        
-        BUILD_OUTPUT="out/target/product/rk3399/system.img"
-        ;;
-    
-    4)
-        # ====================================================================
-        # AOSP ANDROID 12 — uses m (mm)
-        # ====================================================================
-        echo "[3/4] Configuring AOSP Android 12..."
-
-        LUNCH_TARGET=""
-        if [ -d "device/rockchip/rk3399" ]; then
-            if [ -f "device/rockchip/rk3399/rk3399_all.mk" ]; then
-                LUNCH_TARGET="rk3399_all-userdebug"
-            elif [ -f "device/rockchip/rk3399/rk3399.mk" ]; then
-                LUNCH_TARGET="rk3399-userdebug"
-            fi
-        fi
-
-        if [ -n "$LUNCH_TARGET" ]; then
-            echo "Auto-detected Rockchip AOSP target: $LUNCH_TARGET"
-            lunch "$LUNCH_TARGET" < /dev/null || {
-                echo "ERROR: lunch target '$LUNCH_TARGET' failed"
-                exit 1
-            }
-            PRODUCT_NAME="${LUNCH_TARGET%%-*}"
-            BUILD_OUTPUT="out/target/product/${PRODUCT_NAME}/system.img"
-        else
-            echo "WARNING: No Rockchip AOSP lunch target found."
-            echo "Falling back to generic sdk_gphone_arm64-userdebug"
-            lunch sdk_gphone_arm64-userdebug 2>/dev/null || lunch 2>/dev/null | head -20
-            BUILD_OUTPUT="out/target/product/generic_arm64/system.img"
-        fi
-
-        echo "[4/4] Building AOSP Android 12..."
-        echo ""
-        echo "Build command: m -j\$(nproc)"
-        echo ""
-
-        AOSP_START=$(date +%s)
-        m -j$(nproc) 2>&1 | tee build.log
-        if [ "${PIPESTATUS[0]}" -ne 0 ]; then
-            echo ""
-            echo "========================================"
-            echo "BUILD FAILED"
-            echo "========================================"
-            tail -50 build.log
-            exit 1
-        fi
-        echo "Build finished in $(elapsed_since $AOSP_START)"
-        ;;
-    
-    5)
-        # ====================================================================
         # RADXA ANDROID 11 (rk11, kernel 4.19) — uses make
         # ====================================================================
         echo "[3/4] Configuring Radxa Android 11..."
@@ -573,6 +461,86 @@ with open(path, 'w') as f:
         echo "Android build finished in $(elapsed_since $ANDROID_START)"
         
         BUILD_OUTPUT="out/target/product/${LUNCH_TARGET%%-*}/system.img"
+        ;;
+    
+    3)
+        # ====================================================================
+        # VICHARAK ANDROID 12 — uses ./build.sh
+        # ====================================================================
+        echo "[3/4] Configuring Vicharak Android 12..."
+        lunch rk3399-userdebug 2>/dev/null || lunch 2>/dev/null | head -20
+        
+        echo "[4/4] Building Vicharak Android 12..."
+        echo ""
+        echo "Build command: ./build.sh -UACKup"
+        echo ""
+        
+        if [ ! -f "build.sh" ]; then
+            echo "ERROR: build.sh not found!"
+            exit 1
+        fi
+        
+        VICHARAK_START=$(date +%s)
+        ./build.sh -UACKup 2>&1 | tee build.log
+        if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+            echo ""
+            echo "========================================"
+            echo "BUILD FAILED"
+            echo "========================================"
+            tail -50 build.log
+            exit 1
+        fi
+        echo "Build finished in $(elapsed_since $VICHARAK_START)"
+        
+        BUILD_OUTPUT="out/target/product/vaaman/system.img"
+        ;;
+    
+    4)
+        # ====================================================================
+        # AOSP ANDROID 12 — uses m (mm)
+        # ====================================================================
+        echo "[3/4] Configuring AOSP Android 12..."
+
+        LUNCH_TARGET=""
+        if [ -d "device/rockchip/rk3399" ]; then
+            if [ -f "device/rockchip/rk3399/rk3399_all.mk" ]; then
+                LUNCH_TARGET="rk3399_all-userdebug"
+            elif [ -f "device/rockchip/rk3399/rk3399.mk" ]; then
+                LUNCH_TARGET="rk3399-userdebug"
+            fi
+        fi
+
+        if [ -n "$LUNCH_TARGET" ]; then
+            echo "Auto-detected Rockchip AOSP target: $LUNCH_TARGET"
+            lunch "$LUNCH_TARGET" < /dev/null || {
+                echo "ERROR: lunch target '$LUNCH_TARGET' failed"
+                exit 1
+            }
+            PRODUCT_NAME="${LUNCH_TARGET%%-*}"
+            BUILD_OUTPUT="out/target/product/${PRODUCT_NAME}/system.img"
+        else
+            echo "WARNING: No Rockchip AOSP lunch target found."
+            echo "Falling back to generic sdk_gphone_arm64-userdebug"
+            lunch sdk_gphone_arm64-userdebug 2>/dev/null || lunch 2>/dev/null | head -20
+            BUILD_OUTPUT="out/target/product/generic_arm64/system.img"
+        fi
+
+        echo "[4/4] Building AOSP Android 12..."
+        echo ""
+        echo "Build command: m -j\$(nproc)"
+        echo ""
+
+        AOSP_START=$(date +%s)
+        m -j$(nproc) 2>&1 | tee build.log
+        if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+            echo ""
+            echo "========================================"
+            echo "BUILD FAILED"
+            echo "========================================"
+            tail -50 build.log
+            exit 1
+        fi
+        echo "Build finished in $(elapsed_since $AOSP_START)"
         ;;
     
     *)
