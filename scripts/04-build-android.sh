@@ -437,7 +437,12 @@ with open(path, 'w') as f:
                 sed -i '/YYLTYPE yylloc/d' "$DTC_LEXER_GEN"
             fi
             make -C kernel ARCH=arm64 clean 2>/dev/null || true
-            make -C kernel ARCH=arm64 rockchip_defconfig && make -C kernel ARCH=arm64 -j$(nproc) Image dtbs || {
+            make -C kernel ARCH=arm64 rockchip_defconfig && \
+            {
+                # Add Android 11 vintf compatibility: enable BINDERFS
+                echo "CONFIG_ANDROID_BINDERFS=y" >> kernel/.config
+            } && \
+            make -C kernel ARCH=arm64 -j$(nproc) Image dtbs || {
                 echo ""
                 echo "========================================"
                 echo "KERNEL BUILD FAILED"
