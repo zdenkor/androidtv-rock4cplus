@@ -439,14 +439,20 @@ with open(path, 'w') as f:
             make -C kernel ARCH=arm64 clean 2>/dev/null || true
             make -C kernel ARCH=arm64 rockchip_defconfig && \
             {
-                # Add Android 11 vintf compatibility: enable BINDERFS
-                echo "CONFIG_ANDROID_BINDERFS=y" >> kernel/.config
-                # Ensure MD4 crypto is disabled for vintf level 5
-                if grep -q '^CONFIG_CRYPTO_MD4=' kernel/.config; then
-                    sed -i 's/^CONFIG_CRYPTO_MD4=.*/CONFIG_CRYPTO_MD4=n/' kernel/.config
+                # Add Android 11 vintf compatibility: enable BINDERFS and disable MD4
+                if [ -x "kernel/scripts/config" ]; then
+                    kernel/scripts/config --file kernel/.config --set-val ANDROID_BINDERFS y || true
+                    kernel/scripts/config --file kernel/.config --disable CRYPTO_MD4 || true
                 else
-                    echo 'CONFIG_CRYPTO_MD4=n' >> kernel/.config
+                    echo "CONFIG_ANDROID_BINDERFS=y" >> kernel/.config
+                    if grep -q '^CONFIG_CRYPTO_MD4=' kernel/.config; then
+                        sed -i 's/^CONFIG_CRYPTO_MD4=.*/CONFIG_CRYPTO_MD4=n/' kernel/.config
+                    else
+                        echo 'CONFIG_CRYPTO_MD4=n' >> kernel/.config
+                    fi
                 fi
+                echo "Kernel config override:"
+                grep -E '^CONFIG_ANDROID_BINDERFS=|^CONFIG_CRYPTO_MD4=' kernel/.config || true
             } && \
             make -C kernel ARCH=arm64 -j$(nproc) Image dtbs || {
                 echo ""
