@@ -444,7 +444,11 @@ with open(path, 'w') as f:
                     kernel/scripts/config --file kernel/.config --set-val ANDROID_BINDERFS y || true
                     kernel/scripts/config --file kernel/.config --set-val CRYPTO_MD4 n || true
                 else
-                    echo "CONFIG_ANDROID_BINDERFS=y" >> kernel/.config
+                    if grep -q '^CONFIG_ANDROID_BINDERFS=' kernel/.config; then
+                        sed -i 's/^CONFIG_ANDROID_BINDERFS=.*/CONFIG_ANDROID_BINDERFS=y/' kernel/.config
+                    else
+                        echo 'CONFIG_ANDROID_BINDERFS=y' >> kernel/.config
+                    fi
                     if grep -q '^CONFIG_CRYPTO_MD4=' kernel/.config; then
                         sed -i 's/^CONFIG_CRYPTO_MD4=.*/CONFIG_CRYPTO_MD4=n/' kernel/.config
                     else
@@ -452,6 +456,22 @@ with open(path, 'w') as f:
                     fi
                 fi
                 make -C kernel ARCH=arm64 olddefconfig >/dev/null 2>&1 || true
+                # Re-apply Android compatibility overrides after olddefconfig
+                if [ -x "kernel/scripts/config" ]; then
+                    kernel/scripts/config --file kernel/.config --set-val ANDROID_BINDERFS y || true
+                    kernel/scripts/config --file kernel/.config --set-val CRYPTO_MD4 n || true
+                else
+                    if grep -q '^CONFIG_ANDROID_BINDERFS=' kernel/.config; then
+                        sed -i 's/^CONFIG_ANDROID_BINDERFS=.*/CONFIG_ANDROID_BINDERFS=y/' kernel/.config
+                    else
+                        echo 'CONFIG_ANDROID_BINDERFS=y' >> kernel/.config
+                    fi
+                    if grep -q '^CONFIG_CRYPTO_MD4=' kernel/.config; then
+                        sed -i 's/^CONFIG_CRYPTO_MD4=.*/CONFIG_CRYPTO_MD4=n/' kernel/.config
+                    else
+                        echo 'CONFIG_CRYPTO_MD4=n' >> kernel/.config
+                    fi
+                fi
                 echo "Kernel config override:"
                 grep -E '^CONFIG_ANDROID_BINDERFS=|^CONFIG_CRYPTO_MD4=' kernel/.config || true
             } && \
