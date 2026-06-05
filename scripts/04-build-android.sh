@@ -428,6 +428,26 @@ with open(path, 'w') as f:
         if [ -d "kernel" ] && [ -f "kernel/arch/arm64/configs/rockchip_defconfig" ]; then
             echo "[4a/4] Building kernel..."
             KERNEL_START=$(date +%s)
+
+            # Patch the defconfig SOURCE FILE so Android build system picks up the fix
+            KERNEL_DEFCONFIG="kernel/arch/arm64/configs/rockchip_defconfig"
+            echo "Patching kernel defconfig for Android 11 VINTF compatibility..."
+            for opt in "CONFIG_ANDROID_BINDERFS=y" "CONFIG_CRYPTO_MD4=n"; do
+                key="${opt%%=*}"
+                if grep -q "^${key}=" "$KERNEL_DEFCONFIG"; then
+                    sed -i "s/^${key}=.*/${opt}/" "$KERNEL_DEFCONFIG"
+                else
+                    echo "$opt" >> "$KERNEL_DEFCONFIG"
+                fi
+            done
+            echo "Defconfig after patch:"
+            grep -E '^CONFIG_ANDROID_BINDERFS=|^CONFIG_CRYPTO_MD4=' "$KERNEL_DEFCONFIG" || true
+
+            # Remove stale kernel objects so Android build system rebuilds from patched defconfig
+            echo "Cleaning stale kernel build artifacts..."
+            rm -rf out/target/product/*/obj/KERNEL_OBJ 2>/dev/null || true
+            rm -f kernel/.config kernel/.config.old 2>/dev/null || true
+
             DTC_LEXER="kernel/scripts/dtc/dtc-lexer.l"
             DTC_LEXER_GEN="kernel/scripts/dtc/dtc-lexer.lex.c"
             if [ -f "$DTC_LEXER" ] && grep -q "YYLTYPE yylloc" "$DTC_LEXER"; then
@@ -439,7 +459,7 @@ with open(path, 'w') as f:
             make -C kernel ARCH=arm64 clean 2>/dev/null || true
             make -C kernel ARCH=arm64 rockchip_defconfig && \
             {
-                # Add Android 11 vintf compatibility: enable BINDERFS and disable MD4
+                # Also patch .config as a safety net
                 if [ -x "kernel/scripts/config" ]; then
                     kernel/scripts/config --file kernel/.config --set-val ANDROID_BINDERFS y || true
                     kernel/scripts/config --file kernel/.config --set-val CRYPTO_MD4 n || true
@@ -472,7 +492,7 @@ with open(path, 'w') as f:
                         echo 'CONFIG_CRYPTO_MD4=n' >> kernel/.config
                     fi
                 fi
-                echo "Kernel config override:"
+                echo "Kernel .config override:"
                 grep -E '^CONFIG_ANDROID_BINDERFS=|^CONFIG_CRYPTO_MD4=' kernel/.config || true
             } && \
             make -C kernel ARCH=arm64 -j$(nproc) Image dtbs || {
