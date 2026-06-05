@@ -42,10 +42,10 @@ This repository provides a complete, automated build system for compiling Androi
 
 | BSP | Android | Kernel | Status | Use Case |
 |-----|---------|--------|--------|----------|
-| **Vicharak** | 12 | 5.10 | ✅ Recommended | Latest, most features |
-| Radxa rk11 | 11 | 4.19 | ✅ Stable | Newer than 9, good HW support |
-| Radxa | 9 Pie | 4.4 | ✅ Stable | Official support, mature |
-| AOSP | 12 | 5.10+ | ⚠️ Partial | Rockchip overlay installed automatically |
+| **Vicharak** | 12 | 5.10 | ✅ Recommended - in development | Latest, most features |
+| Radxa rk11 | 11 | 4.19 | ✅ Stable - in development | Newer than 9, good HW support |
+| Radxa | 9 Pie | 4.4 | ✅ Stable - in development | Official support, mature |
+| AOSP | 12 | 5.10+ | ⚠️ Partial - in development | Rockchip overlay installed automatically |
 
 **Hardware Components (all BSPs):**
 
