@@ -245,6 +245,18 @@ print('Fixed auto_generator.py tabs')
 
         echo "[3/6] Android 11 — device tree already included"
         echo "[4/6] Kernel config — using default (Android 11, kernel 4.19)"
+        KERNEL_CONFIG="kernel/arch/arm64/configs/rockchip_defconfig"
+        if [ -f "$KERNEL_CONFIG" ]; then
+            for opt in "CONFIG_ANDROID_BINDERFS=y" "CONFIG_CRYPTO_MD4=n"; do
+                if grep -q "^${opt%%=*}" "$KERNEL_CONFIG"; then
+                    sed -i "s/^${opt%%=*}.*/$opt/" "$KERNEL_CONFIG"
+                else
+                    echo "$opt" >> "$KERNEL_CONFIG"
+                fi
+            done
+            echo "Patched Android 11 kernel config:"
+            grep -E '^CONFIG_ANDROID_BINDERFS=|^CONFIG_CRYPTO_MD4=' "$KERNEL_CONFIG" || true
+        fi
         echo "[5/6] Applying ROCK 4C+ device tree..."
         DTS_DIR="kernel/arch/arm64/boot/dts/rockchip"
         if [ -d "$DTS_DIR" ] && [ -f "$DTS_DIR/rk3399-rock-pi-4.dts" ]; then
