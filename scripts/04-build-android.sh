@@ -429,24 +429,27 @@ with open(path, 'w') as f:
             echo "[4a/4] Building kernel..."
             KERNEL_START=$(date +%s)
 
-            # Patch the defconfig SOURCE FILE so Android build system picks up the fix
-            KERNEL_DEFCONFIG="kernel/arch/arm64/configs/rockchip_defconfig"
-            echo "Patching kernel defconfig for Android 11 VINTF compatibility..."
-            for opt in "CONFIG_ANDROID_BINDERFS=y" "CONFIG_CRYPTO_MD4=n"; do
-                key="${opt%%=*}"
-                if grep -q "^${key}=" "$KERNEL_DEFCONFIG"; then
-                    sed -i "s/^${key}=.*/${opt}/" "$KERNEL_DEFCONFIG"
-                else
-                    echo "$opt" >> "$KERNEL_DEFCONFIG"
-                fi
-            done
-            echo "Defconfig after patch:"
-            grep -E '^CONFIG_ANDROID_BINDERFS=|^CONFIG_CRYPTO_MD4=' "$KERNEL_DEFCONFIG" || true
+            # Patch ALL defconfig files in the kernel tree for Android 11 VINTF compatibility
+            echo "Patching ALL kernel defconfigs for Android 11 VINTF compatibility..."
+            while IFS= read -r -d '' defconfig; do
+                echo "  Patching: $defconfig"
+                for opt in "CONFIG_ANDROID_BINDERFS=y" "CONFIG_CRYPTO_MD4=n"; do
+                    key="${opt%%=*}"
+                    if grep -q "^${key}=" "$defconfig"; then
+                        sed -i "s/^${key}=.*/${opt}/" "$defconfig"
+                    else
+                        echo "$opt" >> "$defconfig"
+                    fi
+                done
+            done < <(find kernel/ -name '*defconfig*' -o -name '*_defconfig' -o -name 'rockchip*config*' 2>/dev/null | sort -u)
+            echo "Verifying defconfig patch:"
+            grep -rHE '^CONFIG_CRYPTO_MD4=' kernel/arch/arm64/configs/ 2>/dev/null || true
 
-            # Remove stale kernel objects so Android build system rebuilds from patched defconfig
-            echo "Cleaning stale kernel build artifacts..."
+            # Remove ALL stale kernel objects so Android build system rebuilds from patched defconfig
+            echo "Cleaning ALL stale kernel build artifacts..."
             rm -rf out/target/product/*/obj/KERNEL_OBJ 2>/dev/null || true
             rm -f kernel/.config kernel/.config.old 2>/dev/null || true
+            find kernel/ -name '*.o' -delete 2>/dev/null || true
 
             DTC_LEXER="kernel/scripts/dtc/dtc-lexer.l"
             DTC_LEXER_GEN="kernel/scripts/dtc/dtc-lexer.lex.c"
@@ -502,6 +505,10 @@ with open(path, 'w') as f:
                 echo "========================================"
                 exit 1
             }
+            # Touch kernel artifacts so Android build system doesn't rebuild them
+            echo "Touching kernel artifacts to prevent Android rebuild..."
+            touch kernel/arch/arm64/boot/Image 2>/dev/null || true
+            find kernel/arch/arm64/boot/dts/rockchip/ -name '*.dtb' -exec touch {} \; 2>/dev/null || true
             echo "Kernel build finished in $(elapsed_since $KERNEL_START)"
         fi
 
