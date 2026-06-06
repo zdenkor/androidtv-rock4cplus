@@ -447,12 +447,12 @@ with open(path, 'w') as f:
             # Ensure ROCK 4C+ DTS is registered in the kernel Makefile so it gets compiled
             DTS_MAKEFILE="kernel/arch/arm64/boot/dts/rockchip/Makefile"
             DTS_FILE="kernel/arch/arm64/boot/dts/rockchip/rk3399-rock-4c-plus.dts"
-            if [ ! -f "$DTS_FILE" ]; then
-                # Prefer the patches DTS (specifically for ROCK 4C+ with RK3399-T OPP tables)
-                if [ -f "$SCRIPT_DIR/../patches/rk3399-rock-4c-plus.dts" ]; then
-                    cp "$SCRIPT_DIR/../patches/rk3399-rock-4c-plus.dts" "$DTS_FILE"
-                    echo "Copied $DTS_FILE from patches/ (ROCK 4C+ specific)"
-                elif [ -f "kernel/arch/arm64/boot/dts/rockchip/rk3399-rock-pi-4.dts" ]; then
+            # Always overwrite with latest from patches/ to avoid stale cached copies
+            if [ -f "$SCRIPT_DIR/../patches/rk3399-rock-4c-plus.dts" ]; then
+                cp "$SCRIPT_DIR/../patches/rk3399-rock-4c-plus.dts" "$DTS_FILE"
+                echo "Copied $DTS_FILE from patches/ (ROCK 4C+ specific)"
+            elif [ ! -f "$DTS_FILE" ]; then
+                if [ -f "kernel/arch/arm64/boot/dts/rockchip/rk3399-rock-pi-4.dts" ]; then
                     cp "kernel/arch/arm64/boot/dts/rockchip/rk3399-rock-pi-4.dts" "$DTS_FILE"
                     echo "Created $DTS_FILE from rk3399-rock-pi-4.dts (fallback)"
                 fi
