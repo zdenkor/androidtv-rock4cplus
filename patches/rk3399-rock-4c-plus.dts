@@ -227,11 +227,6 @@
 	status = "disabled";
 };
 
-&route_hdmi {
-	status = "okay";
-	connect = <&vopl_out_hdmi>;
-};
-
 /* Display */
 &vopl {
 	status = "okay";
