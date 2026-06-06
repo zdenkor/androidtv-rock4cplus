@@ -444,6 +444,26 @@ with open(path, 'w') as f:
             echo "[4a/4] Building kernel..."
             KERNEL_START=$(date +%s)
 
+            # Ensure ROCK 4C+ DTS is registered in the kernel Makefile so it gets compiled
+            DTS_MAKEFILE="kernel/arch/arm64/boot/dts/rockchip/Makefile"
+            DTS_FILE="kernel/arch/arm64/boot/dts/rockchip/rk3399-rock-4c-plus.dts"
+            if [ ! -f "$DTS_FILE" ]; then
+                # Try to create from rock-pi-4.dts or copy from patches
+                if [ -f "kernel/arch/arm64/boot/dts/rockchip/rk3399-rock-pi-4.dts" ]; then
+                    cp "kernel/arch/arm64/boot/dts/rockchip/rk3399-rock-pi-4.dts" "$DTS_FILE"
+                    echo "Created $DTS_FILE from rk3399-rock-pi-4.dts"
+                elif [ -f "$SCRIPT_DIR/../patches/rk3399-rock-4c-plus.dts" ]; then
+                    cp "$SCRIPT_DIR/../patches/rk3399-rock-4c-plus.dts" "$DTS_FILE"
+                    echo "Copied $DTS_FILE from patches/"
+                fi
+            fi
+            if [ -f "$DTS_FILE" ] && [ -f "$DTS_MAKEFILE" ]; then
+                if ! grep -q 'rk3399-rock-4c-plus' "$DTS_MAKEFILE"; then
+                    echo "Adding rk3399-rock-4c-plus.dtb to kernel Makefile..."
+                    echo 'dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3399-rock-4c-plus.dtb' >> "$DTS_MAKEFILE"
+                fi
+            fi
+
             # Patch ALL defconfig files in the kernel tree for Android 11 VINTF compatibility
             echo "Patching ALL kernel defconfigs for Android 11 VINTF compatibility..."
             while IFS= read -r -d '' defconfig; do
