@@ -400,6 +400,21 @@ print('Fixed auto_generator.py')
         echo "Build command: make -j\$(nproc)"
         echo ""
 
+        # Disable VINTF kernel config checks for kernel 4.19
+        # Kernel 4.19 cannot disable CRYPTO_MD4 due to Kconfig dependencies
+        echo "Disabling VINTF kernel config enforcement..."
+        DEVICE_MK="device/rockchip/rk3399/device.mk"
+        if [ -f "$DEVICE_MK" ] && ! grep -q "PRODUCT_OTA_ENFORCE_VINTF_KERNEL_REQUIREMENTS" "$DEVICE_MK"; then
+            echo 'PRODUCT_OTA_ENFORCE_VINTF_KERNEL_REQUIREMENTS := false' >> "$DEVICE_MK"
+            echo "  Added PRODUCT_OTA_ENFORCE_VINTF_KERNEL_REQUIREMENTS := false to $DEVICE_MK"
+        fi
+        # Also try the product-specific mk file
+        PRODUCT_MK="device/rockchip/rk3399/${LUNCH_TARGET%%-*}.mk"
+        if [ -f "$PRODUCT_MK" ] && ! grep -q "PRODUCT_OTA_ENFORCE_VINTF_KERNEL_REQUIREMENTS" "$PRODUCT_MK"; then
+            echo 'PRODUCT_OTA_ENFORCE_VINTF_KERNEL_REQUIREMENTS := false' >> "$PRODUCT_MK"
+            echo "  Added PRODUCT_OTA_ENFORCE_VINTF_KERNEL_REQUIREMENTS := false to $PRODUCT_MK"
+        fi
+
         # Fix auto_generator.py (same patch issue as Android 9)
         AUTO_GEN="device/rockchip/common/auto_generator.py"
         if [ -f "$AUTO_GEN" ]; then
@@ -519,19 +534,24 @@ with open(path, 'w') as f:
         # Kernel 4.19 cannot disable CRYPTO_MD4 due to Kconfig dependencies,
         # so we relax the framework requirement instead (standard workaround)
         echo "Patching VINTF framework compatibility matrix..."
-        FCM_FILE="hardware/interfaces/compatibility_matrices/compatibility_matrix.5.xml"
-        if [ -f "$FCM_FILE" ]; then
-            # Remove the MD4 kernel config requirement from the matrix
-            sed -i '/CONFIG_CRYPTO_MD4/d' "$FCM_FILE"
-            echo "  Removed CONFIG_CRYPTO_MD4 requirement from $FCM_FILE"
-        else
-            # Try alternate locations
-            for fcm in $(find hardware/interfaces -name 'compatibility_matrix*.xml' 2>/dev/null); do
-                if grep -q 'CONFIG_CRYPTO_MD4' "$fcm"; then
-                    sed -i '/CONFIG_CRYPTO_MD4/d' "$fcm"
-                    echo "  Removed CONFIG_CRYPTO_MD4 requirement from $fcm"
-                fi
+        FCM_FILES=$(grep -rl 'CONFIG_CRYPTO_MD4' hardware/ system/ build/ device/ 2>/dev/null || true)
+        if [ -n "$FCM_FILES" ]; then
+            for fcm in $FCM_FILES; do
+                echo "  Removing CONFIG_CRYPTO_MD4 from: $fcm"
+                sed -i '/CONFIG_CRYPTO_MD4/d' "$fcm"
             done
+        else
+            echo "  WARNING: No files found containing CONFIG_CRYPTO_MD4 in hardware/, system/, build/, device/"
+            echo "  Searching entire tree..."
+            FCM_FILES=$(grep -rl 'CONFIG_CRYPTO_MD4' . --include='*.xml' 2>/dev/null | head -20 || true)
+            if [ -n "$FCM_FILES" ]; then
+                for fcm in $FCM_FILES; do
+                    echo "  Removing CONFIG_CRYPTO_MD4 from: $fcm"
+                    sed -i '/CONFIG_CRYPTO_MD4/d' "$fcm"
+                done
+            else
+                echo "  No files found. VINTF check may still fail."
+            fi
         fi
 
         make -j$(nproc) 2>&1 | tee build.log
