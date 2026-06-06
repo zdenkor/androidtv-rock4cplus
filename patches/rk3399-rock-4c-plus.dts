@@ -157,6 +157,51 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&wifi_enable_h>;
 	};
+
+	/* SDIO power regulator */
+	vcc_sdio: vcc-sdio {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc_sdio";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-always-on;
+		vin-supply = <&vcc3v3_sys>;
+	};
+
+	/* Wi-Fi SDIO power sequence */
+	sdio_pwrseq: sdio-pwrseq {
+		compatible = "mmc-pwrseq-simple";
+		pinctrl-names = "default";
+		pinctrl-0 = <&wifi_enable_h>;
+		reset-gpios = <&gpio0 RK_PB2 GPIO_ACTIVE_LOW>;
+	};
+
+	/* GMAC clock input */
+	clkin_gmac: external-gmac-clock {
+		compatible = "fixed-clock";
+		clock-frequency = <125000000>;
+		clock-output-names = "clkin_gmac";
+		#clock-cells = <0>;
+	};
+
+	/* System power rail (referenced by other regulators) */
+	vcc3v3_sys: vcc3v3-sys {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc3v3_sys";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-always-on;
+	};
+
+	/* GPU power rail */
+	vdd_gpu: vdd-gpu {
+		compatible = "regulator-fixed";
+		regulator-name = "vdd_gpu";
+		regulator-min-microvolt = <800000>;
+		regulator-max-microvolt = <1000000>;
+		regulator-always-on;
+		vin-supply = <&vcc3v3_sys>;
+	};
 };
 
 /* CPU OPP assignment */

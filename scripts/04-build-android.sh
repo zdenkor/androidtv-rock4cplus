@@ -448,13 +448,13 @@ with open(path, 'w') as f:
             DTS_MAKEFILE="kernel/arch/arm64/boot/dts/rockchip/Makefile"
             DTS_FILE="kernel/arch/arm64/boot/dts/rockchip/rk3399-rock-4c-plus.dts"
             if [ ! -f "$DTS_FILE" ]; then
-                # ROCK 4C+ is essentially a ROCK Pi 4 with RK3399-T — use rock-pi-4 DTS directly
-                if [ -f "kernel/arch/arm64/boot/dts/rockchip/rk3399-rock-pi-4.dts" ]; then
-                    cp "kernel/arch/arm64/boot/dts/rockchip/rk3399-rock-pi-4.dts" "$DTS_FILE"
-                    echo "Created $DTS_FILE from rk3399-rock-pi-4.dts (ROCK 4C+ is compatible)"
-                elif [ -f "$SCRIPT_DIR/../patches/rk3399-rock-4c-plus.dts" ]; then
+                # Prefer the patches DTS (specifically for ROCK 4C+ with RK3399-T OPP tables)
+                if [ -f "$SCRIPT_DIR/../patches/rk3399-rock-4c-plus.dts" ]; then
                     cp "$SCRIPT_DIR/../patches/rk3399-rock-4c-plus.dts" "$DTS_FILE"
-                    echo "Copied $DTS_FILE from patches/"
+                    echo "Copied $DTS_FILE from patches/ (ROCK 4C+ specific)"
+                elif [ -f "kernel/arch/arm64/boot/dts/rockchip/rk3399-rock-pi-4.dts" ]; then
+                    cp "kernel/arch/arm64/boot/dts/rockchip/rk3399-rock-pi-4.dts" "$DTS_FILE"
+                    echo "Created $DTS_FILE from rk3399-rock-pi-4.dts (fallback)"
                 fi
             fi
             if [ -f "$DTS_FILE" ] && [ -f "$DTS_MAKEFILE" ]; then
