@@ -524,6 +524,27 @@ with open(path, 'w') as f:
             echo "Touching kernel artifacts to prevent Android rebuild..."
             touch kernel/arch/arm64/boot/Image 2>/dev/null || true
             find kernel/arch/arm64/boot/dts/rockchip/ -name '*.dtb' -exec touch {} \; 2>/dev/null || true
+
+            # Generate resource.img (Rockchip-specific, required for mkbootimg --second)
+            echo "Generating resource.img from DTB..."
+            DTB_FILE="kernel/arch/arm64/boot/dts/rockchip/rk3399-rock-4c-plus.dtb"
+            if [ -f "$DTB_FILE" ]; then
+                cp "$DTB_FILE" kernel/resource.img
+                echo "  Created kernel/resource.img from $DTB_FILE"
+            elif [ -f "kernel/arch/arm64/boot/dts/rockchip/rk3399-rock-pi-4.dtb" ]; then
+                cp "kernel/arch/arm64/boot/dts/rockchip/rk3399-rock-pi-4.dtb" kernel/resource.img
+                echo "  Created kernel/resource.img from rk3399-rock-pi-4.dtb"
+            else
+                # Last resort: use any available dtb
+                DTB=$(find kernel/arch/arm64/boot/dts/rockchip/ -name '*.dtb' 2>/dev/null | head -1)
+                if [ -n "$DTB" ]; then
+                    cp "$DTB" kernel/resource.img
+                    echo "  Created kernel/resource.img from $DTB"
+                else
+                    echo "  WARNING: No DTB found, creating empty resource.img"
+                    touch kernel/resource.img
+                fi
+            fi
             echo "Kernel build finished in $(elapsed_since $KERNEL_START)"
         fi
 
