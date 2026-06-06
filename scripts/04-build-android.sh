@@ -444,47 +444,17 @@ with open(path, 'w') as f:
             echo "[4a/4] Building kernel..."
             KERNEL_START=$(date +%s)
 
-            # Ensure ROCK 4C+ DTS is registered in the kernel Makefile so it gets compiled
+            # Ensure ROCK 4C+ DTS exists and is registered in Makefile
             DTS_MAKEFILE="kernel/arch/arm64/boot/dts/rockchip/Makefile"
             DTS_FILE="kernel/arch/arm64/boot/dts/rockchip/rk3399-rock-4c-plus.dts"
-            # Always overwrite with latest from patches/ to avoid stale cached copies
             if [ -f "$SCRIPT_DIR/../patches/rk3399-rock-4c-plus.dts" ]; then
                 cp "$SCRIPT_DIR/../patches/rk3399-rock-4c-plus.dts" "$DTS_FILE"
-                echo "Copied $DTS_FILE from patches/ (ROCK 4C+ specific)"
-            elif [ ! -f "$DTS_FILE" ]; then
-                if [ -f "kernel/arch/arm64/boot/dts/rockchip/rk3399-rock-pi-4.dts" ]; then
-                    cp "kernel/arch/arm64/boot/dts/rockchip/rk3399-rock-pi-4.dts" "$DTS_FILE"
-                    echo "Created $DTS_FILE from rk3399-rock-pi-4.dts (fallback)"
-                fi
+            elif [ ! -f "$DTS_FILE" ] && [ -f "kernel/arch/arm64/boot/dts/rockchip/rk3399-rock-pi-4.dts" ]; then
+                cp "kernel/arch/arm64/boot/dts/rockchip/rk3399-rock-pi-4.dts" "$DTS_FILE"
             fi
-            if [ -f "$DTS_FILE" ] && [ -f "$DTS_MAKEFILE" ]; then
-                if ! grep -q 'rk3399-rock-4c-plus' "$DTS_MAKEFILE"; then
-                    echo "Adding rk3399-rock-4c-plus.dtb to kernel Makefile..."
-                    echo 'dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3399-rock-4c-plus.dtb' >> "$DTS_MAKEFILE"
-                fi
+            if [ -f "$DTS_MAKEFILE" ] && ! grep -q 'rk3399-rock-4c-plus' "$DTS_MAKEFILE"; then
+                echo 'dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3399-rock-4c-plus.dtb' >> "$DTS_MAKEFILE"
             fi
-
-            # Patch ALL defconfig files in the kernel tree for Android 11 VINTF compatibility
-            echo "Patching ALL kernel defconfigs for Android 11 VINTF compatibility..."
-            while IFS= read -r -d '' defconfig; do
-                echo "  Patching: $defconfig"
-                for opt in "CONFIG_ANDROID_BINDERFS=y" "CONFIG_CRYPTO_MD4=n"; do
-                    key="${opt%%=*}"
-                    if grep -q "^${key}=" "$defconfig"; then
-                        sed -i "s/^${key}=.*/${opt}/" "$defconfig"
-                    else
-                        echo "$opt" >> "$defconfig"
-                    fi
-                done
-            done < <(find kernel/ -name '*defconfig*' -o -name '*_defconfig' -o -name 'rockchip*config*' 2>/dev/null | sort -u)
-            echo "Verifying defconfig patch:"
-            grep -rHE '^CONFIG_CRYPTO_MD4=' kernel/arch/arm64/configs/ 2>/dev/null || true
-
-            # Remove ALL stale kernel objects so Android build system rebuilds from patched defconfig
-            echo "Cleaning ALL stale kernel build artifacts..."
-            rm -rf out/target/product/*/obj/KERNEL_OBJ 2>/dev/null || true
-            rm -f kernel/.config kernel/.config.old 2>/dev/null || true
-            find kernel/ -name '*.o' -delete 2>/dev/null || true
 
             DTC_LEXER="kernel/scripts/dtc/dtc-lexer.l"
             DTC_LEXER_GEN="kernel/scripts/dtc/dtc-lexer.lex.c"
@@ -497,7 +467,7 @@ with open(path, 'w') as f:
             make -C kernel ARCH=arm64 clean 2>/dev/null || true
             make -C kernel ARCH=arm64 rockchip_defconfig && \
             {
-                # Also patch .config as a safety net
+                # Add Android 11 vintf compatibility: enable BINDERFS and disable MD4
                 if [ -x "kernel/scripts/config" ]; then
                     kernel/scripts/config --file kernel/.config --set-val ANDROID_BINDERFS y || true
                     kernel/scripts/config --file kernel/.config --set-val CRYPTO_MD4 n || true
@@ -533,64 +503,24 @@ with open(path, 'w') as f:
                 echo "Kernel .config override:"
                 grep -E '^CONFIG_ANDROID_BINDERFS=|^CONFIG_CRYPTO_MD4=' kernel/.config || true
             } && \
-            make -C kernel ARCH=arm64 -j$(nproc) Image dtbs > kernel-build.log 2>&1
-            KERNEL_EXIT=$?
-            if [ "$KERNEL_EXIT" -ne 0 ]; then
+            make -C kernel ARCH=arm64 -j$(nproc) Image dtbs || {
                 echo ""
                 echo "========================================"
-                echo "KERNEL BUILD FAILED (exit code: $KERNEL_EXIT)"
+                echo "KERNEL BUILD FAILED"
                 echo "========================================"
-                echo "Last 50 lines of kernel build log:"
-                tail -50 kernel-build.log
-                echo ""
-                echo "Checking for errors in log:"
-                grep -i 'error\|fatal\|undefined' kernel-build.log | tail -20 || echo "  No specific errors found"
-                echo "DTS files in kernel tree:"
-                find kernel/arch/arm64/boot/dts/rockchip/ -name 'rk3399-rock*' -type f 2>/dev/null || echo "  None found"
                 exit 1
-            fi
-            echo "Kernel build log saved to kernel-build.log"
+            }
+            echo "Kernel build finished in $(elapsed_since $KERNEL_START)"
 
-            # Force-build the ROCK 4C+ DTB if it wasn't produced
-            if [ ! -f "kernel/arch/arm64/boot/dts/rockchip/rk3399-rock-4c-plus.dtb" ]; then
-                echo "DTB not produced by make dtbs — building explicitly..."
-                make -C kernel ARCH=arm64 rockchip/rk3399-rock-4c-plus.dtb 2>&1 || {
-                    echo "WARNING: Failed to build rk3399-rock-4c-plus.dtb"
-                    echo "Trying any rk3399 DTB as fallback..."
-                }
-            fi
-            # Touch kernel artifacts so Android build system doesn't rebuild them
-            echo "Touching kernel artifacts to prevent Android rebuild..."
-            touch kernel/arch/arm64/boot/Image 2>/dev/null || true
-            find kernel/arch/arm64/boot/dts/rockchip/ -name '*.dtb' -exec touch {} \; 2>/dev/null || true
-
-            # Generate resource.img (Rockchip-specific, required for mkbootimg --second)
-            echo "Generating resource.img from DTB..."
-            echo "  Looking for DTBs in kernel/arch/arm64/boot/dts/rockchip/"
-            ls -la kernel/arch/arm64/boot/dts/rockchip/*.dtb 2>/dev/null || echo "  No DTBs found in rockchip/ subdir"
-            echo "  Looking for DTBs in kernel/arch/arm64/boot/"
-            ls -la kernel/arch/arm64/boot/*.dtb 2>/dev/null || echo "  No DTBs found in boot/"
-
-            DTB_FILE="kernel/arch/arm64/boot/dts/rockchip/rk3399-rock-4c-plus.dtb"
-            if [ -f "$DTB_FILE" ]; then
-                cp "$DTB_FILE" kernel/resource.img
-                echo "  Created kernel/resource.img from $DTB_FILE"
+            # Generate resource.img from DTB
+            if [ -f "kernel/arch/arm64/boot/dts/rockchip/rk3399-rock-4c-plus.dtb" ]; then
+                cp "kernel/arch/arm64/boot/dts/rockchip/rk3399-rock-4c-plus.dtb" kernel/resource.img
             elif [ -f "kernel/arch/arm64/boot/dts/rockchip/rk3399-rock-pi-4.dtb" ]; then
                 cp "kernel/arch/arm64/boot/dts/rockchip/rk3399-rock-pi-4.dtb" kernel/resource.img
-                echo "  Created kernel/resource.img from rk3399-rock-pi-4.dtb"
             else
-                # Search broadly for any dtb
-                DTB=$(find kernel/arch/arm64/boot/ -name '*.dtb' 2>/dev/null | head -1)
-                if [ -n "$DTB" ]; then
-                    cp "$DTB" kernel/resource.img
-                    echo "  Created kernel/resource.img from $DTB"
-                else
-                    echo "  WARNING: No DTB found anywhere, creating empty resource.img"
-                    touch kernel/resource.img
-                fi
+                DTB=$(find kernel/arch/arm64/boot/dts/rockchip/ -name '*.dtb' 2>/dev/null | head -1)
+                [ -n "$DTB" ] && cp "$DTB" kernel/resource.img || touch kernel/resource.img
             fi
-            echo "  resource.img: $(ls -la kernel/resource.img 2>/dev/null || echo 'NOT CREATED')"
-            echo "Kernel build finished in $(elapsed_since $KERNEL_START)"
         fi
 
         echo "[4b/4] Building Android (make -j$(nproc))..."
