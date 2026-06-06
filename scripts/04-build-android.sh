@@ -544,6 +544,15 @@ with open(path, 'w') as f:
                 find kernel/arch/arm64/boot/dts/rockchip/ -name 'rk3399-rock*' -type f 2>/dev/null || echo "  None found"
                 exit 1
             }
+
+            # Force-build the ROCK 4C+ DTB if it wasn't produced
+            if [ ! -f "kernel/arch/arm64/boot/dts/rockchip/rk3399-rock-4c-plus.dtb" ]; then
+                echo "DTB not produced by make dtbs — building explicitly..."
+                make -C kernel ARCH=arm64 rockchip/rk3399-rock-4c-plus.dtb 2>&1 || {
+                    echo "WARNING: Failed to build rk3399-rock-4c-plus.dtb"
+                    echo "Trying any rk3399 DTB as fallback..."
+                }
+            fi
             # Touch kernel artifacts so Android build system doesn't rebuild them
             echo "Touching kernel artifacts to prevent Android rebuild..."
             touch kernel/arch/arm64/boot/Image 2>/dev/null || true
