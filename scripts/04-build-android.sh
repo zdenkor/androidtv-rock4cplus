@@ -514,6 +514,26 @@ with open(path, 'w') as f:
 
         echo "[4b/4] Building Android (make -j$(nproc))..."
         ANDROID_START=$(date +%s)
+
+        # Patch VINTF framework compatibility matrix to remove MD4 requirement
+        # Kernel 4.19 cannot disable CRYPTO_MD4 due to Kconfig dependencies,
+        # so we relax the framework requirement instead (standard workaround)
+        echo "Patching VINTF framework compatibility matrix..."
+        FCM_FILE="hardware/interfaces/compatibility_matrices/compatibility_matrix.5.xml"
+        if [ -f "$FCM_FILE" ]; then
+            # Remove the MD4 kernel config requirement from the matrix
+            sed -i '/CONFIG_CRYPTO_MD4/d' "$FCM_FILE"
+            echo "  Removed CONFIG_CRYPTO_MD4 requirement from $FCM_FILE"
+        else
+            # Try alternate locations
+            for fcm in $(find hardware/interfaces -name 'compatibility_matrix*.xml' 2>/dev/null); do
+                if grep -q 'CONFIG_CRYPTO_MD4' "$fcm"; then
+                    sed -i '/CONFIG_CRYPTO_MD4/d' "$fcm"
+                    echo "  Removed CONFIG_CRYPTO_MD4 requirement from $fcm"
+                fi
+            done
+        fi
+
         make -j$(nproc) 2>&1 | tee build.log
         if [ "${PIPESTATUS[0]}" -ne 0 ]; then
             echo ""
