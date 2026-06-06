@@ -448,10 +448,10 @@ with open(path, 'w') as f:
             DTS_MAKEFILE="kernel/arch/arm64/boot/dts/rockchip/Makefile"
             DTS_FILE="kernel/arch/arm64/boot/dts/rockchip/rk3399-rock-4c-plus.dts"
             if [ ! -f "$DTS_FILE" ]; then
-                # Try to create from rock-pi-4.dts or copy from patches
+                # ROCK 4C+ is essentially a ROCK Pi 4 with RK3399-T — use rock-pi-4 DTS directly
                 if [ -f "kernel/arch/arm64/boot/dts/rockchip/rk3399-rock-pi-4.dts" ]; then
                     cp "kernel/arch/arm64/boot/dts/rockchip/rk3399-rock-pi-4.dts" "$DTS_FILE"
-                    echo "Created $DTS_FILE from rk3399-rock-pi-4.dts"
+                    echo "Created $DTS_FILE from rk3399-rock-pi-4.dts (ROCK 4C+ is compatible)"
                 elif [ -f "$SCRIPT_DIR/../patches/rk3399-rock-4c-plus.dts" ]; then
                     cp "$SCRIPT_DIR/../patches/rk3399-rock-4c-plus.dts" "$DTS_FILE"
                     echo "Copied $DTS_FILE from patches/"
@@ -533,11 +533,15 @@ with open(path, 'w') as f:
                 echo "Kernel .config override:"
                 grep -E '^CONFIG_ANDROID_BINDERFS=|^CONFIG_CRYPTO_MD4=' kernel/.config || true
             } && \
-            make -C kernel ARCH=arm64 -j$(nproc) Image dtbs || {
+            make -C kernel ARCH=arm64 -j$(nproc) Image dtbs 2>&1 | tail -50 || {
                 echo ""
                 echo "========================================"
                 echo "KERNEL BUILD FAILED"
                 echo "========================================"
+                echo "Last 30 lines of kernel build output above."
+                echo "Checking for common issues..."
+                echo "DTS files in kernel tree:"
+                find kernel/arch/arm64/boot/dts/rockchip/ -name 'rk3399-rock*' -type f 2>/dev/null || echo "  None found"
                 exit 1
             }
             # Touch kernel artifacts so Android build system doesn't rebuild them
