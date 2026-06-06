@@ -533,17 +533,23 @@ with open(path, 'w') as f:
                 echo "Kernel .config override:"
                 grep -E '^CONFIG_ANDROID_BINDERFS=|^CONFIG_CRYPTO_MD4=' kernel/.config || true
             } && \
-            make -C kernel ARCH=arm64 -j$(nproc) Image dtbs 2>&1 | tail -50 || {
+            make -C kernel ARCH=arm64 -j$(nproc) Image dtbs > kernel-build.log 2>&1
+            KERNEL_EXIT=$?
+            if [ "$KERNEL_EXIT" -ne 0 ]; then
                 echo ""
                 echo "========================================"
-                echo "KERNEL BUILD FAILED"
+                echo "KERNEL BUILD FAILED (exit code: $KERNEL_EXIT)"
                 echo "========================================"
-                echo "Last 30 lines of kernel build output above."
-                echo "Checking for common issues..."
+                echo "Last 50 lines of kernel build log:"
+                tail -50 kernel-build.log
+                echo ""
+                echo "Checking for errors in log:"
+                grep -i 'error\|fatal\|undefined' kernel-build.log | tail -20 || echo "  No specific errors found"
                 echo "DTS files in kernel tree:"
                 find kernel/arch/arm64/boot/dts/rockchip/ -name 'rk3399-rock*' -type f 2>/dev/null || echo "  None found"
                 exit 1
-            }
+            fi
+            echo "Kernel build log saved to kernel-build.log"
 
             # Force-build the ROCK 4C+ DTB if it wasn't produced
             if [ ! -f "kernel/arch/arm64/boot/dts/rockchip/rk3399-rock-4c-plus.dtb" ]; then
