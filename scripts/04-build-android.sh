@@ -527,6 +527,11 @@ with open(path, 'w') as f:
 
             # Generate resource.img (Rockchip-specific, required for mkbootimg --second)
             echo "Generating resource.img from DTB..."
+            echo "  Looking for DTBs in kernel/arch/arm64/boot/dts/rockchip/"
+            ls -la kernel/arch/arm64/boot/dts/rockchip/*.dtb 2>/dev/null || echo "  No DTBs found in rockchip/ subdir"
+            echo "  Looking for DTBs in kernel/arch/arm64/boot/"
+            ls -la kernel/arch/arm64/boot/*.dtb 2>/dev/null || echo "  No DTBs found in boot/"
+
             DTB_FILE="kernel/arch/arm64/boot/dts/rockchip/rk3399-rock-4c-plus.dtb"
             if [ -f "$DTB_FILE" ]; then
                 cp "$DTB_FILE" kernel/resource.img
@@ -535,16 +540,17 @@ with open(path, 'w') as f:
                 cp "kernel/arch/arm64/boot/dts/rockchip/rk3399-rock-pi-4.dtb" kernel/resource.img
                 echo "  Created kernel/resource.img from rk3399-rock-pi-4.dtb"
             else
-                # Last resort: use any available dtb
-                DTB=$(find kernel/arch/arm64/boot/dts/rockchip/ -name '*.dtb' 2>/dev/null | head -1)
+                # Search broadly for any dtb
+                DTB=$(find kernel/arch/arm64/boot/ -name '*.dtb' 2>/dev/null | head -1)
                 if [ -n "$DTB" ]; then
                     cp "$DTB" kernel/resource.img
                     echo "  Created kernel/resource.img from $DTB"
                 else
-                    echo "  WARNING: No DTB found, creating empty resource.img"
+                    echo "  WARNING: No DTB found anywhere, creating empty resource.img"
                     touch kernel/resource.img
                 fi
             fi
+            echo "  resource.img: $(ls -la kernel/resource.img 2>/dev/null || echo 'NOT CREATED')"
             echo "Kernel build finished in $(elapsed_since $KERNEL_START)"
         fi
 
