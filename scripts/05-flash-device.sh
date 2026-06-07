@@ -26,7 +26,12 @@ echo ""
 # Search for build output in common locations
 OUT_DIR=""
 for d in "$WORK_DIR/rockdev/Image-rk3399" "$WORK_DIR/rockdev/Image" \
-         "$WORK_DIR/out/target/product/rk3399" "$WORK_DIR/out/target/product/rk3399_box"; do
+         "$WORK_DIR/out/target/product/rk3399_ROCKPI4C_Plus_Android11" \
+         "$WORK_DIR/out/target/product/rk3399_ROCKPI4C_Android11" \
+         "$WORK_DIR/out/target/product/rk3399_ROCKPI4B_Android11" \
+         "$WORK_DIR/out/target/product/rk3399_Android11" \
+         "$WORK_DIR/out/target/product/rk3399_box" \
+         "$WORK_DIR/out/target/product/rk3399"; do
     if [ -d "$d" ]; then
         OUT_DIR="$d"
         break
