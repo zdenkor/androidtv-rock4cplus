@@ -1,8 +1,8 @@
 #!/bin/bash
 # =============================================================================
 # 05-flash-device.sh
-# Flashes Android TV to Radxa ROCK 4C+ (RK3399-T)
-# Supports: Android 9/11/12 BSPs
+# Flashes Android TV to ROCK 4C+ (RK3399-T)
+# Supports: USB (Rockchip upgrade tool) and SD card (dd)
 # =============================================================================
 
 set -e
@@ -40,9 +40,11 @@ done
 
 if [ -z "$OUT_DIR" ]; then
     echo "ERROR: No build output found. Run 04-build-android.sh first."
-    echo "Searched: rockdev/Image-rk3399, rockdev/Image, out/target/product/rk3399"
+    echo "Searched: rockdev/Image-rk3399, rockdev/Image, out/target/product/rk3399*"
     exit 1
 fi
+
+echo "Found build output at: $OUT_DIR"
 
 # ---------------------------------------------------------------------------
 # 1. Check for output files
@@ -54,104 +56,244 @@ if [ ! -d "$OUT_DIR" ]; then
     exit 1
 fi
 
-echo "Found build output at: $OUT_DIR"
-
 # ---------------------------------------------------------------------------
-# 2. Prepare device for flashing
+# 2. Parse parameter.txt for partition offsets
 # ---------------------------------------------------------------------------
-echo "[2/4] Preparing device..."
-echo ""
-echo "IMPORTANT: Put your ROCK 4C+ into MaskROM/Loader mode:"
-echo ""
-echo "  Method 1 (MaskROM):"
-echo "    1. Remove power and SD card"
-echo "    2. Short the eMMC clock pin to GND"
-echo "    3. Connect USB-C to your PC"
-echo "    4. Remove the short"
-echo ""
-echo "  Method 2 (Loader mode):"
-echo "    1. Hold the MASKROM button"
-echo "    2. Connect USB-C to your PC"
-echo "    3. Release the button"
-echo ""
-echo "  Method 3 (If Android is already running):"
-echo "    adb reboot bootloader"
-echo ""
-read -rp "Press Enter when device is in Loader/MaskROM mode..."
-
-# ---------------------------------------------------------------------------
-# 3. Flash using Rockchip upgrade tool
-# ---------------------------------------------------------------------------
-echo "[3/4] Flashing firmware..."
-
-# Check for Rockchip tools
-RK_TOOLS="$WORK_DIR/tools/rkbin"
-UPGRADE_TOOL="$RK_TOOLS/upgrade_tool"
-
-if [ ! -f "$UPGRADE_TOOL" ]; then
-    echo "Downloading Rockchip upgrade tool..."
-    git clone --depth=1 https://github.com/rockchip-linux/tools.git /tmp/rk-tools
-    UPGRADE_TOOL="/tmp/rk-tools/upgrade_tool"
+PARAM_FILE="$OUT_DIR/parameter.txt"
+if [ ! -f "$PARAM_FILE" ]; then
+    echo "ERROR: parameter.txt not found at $PARAM_FILE"
+    exit 1
 fi
 
-# Check if device is detected
-echo "Checking for device..."
-sudo "$UPGRADE_TOOL" LD
+echo "Parsing partition layout from parameter.txt..."
 
-# Flash the update image
-UPDATE_IMG="$WORK_DIR/rockdev/update.img"
-
-if [ -f "$UPDATE_IMG" ]; then
-    echo "Flashing update.img..."
-    sudo "$UPGRADE_TOOL" UF "$UPDATE_IMG"
-    sudo "$UPGRADE_TOOL" RD
-    echo "Flash complete! Device will reboot."
-else
-    echo "update.img not found. Flashing individual images..."
-    
-    # Flash individual images
-    IMAGES=(
-        "MiniLoaderAll.bin"
-        "parameter.txt"
-        "uboot.img"
-        "trust.img"
-        "misc.img"
-        "boot.img"
-        "resource.img"
-        "kernel.img"
-        "dtbo.img"
-        "vbmeta.img"
-        "system.img"
-        "vendor.img"
-        "oem.img"
-    )
-    
-    for img in "${IMAGES[@]}"; do
-        if [ -f "$OUT_DIR/$img" ]; then
-            echo "Flashing $img..."
-            sudo "$UPGRADE_TOOL" DI "$img" "$OUT_DIR/$img"
+# Parse partition offsets from CMDLINE in parameter.txt
+# Format: name@offset(size),name@offset(size),...
+# Sector size is 512 bytes
+parse_partitions() {
+    local cmdline="$1"
+    local result=""
+    # Extract mtdparts from cmdline
+    local mtdparts="${cmdline#*mtdparts=}"
+    if [ "$mtdparts" = "$cmdline" ]; then
+        echo "ERROR: No mtdparts found in CMDLINE"
+        return 1
+    fi
+    # mtdparts=rk29xxnand:partitions
+    local partitions="${mtdparts#*:}"
+    # Split by comma
+    IFS=',' read -ra PARTS <<< "$partitions"
+    for part in "${PARTS[@]}"; do
+        # Format: size@offset(name) or -@offset(name:grow)
+        if [[ "$part" =~ ^0x[0-9a-fA-F]+@0x[0-9a-fA-F]+\([^-]+\) ]]; then
+            local size="${part%%@*}"     # hex size in sectors
+            local rest="${part#*@}"      # offset(name)
+            local offset="${rest%%(*}"    # hex offset
+            local name="${rest#*(}"       # name)
+            name="${name%)}"             # remove trailing )
+            # Convert hex to decimal for dd seek=
+            local seek=$((offset))
+            echo "${name}:${seek}"
         fi
     done
-    
-    echo "Flash complete!"
-    sudo "$UPGRADE_TOOL" RD
+}
+
+# Map partition names to image files
+declare -A PART_MAP=(
+    ["boot"]="boot.img"
+    ["recovery"]="recovery.img"
+    ["dtbo"]="dtbo.img"
+    ["vbmeta"]="vbmeta.img"
+    ["super"]="super.img"
+    ["system"]="system.img"
+    ["vendor"]="vendor.img"
+    ["odm"]="odm.img"
+    ["product"]="product.img"
+    ["cache"]="cache.img"
+    ["userdata"]="userdata.img"
+)
+
+# Parse partitions
+PARTITIONS=""
+CMDLINE=$(grep '^CMDLINE:' "$PARAM_FILE" | head -1)
+if [ -n "$CMDLINE" ]; then
+    PARTITIONS=$(parse_partitions "$CMDLINE")
 fi
 
 # ---------------------------------------------------------------------------
-# 4. Alternative: Flash via SD card
+# 3. Choose flashing method
 # ---------------------------------------------------------------------------
-echo "[4/4] Alternative flashing method (SD card)..."
 echo ""
-echo "If USB flashing doesn't work, you can use an SD card:"
+echo "Choose flashing method:"
 echo ""
-echo "  1. Insert a microSD card (8GB+) into your PC"
-echo "  2. Identify the device: lsblk"
-echo "  3. Flash using dd:"
-echo "     sudo dd if=$UPDATE_IMG of=/dev/sdX bs=4M status=progress"
-echo "     (Replace /dev/sdX with your SD card device)"
-echo "  4. Insert SD card into ROCK 4C+ and power on"
+echo "  1) USB (Rockchip upgrade tool) - requires USB-C connection"
+echo "  2) SD Card (dd) - write images directly to SD card"
 echo ""
+read -rp "Enter choice [1-2]: " FLASH_CHOICE
 
+if [ "$FLASH_CHOICE" != "1" ] && [ "$FLASH_CHOICE" != "2" ]; then
+    echo "Invalid choice. Exiting."
+    exit 1
+fi
+
+# ---------------------------------------------------------------------------
+# 4a. USB Flashing
+# ---------------------------------------------------------------------------
+if [ "$FLASH_CHOICE" = "1" ]; then
+    echo ""
+    echo "IMPORTANT: Put your ROCK 4C+ into MaskROM/Loader mode:"
+    echo ""
+    echo "  Method 1 (MaskROM):"
+    echo "    1. Remove power and SD card"
+    echo "    2. Short the eMMC clock pin to GND"
+    echo "    3. Connect USB-C to your PC"
+    echo "    4. Remove the short"
+    echo ""
+    echo "  Method 2 (Loader mode):"
+    echo "    1. Hold the MASKROM button"
+    echo "    2. Connect USB-C to your PC"
+    echo "    3. Release the button"
+    echo ""
+    echo "  Method 3 (If Android is already running):"
+    echo "    adb reboot bootloader"
+    echo ""
+    read -rp "Press Enter when device is in Loader/MaskROM mode..."
+
+    echo "[3/4] Flashing firmware via USB..."
+
+    # Check for Rockchip tools
+    RK_TOOLS="$WORK_DIR/tools/rkbin"
+    UPGRADE_TOOL="$RK_TOOLS/upgrade_tool"
+
+    if [ ! -f "$UPGRADE_TOOL" ]; then
+        echo "Downloading Rockchip upgrade tool..."
+        git clone --depth=1 https://github.com/rockchip-linux/tools.git /tmp/rk-tools
+        UPGRADE_TOOL="/tmp/rk-tools/upgrade_tool"
+    fi
+
+    # Check if device is detected
+    echo "Checking for device..."
+    sudo "$UPGRADE_TOOL" LD
+
+    # Flash the update image
+    UPDATE_IMG="$WORK_DIR/rockdev/update.img"
+
+    if [ -f "$UPDATE_IMG" ]; then
+        echo "Flashing update.img..."
+        sudo "$UPGRADE_TOOL" UF "$UPDATE_IMG"
+        sudo "$UPGRADE_TOOL" RD
+        echo "Flash complete! Device will reboot."
+    else
+        echo "update.img not found. Flashing individual images..."
+
+        # Flash individual images
+        IMAGES=(
+            "MiniLoaderAll.bin"
+            "parameter.txt"
+            "uboot.img"
+            "trust.img"
+            "misc.img"
+            "boot.img"
+            "resource.img"
+            "kernel.img"
+            "dtbo.img"
+            "vbmeta.img"
+            "system.img"
+            "vendor.img"
+            "oem.img"
+        )
+
+        for img in "${IMAGES[@]}"; do
+            if [ -f "$OUT_DIR/$img" ]; then
+                echo "Flashing $img..."
+                sudo "$UPGRADE_TOOL" DI "$img" "$OUT_DIR/$img"
+            fi
+        done
+
+        echo "Flash complete!"
+        sudo "$UPGRADE_TOOL" RD
+    fi
+
+# ---------------------------------------------------------------------------
+# 4b. SD Card Flashing
+# ---------------------------------------------------------------------------
+else
+    echo ""
+    echo "[3/4] SD Card flashing..."
+    echo ""
+    echo "Available partitions from parameter.txt:"
+    echo "$PARTITIONS" | tr ':' '\n' | column -t || true
+    echo ""
+
+    # List available block devices
+    echo "Available SD card devices:"
+    lsblk -o NAME,SIZE,TYPE,MOUNTPOINT | grep -E 'disk|sd'
+    echo ""
+
+    read -rp "Enter SD card device (e.g., sdb): " SD_DEV
+    SDCARD="/dev/$SD_DEV"
+
+    if [ ! -b "$SDCARD" ]; then
+        echo "ERROR: $SDCARD is not a block device"
+        exit 1
+    fi
+
+    echo ""
+    echo "WARNING: This will ERASE all data on $SDCARD"
+    read -rp "Are you sure? Type 'yes': " CONFIRM
+    if [ "$CONFIRM" != "yes" ]; then
+        echo "Aborted."
+        exit 1
+    fi
+
+    # Unmount all partitions
+    echo "Unmounting $SDCARD..."
+    sudo umount ${SDCARD}* 2>/dev/null || true
+
+    echo ""
+    echo "Writing images to $SDCARD..."
+    echo ""
+
+    # Write each partition
+    write_partition() {
+        local name="$1"
+        local seek="$2"
+        local img="${PART_MAP[$name]}"
+
+        if [ -z "$img" ]; then
+            return
+        fi
+
+        local img_path="$OUT_DIR/$img"
+        if [ -f "$img_path" ]; then
+            local size=$(stat -c%s "$img_path")
+            local size_mb=$((size / 1024 / 1024))
+            echo "  Writing $img -> $name (seek=$seek, ${size_mb}MB)..."
+            sudo dd if="$img_path" of="$SDCARD" seek="$seek" bs=512 conv=notrunc 2>/dev/null
+        fi
+    }
+
+    # Write each partition from parsed layout
+    while IFS=: read -r name seek; do
+        if [ -n "$name" ] && [ -n "$seek" ]; then
+            write_partition "$name" "$seek"
+        fi
+    done <<< "$PARTITIONS"
+
+    echo ""
+    echo "Syncing..."
+    sudo sync
+    sudo eject "$SDCARD" 2>/dev/null || true
+
+    echo ""
+    echo "SD card flashed successfully!"
+    echo "Insert the SD card into ROCK 4C+ and power on."
+fi
+
+# ---------------------------------------------------------------------------
+# 5. Done
+# ---------------------------------------------------------------------------
+echo ""
 echo "============================================"
 echo " Flashing complete!"
 echo "============================================"
