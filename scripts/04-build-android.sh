@@ -415,6 +415,29 @@ print('Fixed auto_generator.py')
             echo "  Added PRODUCT_OTA_ENFORCE_VINTF_KERNEL_REQUIREMENTS := false to $PRODUCT_MK"
         fi
 
+        # Add "resize" flag to /data in fstab so Android auto-expands
+        # the userdata filesystem to fill the SD card on first boot.
+        # Without this, df -h shows only the baseline 4GB even on a 64GB card.
+        echo "Patching fstab to add resize flag for /data..."
+        FSTAB_FILES=$(find device/rockchip -name "fstab*" -type f 2>/dev/null)
+        if [ -n "$FSTAB_FILES" ]; then
+            for fstab in $FSTAB_FILES; do
+                # Only patch if /data line exists and doesn't already have "resize"
+                if grep -q '/data' "$fstab" && ! grep -q 'resize' "$fstab"; then
+                    echo "  Adding resize to /data in $fstab"
+                    # Add "resize" before the wait/check flags on the /data line
+                    sed -i '/\/data/s/\(wait[,]\)/resize,\1/' "$fstab"
+                    sed -i '/\/data/s/\(wait\)/resize,\1/' "$fstab"
+                    # If neither worked, append resize to the options field
+                    if ! grep -q 'resize' "$fstab"; then
+                        sed -i '/\/data/s/\(ext4\|f2fs\)/\1,resize/' "$fstab"
+                    fi
+                fi
+            done
+        else
+            echo "  WARNING: No fstab files found in device/rockchip/"
+        fi
+
         # Fix auto_generator.py (same patch issue as Android 9)
         AUTO_GEN="device/rockchip/common/auto_generator.py"
         if [ -f "$AUTO_GEN" ]; then
