@@ -250,9 +250,91 @@ else
     echo "Unmounting $SDCARD..."
     sudo umount ${SDCARD}* 2>/dev/null || true
 
+    # =========================================================================
+    # STEP 1: Write Rockchip bootloader chain (CRITICAL for boot!)
+    # =========================================================================
+    # RK3399 BootROM loads idbloader.img from sector 64.
+    # idbloader then loads uboot.img from sector 0x4000 and trust.img from 0x6000.
+    # Without these, the CPU never starts — no blue LED, nothing on screen.
     echo ""
-    echo "Writing images to $SDCARD..."
+    echo "=== Step 1/2: Writing bootloader chain ==="
+
+    # Search for bootloader files in common locations
+    IDBLOADER=""
+    UBOOT_IMG=""
+    TRUST_IMG=""
+
+    for search_dir in \
+        "$OUT_DIR" \
+        "$WORK_DIR/u-boot" \
+        "$WORK_DIR/rockdev" \
+        "$WORK_DIR/rockdev/Image-rk3399" \
+        "$WORK_DIR/rockdev/Image"; do
+        [ -f "$search_dir/idbloader.img" ] && IDBLOADER="$search_dir/idbloader.img" && break
+    done
+
+    for search_dir in \
+        "$OUT_DIR" \
+        "$WORK_DIR/u-boot" \
+        "$WORK_DIR/rockdev" \
+        "$WORK_DIR/rockdev/Image-rk3399" \
+        "$WORK_DIR/rockdev/Image"; do
+        [ -f "$search_dir/uboot.img" ] && UBOOT_IMG="$search_dir/uboot.img" && break
+    done
+
+    for search_dir in \
+        "$OUT_DIR" \
+        "$WORK_DIR/u-boot" \
+        "$WORK_DIR/rockdev" \
+        "$WORK_DIR/rockdev/Image-rk3399" \
+        "$WORK_DIR/rockdev/Image"; do
+        [ -f "$search_dir/trust.img" ] && TRUST_IMG="$search_dir/trust.img" && break
+    done
+
+    # Write idbloader.img at sector 64 (BootROM entry point)
+    if [ -n "$IDBLOADER" ]; then
+        echo "  Writing idbloader.img -> sector 64..."
+        sudo dd if="$IDBLOADER" of="$SDCARD" seek=64 bs=512 conv=notrunc 2>/dev/null
+    else
+        # Fallback: try to assemble idbloader.img from rkbin prebuilt binaries
+        RKBIN_DIR="$WORK_DIR/tools/rkbin"
+        DDR_BIN="$RKBIN_DIR/bin/rk33/rk3399_ddr_800MHz_v1.30.bin"
+        MINILOADER="$RKBIN_DIR/bin/rk33/rk3399_miniloader_v1.30.bin"
+        if [ -f "$DDR_BIN" ] && [ -f "$MINILOADER" ]; then
+            echo "  Assembling idbloader.img from rkbin prebuilts..."
+            cat "$DDR_BIN" "$MINILOADER" > /tmp/idbloader.img
+            echo "  Writing idbloader.img -> sector 64..."
+            sudo dd if=/tmp/idbloader.img of="$SDCARD" seek=64 bs=512 conv=notrunc 2>/dev/null
+            rm -f /tmp/idbloader.img
+        else
+            echo "  WARNING: idbloader.img not found and rkbin prebuilts missing!"
+            echo "  SD card will NOT boot without idbloader at sector 64."
+            echo "  Check: $DDR_BIN"
+            echo "  Check: $MINILOADER"
+        fi
+    fi
+
+    # Write uboot.img at sector 0x4000 (16384)
+    if [ -n "$UBOOT_IMG" ]; then
+        echo "  Writing uboot.img -> sector 0x4000 (16384)..."
+        sudo dd if="$UBOOT_IMG" of="$SDCARD" seek=16384 bs=512 conv=notrunc 2>/dev/null
+    else
+        echo "  WARNING: uboot.img not found!"
+    fi
+
+    # Write trust.img at sector 0x6000 (24576)
+    if [ -n "$TRUST_IMG" ]; then
+        echo "  Writing trust.img -> sector 0x6000 (24576)..."
+        sudo dd if="$TRUST_IMG" of="$SDCARD" seek=24576 bs=512 conv=notrunc 2>/dev/null
+    else
+        echo "  WARNING: trust.img not found!"
+    fi
+
+    # =========================================================================
+    # STEP 2: Write Android partition images
+    # =========================================================================
     echo ""
+    echo "=== Step 2/2: Writing Android images ==="
 
     # Write each partition
     write_partition() {

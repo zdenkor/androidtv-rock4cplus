@@ -523,6 +523,57 @@ with open(path, 'w') as f:
             fi
         fi
 
+        # Build U-Boot for RK3399 (needed for SD card boot)
+        if [ -d "u-boot" ]; then
+            echo "[4a2/4] Building U-Boot..."
+            UBOOT_START=$(date +%s)
+
+            # Use the ROCK Pi 4 defconfig as base (closest to ROCK 4C+)
+            cd u-boot
+            if [ -f "configs/rock-pi-4-rk3399_defconfig" ]; then
+                make rock-pi-4-rk3399_defconfig
+            elif [ -f "configs/rockchip-rk3399_defconfig" ]; then
+                make rockchip-rk3399_defconfig
+            elif [ -f "configs/evb-rk3399_defconfig" ]; then
+                make evb-rk3399_defconfig
+            else
+                echo "  WARNING: No RK3399 U-Boot defconfig found. Skipping U-Boot build."
+                cd ..
+                UBOOT_START=""
+            fi
+
+            if [ -n "$UBOOT_START" ]; then
+                make -j$(nproc) || {
+                    echo "  WARNING: U-Boot build failed. SD card boot may not work."
+                }
+                cd ..
+
+                # Copy U-Boot outputs to OUT_DIR for flashing
+                if [ -f "u-boot/idbloader.img" ]; then
+                    cp u-boot/idbloader.img "$OUT_DIR/"
+                    echo "  idbloader.img copied to $OUT_DIR/"
+                fi
+                if [ -f "u-boot/u-boot.itb" ]; then
+                    cp u-boot/u-boot.itb "$OUT_DIR/uboot.img"
+                    echo "  uboot.img (from u-boot.itb) copied to $OUT_DIR/"
+                elif [ -f "u-boot/u-boot-dtb.img" ]; then
+                    cp u-boot/u-boot-dtb.img "$OUT_DIR/uboot.img"
+                    echo "  uboot.img (from u-boot-dtb.img) copied to $OUT_DIR/"
+                elif [ -f "u-boot/u-boot.img" ]; then
+                    cp u-boot/u-boot.img "$OUT_DIR/"
+                    echo "  uboot.img copied to $OUT_DIR/"
+                fi
+                if [ -f "u-boot/trust.img" ]; then
+                    cp u-boot/trust.img "$OUT_DIR/"
+                    echo "  trust.img copied to $OUT_DIR/"
+                fi
+                echo "U-Boot build finished in $(elapsed_since $UBOOT_START)"
+            fi
+        else
+            echo "[4a2/4] No u-boot directory found. Skipping U-Boot build."
+            echo "  SD card boot will NOT work without idbloader.img + uboot.img + trust.img."
+        fi
+
         echo "[4b/4] Building Android (make -j$(nproc))..."
         ANDROID_START=$(date +%s)
 
