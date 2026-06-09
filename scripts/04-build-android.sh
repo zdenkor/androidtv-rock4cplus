@@ -552,10 +552,11 @@ with open(path, 'w') as f:
             UBOOT_START=$(date +%s)
 
             # Find cross-compiler (Linaro 6.3.1 works with this old U-Boot)
+            # Use absolute paths — relative paths break after cd u-boot
             CROSS_COMPILE=""
             for cc in \
-                "prebuilts/gcc/linux-x86/aarch64/gcc-linaro-6.3.1-2017.05-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-" \
-                "prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9/bin/aarch64-linux-android-"; do
+                "$WORK_DIR/prebuilts/gcc/linux-x86/aarch64/gcc-linaro-6.3.1-2017.05-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-" \
+                "$WORK_DIR/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9/bin/aarch64-linux-android-"; do
                 if [ -f "${cc}gcc" ]; then
                     CROSS_COMPILE="$cc"
                     break
