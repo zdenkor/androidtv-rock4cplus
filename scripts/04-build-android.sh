@@ -551,6 +551,24 @@ with open(path, 'w') as f:
             echo "[4a2/4] Building U-Boot..."
             UBOOT_START=$(date +%s)
 
+            # Determine OUT_DIR for copying bootloader outputs
+            OUT_DIR=""
+            for d in "$WORK_DIR/rockdev/Image-rk3399" "$WORK_DIR/rockdev/Image" \
+                     "$WORK_DIR/out/target/product/rk3399_ROCKPI4C_Plus_Android11" \
+                     "$WORK_DIR/out/target/product/rk3399_ROCKPI4C_Android11" \
+                     "$WORK_DIR/out/target/product/rk3399_ROCKPI4B_Android11" \
+                     "$WORK_DIR/out/target/product/rk3399_Android11" \
+                     "$WORK_DIR/out/target/product/rk3399_box" \
+                     "$WORK_DIR/out/target/product/rk3399"; do
+                if [ -d "$d" ]; then
+                    OUT_DIR="$d"
+                    break
+                fi
+            done
+            if [ -z "$OUT_DIR" ]; then
+                echo "  WARNING: No build output directory found. Bootloader files will stay in u-boot/ and rkbin/."
+            fi
+
             # Find cross-compiler (Linaro 6.3.1 works with this old U-Boot)
             # Use absolute paths — relative paths break after cd u-boot
             CROSS_COMPILE=""
