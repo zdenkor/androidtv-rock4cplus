@@ -551,31 +551,82 @@ with open(path, 'w') as f:
             echo "[4a2/4] Building U-Boot..."
             UBOOT_START=$(date +%s)
 
-            # Use the ROCK Pi 4 defconfig as base (closest to ROCK 4C+)
+            # Find cross-compiler (Linaro 6.3.1 works with this old U-Boot)
+            CROSS_COMPILE=""
+            for cc in \
+                "prebuilts/gcc/linux-x86/aarch64/gcc-linaro-6.3.1-2017.05-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-" \
+                "prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9/bin/aarch64-linux-android-"; do
+                if [ -f "${cc}gcc" ]; then
+                    CROSS_COMPILE="$cc"
+                    break
+                fi
+            done
+
+            if [ -z "$CROSS_COMPILE" ]; then
+                echo "  WARNING: No cross-compiler found. Trying system gcc..."
+                CROSS_COMPILE="aarch64-linux-gnu-"
+            fi
+            echo "  Using cross-compiler: ${CROSS_COMPILE}gcc"
+
             cd u-boot
-            if [ -f "configs/rock-pi-4-rk3399_defconfig" ]; then
-                make rock-pi-4-rk3399_defconfig
-            elif [ -f "configs/rockchip-rk3399_defconfig" ]; then
-                make rockchip-rk3399_defconfig
-            elif [ -f "configs/evb-rk3399_defconfig" ]; then
-                make evb-rk3399_defconfig
-            else
+            export CROSS_COMPILE="$CROSS_COMPILE"
+
+            # Try defconfigs in order of compatibility with ROCK 4C+
+            UBOOT_DEFCONFIG=""
+            for cfg in "rock-pi-4-rk3399" "evb-rk3399" "firefly-rk3399" "rk3399"; do
+                if [ -f "configs/${cfg}_defconfig" ]; then
+                    UBOOT_DEFCONFIG="${cfg}_defconfig"
+                    break
+                fi
+            done
+
+            if [ -z "$UBOOT_DEFCONFIG" ]; then
                 echo "  WARNING: No RK3399 U-Boot defconfig found. Skipping U-Boot build."
                 cd ..
                 UBOOT_START=""
             fi
 
             if [ -n "$UBOOT_START" ]; then
+                echo "  Using defconfig: $UBOOT_DEFCONFIG"
+                make "$UBOOT_DEFCONFIG"
                 make -j$(nproc) || {
                     echo "  WARNING: U-Boot build failed. SD card boot may not work."
                 }
                 cd ..
 
-                # Copy U-Boot outputs to OUT_DIR for flashing
-                if [ -f "u-boot/idbloader.img" ]; then
+                # Generate idbloader.img using loaderimage (NOT cat!)
+                # cat produces a broken idbloader without Rockchip SD header
+                LOADERIMAGE="rkbin/tools/loaderimage"
+                DDR_BIN=$(ls rkbin/bin/rk33/rk3399_ddr_*MHz_v*.bin 2>/dev/null | head -1)
+                MINILOADER=$(ls rkbin/bin/rk33/rk3399_miniloader_v*.bin 2>/dev/null | grep -v spinor | head -1)
+
+                if [ -f "$LOADERIMAGE" ] && [ -f "$DDR_BIN" ] && [ -f "$MINILOADER" ]; then
+                    echo "  Generating idbloader.img..."
+                    echo "    DDR:     $(basename "$DDR_BIN")"
+                    echo "    Loader:  $(basename "$MINILOADER")"
+                    "$LOADERIMAGE" --pack --uboot "$DDR_BIN" u-boot/idbloader.img
+                    cat "$MINILOADER" >> u-boot/idbloader.img
                     cp u-boot/idbloader.img "$OUT_DIR/"
                     echo "  idbloader.img copied to $OUT_DIR/"
+                else
+                    echo "  WARNING: Cannot generate idbloader.img"
                 fi
+
+                # Generate trust.img using trust_merger
+                TRUST_MERGER="rkbin/tools/trust_merger"
+                TRUST_INI="rkbin/RKTRUST/RK3399TRUST.ini"
+                if [ -f "$TRUST_MERGER" ] && [ -f "$TRUST_INI" ]; then
+                    echo "  Generating trust.img..."
+                    (cd rkbin && tools/trust_merger --pack RKTRUST/RK3399TRUST.ini)
+                    if [ -f "rkbin/trust.img" ]; then
+                        cp rkbin/trust.img "$OUT_DIR/"
+                        echo "  trust.img copied to $OUT_DIR/"
+                    fi
+                else
+                    echo "  WARNING: Cannot generate trust.img"
+                fi
+
+                # Copy U-Boot proper
                 if [ -f "u-boot/u-boot.itb" ]; then
                     cp u-boot/u-boot.itb "$OUT_DIR/uboot.img"
                     echo "  uboot.img (from u-boot.itb) copied to $OUT_DIR/"
@@ -586,10 +637,7 @@ with open(path, 'w') as f:
                     cp u-boot/u-boot.img "$OUT_DIR/"
                     echo "  uboot.img copied to $OUT_DIR/"
                 fi
-                if [ -f "u-boot/trust.img" ]; then
-                    cp u-boot/trust.img "$OUT_DIR/"
-                    echo "  trust.img copied to $OUT_DIR/"
-                fi
+
                 echo "U-Boot build finished in $(elapsed_since $UBOOT_START)"
             fi
         else

@@ -296,21 +296,26 @@ else
         echo "  Writing idbloader.img -> sector 64..."
         sudo dd if="$IDBLOADER" of="$SDCARD" seek=64 bs=512 conv=notrunc 2>/dev/null
     else
-        # Fallback: try to assemble idbloader.img from rkbin prebuilt binaries
-        RKBIN_DIR="$WORK_DIR/tools/rkbin"
-        DDR_BIN="$RKBIN_DIR/bin/rk33/rk3399_ddr_800MHz_v1.30.bin"
-        MINILOADER="$RKBIN_DIR/bin/rk33/rk3399_miniloader_v1.30.bin"
-        if [ -f "$DDR_BIN" ] && [ -f "$MINILOADER" ]; then
+        # Fallback: assemble idbloader.img from rkbin prebuilt binaries
+        # Must use loaderimage (not cat!) to create proper Rockchip SD header
+        RKBIN_DIR="$WORK_DIR/rkbin"
+        LOADERIMAGE="$RKBIN_DIR/tools/loaderimage"
+        DDR_BIN=$(ls "$RKBIN_DIR"/bin/rk33/rk3399_ddr_*MHz_v*.bin 2>/dev/null | head -1)
+        MINILOADER=$(ls "$RKBIN_DIR"/bin/rk33/rk3399_miniloader_v*.bin 2>/dev/null | grep -v spinor | head -1)
+        if [ -f "$LOADERIMAGE" ] && [ -f "$DDR_BIN" ] && [ -f "$MINILOADER" ]; then
             echo "  Assembling idbloader.img from rkbin prebuilts..."
-            cat "$DDR_BIN" "$MINILOADER" > /tmp/idbloader.img
+            echo "    DDR:     $(basename "$DDR_BIN")"
+            echo "    Loader:  $(basename "$MINILOADER")"
+            "$LOADERIMAGE" --pack --uboot "$DDR_BIN" /tmp/idbloader.img
+            cat "$MINILOADER" >> /tmp/idbloader.img
             echo "  Writing idbloader.img -> sector 64..."
             sudo dd if=/tmp/idbloader.img of="$SDCARD" seek=64 bs=512 conv=notrunc 2>/dev/null
             rm -f /tmp/idbloader.img
         else
-            echo "  WARNING: idbloader.img not found and rkbin prebuilts missing!"
-            echo "  SD card will NOT boot without idbloader at sector 64."
-            echo "  Check: $DDR_BIN"
-            echo "  Check: $MINILOADER"
+            echo "  WARNING: Cannot assemble idbloader.img!"
+            echo "    loaderimage: $LOADERIMAGE"
+            echo "    DDR bin:     $DDR_BIN"
+            echo "    Miniloader:  $MINILOADER"
         fi
     fi
 
