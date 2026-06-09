@@ -298,9 +298,13 @@ else
     else
         # Fallback: assemble idbloader.img from rkbin prebuilt binaries
         # Must use loaderimage (not cat!) to create proper Rockchip SD header
+        # ROCK 4C+ uses RK3399-T with LPDDR4 — prefer rk3399pro DDR binaries
         RKBIN_DIR="$WORK_DIR/rkbin"
         LOADERIMAGE="$RKBIN_DIR/tools/loaderimage"
-        DDR_BIN=$(ls "$RKBIN_DIR"/bin/rk33/rk3399_ddr_*MHz_v*.bin 2>/dev/null | head -1)
+        DDR_BIN=$(ls "$RKBIN_DIR"/bin/rk33/rk3399pro_ddr_*MHz_v*.bin 2>/dev/null | head -1)
+        if [ -z "$DDR_BIN" ]; then
+            DDR_BIN=$(ls "$RKBIN_DIR"/bin/rk33/rk3399_ddr_*MHz_v*.bin 2>/dev/null | head -1)
+        fi
         MINILOADER=$(ls "$RKBIN_DIR"/bin/rk33/rk3399_miniloader_v*.bin 2>/dev/null | grep -v spinor | head -1)
         if [ -f "$LOADERIMAGE" ] && [ -f "$DDR_BIN" ] && [ -f "$MINILOADER" ]; then
             echo "  Assembling idbloader.img from rkbin prebuilts..."
