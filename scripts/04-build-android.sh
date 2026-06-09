@@ -551,24 +551,6 @@ with open(path, 'w') as f:
             echo "[4a2/4] Building U-Boot..."
             UBOOT_START=$(date +%s)
 
-            # Determine OUT_DIR for copying bootloader outputs
-            OUT_DIR=""
-            for d in "$WORK_DIR/rockdev/Image-rk3399" "$WORK_DIR/rockdev/Image" \
-                     "$WORK_DIR/out/target/product/rk3399_ROCKPI4C_Plus_Android11" \
-                     "$WORK_DIR/out/target/product/rk3399_ROCKPI4C_Android11" \
-                     "$WORK_DIR/out/target/product/rk3399_ROCKPI4B_Android11" \
-                     "$WORK_DIR/out/target/product/rk3399_Android11" \
-                     "$WORK_DIR/out/target/product/rk3399_box" \
-                     "$WORK_DIR/out/target/product/rk3399"; do
-                if [ -d "$d" ]; then
-                    OUT_DIR="$d"
-                    break
-                fi
-            done
-            if [ -z "$OUT_DIR" ]; then
-                echo "  WARNING: No build output directory found. Bootloader files will stay in u-boot/ and rkbin/."
-            fi
-
             # Find cross-compiler (Linaro 6.3.1 works with this old U-Boot)
             # Use absolute paths — relative paths break after cd u-boot
             CROSS_COMPILE=""
@@ -629,8 +611,7 @@ with open(path, 'w') as f:
                     echo "    Loader:  $(basename "$MINILOADER")"
                     "$LOADERIMAGE" --pack --uboot "$DDR_BIN" u-boot/idbloader.img
                     cat "$MINILOADER" >> u-boot/idbloader.img
-                    cp u-boot/idbloader.img "$OUT_DIR/"
-                    echo "  idbloader.img copied to $OUT_DIR/"
+                    echo "  idbloader.img created in u-boot/"
                 else
                     echo "  WARNING: Cannot generate idbloader.img"
                 fi
@@ -642,23 +623,19 @@ with open(path, 'w') as f:
                     echo "  Generating trust.img..."
                     (cd rkbin && tools/trust_merger --pack RKTRUST/RK3399TRUST.ini)
                     if [ -f "rkbin/trust.img" ]; then
-                        cp rkbin/trust.img "$OUT_DIR/"
-                        echo "  trust.img copied to $OUT_DIR/"
+                        echo "  trust.img created in rkbin/"
                     fi
                 else
                     echo "  WARNING: Cannot generate trust.img"
                 fi
 
-                # Copy U-Boot proper
+                # U-Boot proper stays in u-boot/ (flash script finds it there)
                 if [ -f "u-boot/u-boot.itb" ]; then
-                    cp u-boot/u-boot.itb "$OUT_DIR/uboot.img"
-                    echo "  uboot.img (from u-boot.itb) copied to $OUT_DIR/"
+                    echo "  uboot.img (u-boot.itb) ready in u-boot/"
                 elif [ -f "u-boot/u-boot-dtb.img" ]; then
-                    cp u-boot/u-boot-dtb.img "$OUT_DIR/uboot.img"
-                    echo "  uboot.img (from u-boot-dtb.img) copied to $OUT_DIR/"
+                    echo "  uboot.img (u-boot-dtb.img) ready in u-boot/"
                 elif [ -f "u-boot/u-boot.img" ]; then
-                    cp u-boot/u-boot.img "$OUT_DIR/"
-                    echo "  uboot.img copied to $OUT_DIR/"
+                    echo "  uboot.img ready in u-boot/"
                 fi
 
                 echo "U-Boot build finished in $(elapsed_since $UBOOT_START)"
