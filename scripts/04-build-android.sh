@@ -572,6 +572,15 @@ with open(path, 'w') as f:
             cd u-boot
             export CROSS_COMPILE="$CROSS_COMPILE"
 
+            # GCC 9+ reserves x18 for Shadow Call Stack; old U-Boot uses it in
+            # inline asm. -ffixed-x18 tells GCC x18 is a fixed register.
+            # Only needed when NOT using the old Linaro 6.3.1 toolchain.
+            UBOOT_EXTRA_FLAGS=""
+            if ! echo "$CROSS_COMPILE" | grep -q "linaro-6"; then
+                echo "  Non-Linaro compiler detected — adding -ffixed-x18"
+                UBOOT_EXTRA_FLAGS="KCFLAGS=-ffixed-x18"
+            fi
+
             # Try defconfigs in order of compatibility with ROCK 4C+
             UBOOT_DEFCONFIG=""
             for cfg in "rock-pi-4-rk3399" "evb-rk3399" "firefly-rk3399" "rk3399"; do
@@ -589,8 +598,8 @@ with open(path, 'w') as f:
 
             if [ -n "$UBOOT_START" ]; then
                 echo "  Using defconfig: $UBOOT_DEFCONFIG"
-                make "$UBOOT_DEFCONFIG"
-                make -j$(nproc) || {
+                make "$UBOOT_DEFCONFIG" $UBOOT_EXTRA_FLAGS
+                make -j$(nproc) $UBOOT_EXTRA_FLAGS || {
                     echo "  WARNING: U-Boot build failed. SD card boot may not work."
                 }
                 cd ..
