@@ -265,8 +265,7 @@ AndroidTV for Radxa4C+/
 │   ├── 05-flash-device.sh           # Flash to device
 │   ├── 03a-preinstall-apps.sh       # Download apps (curl + F-Droid, apkeep fallback)
 │   └── fix_prebuilts.py             # Sanitize Soong modules (called by 03)
-├── patches/
-│   └── rk3399-rock-4c-plus.dts      # ROCK 4C+ device tree (RK3399-T OPP table)
+├── patches/                         # (deprecated — removed; build now uses kernel's stock rock-pi-4.dts)
 ├── configs/
 │   └── BoardConfig.mk               # Board configuration reference
 ├── prebuilt/                        # Known-good Radxa boot chain (idbloader/uboot/trust)
