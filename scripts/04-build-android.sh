@@ -647,6 +647,26 @@ with open(path, 'w') as f:
                     echo "  uboot.img ready in u-boot/"
                 fi
 
+                # Stage bootloader files in the layout 05-flash-device.sh searches for.
+                # The flash script looks for raw names (uboot.img, trust.img, idbloader.img)
+                # in $OUT_DIR, $WORK_DIR/u-boot, $WORK_DIR/rockdev. The U-Boot build above
+                # leaves artifacts named u-boot.itb / u-boot-dtb.img / u-boot.img and the
+                # trust merger drops trust.img into rkbin/, so without staging the flash
+                # script prints "uboot.img not found" / "trust.img not found" and the SD
+                # card boots nothing.
+                echo "  Staging bootloader files for flash script..."
+                if   [ -f "u-boot/u-boot.itb" ];     then cp -f "u-boot/u-boot.itb"     "u-boot/uboot.img"
+                elif [ -f "u-boot/u-boot-dtb.img" ]; then cp -f "u-boot/u-boot-dtb.img" "u-boot/uboot.img"
+                elif [ -f "u-boot/u-boot.img" ];     then cp -f "u-boot/u-boot.img"     "u-boot/uboot.img"
+                fi
+                if [ -f "rkbin/trust.img" ] && [ ! -f "u-boot/trust.img" ]; then
+                    cp -f "rkbin/trust.img" "u-boot/trust.img"
+                fi
+                # idbloader.img is already created in u-boot/ by the block above; nothing to do.
+                echo "  Staged:"
+                ls -la u-boot/idbloader.img u-boot/uboot.img u-boot/trust.img 2>/dev/null | \
+                    sed 's/^/    /'
+
                 echo "U-Boot build finished in $(elapsed_since $UBOOT_START)"
             fi
         else
