@@ -269,7 +269,9 @@ AndroidTV for Radxa4C+/
 │   └── rk3399-rock-4c-plus.dts      # ROCK 4C+ device tree (RK3399-T OPP table)
 ├── configs/
 │   └── BoardConfig.mk               # Board configuration reference
-└── docs/
+├── prebuilt/                        # Known-good Radxa boot chain (idbloader/uboot/trust)
+│   └── README.md                    #   - used by 05-flash-device.sh as the preferred boot source
+├── docs/
     ├── device-tree.md               # Device tree reference
     ├── kernel-config.md             # Kernel configuration
     └── troubleshooting.md           # Common issues & fixes
@@ -359,6 +361,50 @@ All source code will be stored at `/mnt/aosp-build/androidtv-rock4cplus/` on you
 ```bash
 sudo mount /mnt/aosp-build
 ```
+
+---
+
+## Bootloader Fast Path
+
+If your build produces a boot chain that doesn't boot (no blue LED, no serial
+output, or U-Boot banner followed by silence), the `prebuilt/` directory in
+this repo contains a **known-good Rockchip boot chain** extracted from the
+official Radxa Android 11 reference image:
+
+- `idbloader.img` (230 KB) — DDR init + miniloader
+- `uboot.img` (4 MB) — U-Boot proper
+- `trust.img` (4 MB) — ARM Trusted Firmware (BL31)
+- `dtbo.img`, `vbmeta.img` — device tree overlay + AVB metadata
+
+`scripts/05-flash-device.sh` automatically **prefers `prebuilt/` over your own
+build output** when writing the boot chain to an SD card. So even if your
+U-Boot build is broken, you can still produce a bootable SD card as long as
+your kernel + Android system partition images are sane.
+
+To force the flash script to use your own U-Boot build instead, move the
+`prebuilt/` directory aside before flashing:
+
+```bash
+mv prebuilt prebuilt.disabled
+./scripts/05-flash-device.sh
+```
+
+After `04-build-android.sh` runs, the build script also prints a **diff
+report** comparing your built bootloader files against the `prebuilt/`
+reference — so you can see at a glance whether your build diverged from the
+known-good chain (and is therefore suspect as the source of a non-booting
+board).
+
+**Caveats:**
+- The prebuilt boot chain is tied to **RK3399-T + LPDDR4**. Do not use it on
+  other boards.
+- It is **not** mixed with a different Android build's `boot.img` automatically
+  (mixing a Radxa 4.19 kernel `boot.img` with a Vicharak 5.10 `system.img`
+  breaks things). If you need the full reference Android system, flash the
+  original `Rock4CPlus-Android11-r12-20241202-gpt.img` via `dd` directly to
+  the SD card.
+
+See `prebuilt/README.md` for file-level details and a regeneration recipe.
 
 ---
 

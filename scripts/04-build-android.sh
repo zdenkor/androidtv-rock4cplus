@@ -667,6 +667,31 @@ with open(path, 'w') as f:
                 ls -la u-boot/idbloader.img u-boot/uboot.img u-boot/trust.img 2>/dev/null | \
                     sed 's/^/    /'
 
+                # Diff-check against the known-good reference in prebuilt/.
+                # If your build matches the Radxa reference, you can be confident
+                # the boot chain is sane. If it differs, that's expected when you
+                # change DDR timing / U-Boot config — but it also tells you why
+                # a "known good" SD card might suddenly stop booting after a U-Boot
+                # config change.
+                PREBUILT_DIR="$SCRIPT_DIR/../prebuilt"
+                if [ -d "$PREBUILT_DIR" ]; then
+                    echo ""
+                    echo "  Boot chain diff vs. prebuilt/ (known-good Radxa reference):"
+                    for f in idbloader.img uboot.img trust.img; do
+                        if [ -f "u-boot/$f" ] && [ -f "$PREBUILT_DIR/$f" ]; then
+                            if cmp -s "u-boot/$f" "$PREBUILT_DIR/$f"; then
+                                echo "    $f: IDENTICAL"
+                            else
+                                built_size=$(stat -c%s "u-boot/$f" 2>/dev/null || echo "?")
+                                ref_size=$(stat -c%s "$PREBUILT_DIR/$f" 2>/dev/null || echo "?")
+                                echo "    $f: DIFFER (built=${built_size}B, prebuilt=${ref_size}B)"
+                            fi
+                        elif [ -f "u-boot/$f" ]; then
+                            echo "    $f: built only (no prebuilt reference)"
+                        fi
+                    done
+                fi
+
                 echo "U-Boot build finished in $(elapsed_since $UBOOT_START)"
             fi
         else

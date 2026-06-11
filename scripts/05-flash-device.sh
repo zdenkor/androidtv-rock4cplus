@@ -259,12 +259,18 @@ else
     echo ""
     echo "=== Step 1/2: Writing bootloader chain ==="
 
-    # Search for bootloader files in common locations
+    # Search for bootloader files. Search order:
+    #   1) prebuilt/  (known-good Radxa reference, in this repo) -- preferred
+    #   2) build output dirs (your own U-Boot build)
+    #   3) rkbin prebuilts assembled by the fallback block below
+    # To force using your own U-Boot build, rename or move prebuilt/ aside.
+    PREBUILT_DIR="$SCRIPT_DIR/../prebuilt"
     IDBLOADER=""
     UBOOT_IMG=""
     TRUST_IMG=""
 
     for search_dir in \
+        "$PREBUILT_DIR" \
         "$OUT_DIR" \
         "$WORK_DIR/u-boot" \
         "$WORK_DIR/rockdev" \
@@ -274,6 +280,7 @@ else
     done
 
     for search_dir in \
+        "$PREBUILT_DIR" \
         "$OUT_DIR" \
         "$WORK_DIR/u-boot" \
         "$WORK_DIR/rockdev" \
@@ -283,6 +290,7 @@ else
     done
 
     for search_dir in \
+        "$PREBUILT_DIR" \
         "$OUT_DIR" \
         "$WORK_DIR/u-boot" \
         "$WORK_DIR/rockdev" \
@@ -290,6 +298,14 @@ else
         "$WORK_DIR/rockdev/Image"; do
         [ -f "$search_dir/trust.img" ] && TRUST_IMG="$search_dir/trust.img" && break
     done
+
+    # Tell the user which boot chain source we're using
+    if [ -n "$IDBLOADER" ]; then
+        case "$IDBLOADER" in
+            "$PREBUILT_DIR"/*) echo "  Boot chain source: prebuilt/ (known-good Radxa reference)" ;;
+            *)                  echo "  Boot chain source: $IDBLOADER (your build output)" ;;
+        esac
+    fi
 
     # Write idbloader.img at sector 64 (BootROM entry point)
     if [ -n "$IDBLOADER" ]; then
