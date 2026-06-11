@@ -57,8 +57,9 @@ echo "     - Manifest: radxa/manifests, branch: rockpi-box-9.0"
 echo "     - Most stable, all hardware works"
 echo "     - Directory: $BASE_DIR/androidtv-rock4cplus-radxa9"
 echo ""
-echo "  2) Android 11 (Radxa rk11, kernel 4.19) ★ RECOMMENDED"
-echo "     - Manifest: radxa/manifests, branch: Android11_Radxa_rk11"
+echo "  2) Android 11 (Radxa rk12 BSP, kernel 4.19) ★ RECOMMENDED"
+echo "     - Manifest: radxa/manifests, tag: radxa-rock4cplus-20241202"
+echo "     - Rockchip rkr12 BSP (newer than the old rkr11.2 branch)"
 echo "     - Best built on Ubuntu 18.04 (Python 2 native, no 2to3 needed)"
 echo "     - Directory: $BASE_DIR/androidtv-rock4cplus-radxa11"
 echo ""
@@ -260,12 +261,14 @@ case $BUILD_CHOICE in
 
     2)
         # ====================================================================
-        # OPTION 2: Android 11 (Radxa rk11, kernel 4.19)
+        # OPTION 2: Android 11 (Radxa rock-4c-plus 20241202 tag, rkr12 BSP)
         # ====================================================================
+        # Pinned to the official Radxa tag for ROCK 4C+ which uses the newer
+        # Rockchip rkr12 BSP (was: branch Android11_Radxa_rk11 / rkr11.2).
         echo "[2/4] Initializing repo with Radxa Android 11 manifest..."
         echo ""
         echo "Manifest: https://github.com/radxa/manifests.git"
-        echo "Branch:   Android11_Radxa_rk11"
+        echo "Ref:      radxa-rock4cplus-20241202 (tag, rkr12 BSP)"
         echo "XML:      rockchip-r-release.xml"
         echo ""
         echo "NOTE: Android 11 builds best on Ubuntu 18.04 LTS (Python 2 native)."
@@ -273,7 +276,7 @@ case $BUILD_CHOICE in
 
         "$REPO_CMD" init --depth=1 \
             -u https://github.com/radxa/manifests.git \
-            -b Android11_Radxa_rk11 \
+            -b radxa-rock4cplus-20241202 \
             -m rockchip-r-release.xml
 
         echo ""

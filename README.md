@@ -6,7 +6,7 @@ Build **Android 9–12** for the **Radxa ROCK 4C+** (Rockchip RK3399-T) from sou
 
 > **Supported BSPs:**
 > - [Vicharak Android 12](https://github.com/vicharak-in/rockchip-android-manifest) — kernel 5.10, full Rockchip HALs, last updated Dec 2025 (**recommended**)
-> - Radxa Android 11 — kernel 4.19, Radxa rk11 BSP
+> - Radxa Android 11 — kernel 4.19, pinned to [`radxa-rock4cplus-20241202`](https://github.com/radxa/manifests/releases/tag/radxa-rock4cplus-20241202) tag (Rockchip rkr12 BSP)
 > - Radxa Android 9 Pie — kernel 4.4, official Radxa BSP
 
 ---
