@@ -8,7 +8,6 @@ Build **Android 9–12** for the **Radxa ROCK 4C+** (Rockchip RK3399-T) from sou
 > - [Vicharak Android 12](https://github.com/vicharak-in/rockchip-android-manifest) — kernel 5.10, full Rockchip HALs, last updated Dec 2025 (**recommended**)
 > - Radxa Android 11 — kernel 4.19, Radxa rk11 BSP
 > - Radxa Android 9 Pie — kernel 4.4, official Radxa BSP
-> - AOSP 12 — experimental, partially automated Rockchip BSP overlay
 
 ---
 
@@ -16,8 +15,8 @@ Build **Android 9–12** for the **Radxa ROCK 4C+** (Rockchip RK3399-T) from sou
 
 This repository provides a complete, automated build system for compiling Android from AOSP source for the Radxa ROCK 4C+ single-board computer. It includes:
 
-- **Multi-BSP support** — choose between Vicharak (Android 12), Radxa (Android 11), Radxa (Android 9), or AOSP 12 during `02-download-source.sh`
-- **Isolated build directories** — each BSP downloads to its own directory (`/mnt/aosp-build/androidtv-rock4cplus-{vicharak12,radxa11,radxa9,aosp12}`)
+- **Multi-BSP support** — choose between Vicharak (Android 12), Radxa (Android 11), or Radxa (Android 9) during `02-download-source.sh`
+- **Isolated build directories** — each BSP downloads to its own directory (`/mnt/aosp-build/androidtv-rock4cplus-{vicharak12,radxa11,radxa9}`)
 - **BSP-aware scripts** — all build scripts auto-detect which BSP was selected and apply correct configuration
 - **Automated scripts** for USB setup, environment preparation, source download, configuration, building, and flashing
 - **Prebuilts compatibility fixes** for Ubuntu 18.04/20.04/22.04 / WSL2 (Soong sanitization, missing manifests, symlink fixes)
@@ -32,7 +31,6 @@ This repository provides a complete, automated build system for compiling Androi
 | Android 9 Pie | **Ubuntu 18.04 LTS** | Python 2 (native) | OpenJDK 8 |
 | Android 11 | **Ubuntu 18.04 LTS** | Python 2 (native) | OpenJDK 8 |
 | Android 12 (Vicharak) | **Ubuntu 22.04 LTS** | Python 3 | OpenJDK 11 |
-| Android 12 (AOSP) | **Ubuntu 22.04 LTS** | Python 3 | OpenJDK 11 |
 
 > **Note:** Android 9/11 can also build on Ubuntu 20.04/22.04 — the setup script will pull JDK 8 from the bionic repo. However, Ubuntu 18.04 is recommended for the smoothest experience with these older AOSP versions (Python 2 native, no extra repos needed).
 
@@ -45,7 +43,6 @@ This repository provides a complete, automated build system for compiling Androi
 | **Vicharak** | 12 | 5.10 | ✅ Recommended - in development | Latest, most features |
 | Radxa rk11 | 11 | 4.19 | ✅ Stable - in development | Newer than 9, good HW support |
 | Radxa | 9 Pie | 4.4 | ✅ Stable - in development | Official support, mature |
-| AOSP | 12 | 5.10+ | ⚠️ Partial - in development | Rockchip overlay installed automatically |
 
 **Hardware Components (all BSPs):**
 
@@ -188,11 +185,35 @@ All scripts are designed to run inside **WSL2 or native Ubuntu**.
 
 ### How It Works (Multi-BSP)
 
-1. **01-setup-environment.sh** prompts you to select an AOSP version (1-4) and installs the correct JDK and Python
-2. **02-download-source.sh** prompts you to select a BSP (1-4)
+1. **01-setup-environment.sh** prompts you to select an AOSP version (1-3) and installs the correct JDK and Python
+2. **02-download-source.sh** prompts you to select a BSP (1-3)
 3. Downloads the BSP source to a **separate directory** (e.g., `/mnt/aosp-build/androidtv-rock4cplus-vicharak12`)
 4. Creates `.build-config` storing `BSP_CHOICE` and `WORK_DIR`
 5. **Remaining scripts automatically detect and use the correct BSP**
+
+### BSP Options Summary (1–4)
+
+All four options are selectable inside `02-download-source.sh`. Each downloads into its own directory under `/mnt/aosp-build/`, so you can build them sequentially without conflicts.
+
+| # | Option | Android | Kernel | Manifest / Branch | Source Size | Work Directory | Host OS | JDK | Status |
+|---|--------|---------|--------|-------------------|-------------|----------------|---------|-----|--------|
+| 1 | **Radxa 9 Pie** | 9 | 4.4 | `radxa/manifests` → `master` (Radxa BSP) | ~60 GB | `androidtv-rock4cplus-radxa9` | Ubuntu **18.04** LTS (best) | OpenJDK 8 | Stable, official |
+| 2 | **Radxa 11** | 11 | 4.19 | `radxa/manifests` → `Android11_Radxa_rk11` (`rockchip-r-release.xml`) | ~70 GB | `androidtv-rock4cplus-radxa11` | Ubuntu **18.04** LTS (best) | OpenJDK 8 | Stable |
+| 3 | **Vicharak 12** ⭐ | 12 | 5.10 | `vicharak-in/rockchip-android-manifest` → `master` (`rockchip-s-vicharak.xml`) | ~80 GB | `androidtv-rock4cplus-vicharak12` | Ubuntu **22.04** LTS (best) | OpenJDK 11 | **Recommended**, in development, last updated Dec 2025 |
+| 4 | **AOSP 12 (pure)** | 12 | (overlay) | `android.googlesource.com/platform/manifest` → `android-12.1.0_r11` + automatic Rockchip overlay (khadas `device/rockchip/{rk3399,common}`, `hardware/rockchip`, `kernel`, `tools/rkbin`, `vendor/rockchip/mpp`) | ~60 GB | `androidtv-rock4cplus-aosp12` | Ubuntu **22.04** LTS (best) | OpenJDK 11 | Experimental |
+
+**When to pick which:**
+
+- **Option 1 (Radxa 9)** — Pick if you want the most mature, officially supported build. Oldest kernel, oldest Android, but everything works. Use for TV/digital-signage stability.
+- **Option 2 (Radxa 11)** — Pick if you need newer features than Pie but don't want the Android 12 jump. Kernel 4.19 is well-supported upstream.
+- **Option 3 (Vicharak 12)** — **Default choice.** Latest Android TV features, kernel 5.10, full Rockchip HALs bundled, actively maintained (Dec 2025). Only practical Android 12 path with everything wired up out of the box.
+- **Option 4 (AOSP 12)** — Pick only if you specifically need stock Google AOSP (no Vicharak patches, no extra HALs). The script overlays Rockchip device trees and kernel for you, but expect manual tuning for HALs/Wi-Fi/audio. Experimental.
+
+**Cross-cutting facts (all options):**
+- AOSP source + build output needs **300 GB+** on an **ext4** USB 3.0 drive (case-sensitive FS required).
+- Each build directory is **isolated** — you can download and build multiple BSPs side by side.
+- The selected `BSP_CHOICE` and `WORK_DIR` are persisted in `.build-config`; all later scripts (`03`, `03a`, `04`, `05`) auto-detect and reuse them.
+- HDMI-CEC, IR remote, Leanback / Projectivy launcher, optional MindTheGapps / NikGApps, and preinstalled TV apps (SmartTube, Kodi, TiviMate, …) work the same way across all 4 options — they are added by `03a-preinstall-apps.sh` and `03-configure-build.sh` after the BSP source is in place.
 
 ### Quick Start Steps
 
@@ -200,7 +221,7 @@ All scripts are designed to run inside **WSL2 or native Ubuntu**.
 chmod +x scripts/*.sh
 ./scripts/00-setup-usb.sh         # Format USB, mount it, copy repo to USB
 ./scripts/01-setup-environment.sh # Select AOSP version, install dependencies
-./scripts/02-download-source.sh   # Select BSP (1-4), download source (~80GB)
+./scripts/02-download-source.sh   # Select BSP (1-3), download source (~80GB)
 ./scripts/03-configure-build.sh   # Auto-detect BSP, apply correct config
 ./scripts/03a-preinstall-apps.sh   # Optional: preinstall apps
 ./scripts/04-build-android.sh     # Auto-detect BSP, use correct build command
@@ -219,8 +240,8 @@ cd /mnt/aosp-build/androidtv-rock4cplus
 | Step | Script | Description | Multi-BSP Support |
 |------|--------|-------------|-------------------|
 | 0 | `./scripts/00-setup-usb.sh` | Format & mount USB drive as ext4, copy repo | — |
-| 1 | `./scripts/01-setup-environment.sh` | **Select AOSP version (1-4), install correct JDK & Python** | ✅ Prompts for choice |
-| 2 | `./scripts/02-download-source.sh` | **Select BSP (1-4), download source** (~80GB) | ✅ Prompts for choice |
+| 1 | `./scripts/01-setup-environment.sh` | **Select AOSP version (1-3), install correct JDK & Python** | ✅ Prompts for choice |
+| 2 | `./scripts/02-download-source.sh` | **Select BSP (1-3), download source** (~80GB) | ✅ Prompts for choice |
 | 3 | `./scripts/03-configure-build.sh` | **Auto-detect BSP, apply correct config** | ✅ Reads `.build-config` |
 | 3b | `./scripts/03a-preinstall-apps.sh` | (Optional) Preinstall apps into build | — |
 | 4 | `./scripts/04-build-android.sh` | **Auto-detect BSP, use correct build command** | ✅ Reads `.build-config` |
